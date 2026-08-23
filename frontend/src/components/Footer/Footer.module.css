@@ -1,0 +1,53 @@
+.footer {
+  width: 100%;
+  padding: 1.5rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  background-color: #ffffff;
+  margin-top: auto;
+  position: relative;
+  z-index: 250;
+}
+
+.footerLinks {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 2rem;
+  font-weight: 400;
+  align-items: center;
+}
+
+.footerLinks a,
+.searchButton {
+  color: #737373;
+  text-decoration: none;
+  font-size: 12px;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.footerCopyright {
+  color: #737373;
+  font-size: 12px;
+  margin-top: 1rem;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  font-weight: 400;
+  margin-bottom: 0.8rem;
+}
+
+.footerLinks a:hover,
+.searchButton:hover {
+  text-decoration: underline;
+  color: #000000;
+}

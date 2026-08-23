@@ -1,0 +1,267 @@
+.postCard {
+  background-color: #fff;
+  border-bottom: 1px solid #efefef;
+  padding-bottom: 16px;
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 4px;
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.userMeta {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+}
+
+.username {
+  font-weight: 600;
+  color: #262626;
+  text-decoration: none;
+}
+
+.username:hover {
+  color: #737373;
+}
+
+.dot {
+  margin: 0 6px;
+  color: #737373;
+  font-size: 10px;
+}
+
+.time {
+  color: #737373;
+}
+
+.followBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease;
+}
+
+.followBtn {
+  color: #0095f6;
+}
+
+.followBtn:hover {
+  color: #00376b;
+}
+
+.followBtn.following {
+  color: #262626;
+}
+
+.followBtn.following:hover {
+  color: #8e8e8e;
+}
+
+.followBtn:active {
+  opacity: 0.6;
+}
+
+.followBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.imageContainer {
+  position: relative;
+  width: 100%;
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  background-color: #fafafa;
+  user-select: none;
+}
+
+.postImg {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+  max-height: 580px;
+}
+
+.interactionArea {
+  padding: 12px 4px 0 4px;
+}
+
+.actionsRow {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.actionBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease;
+}
+
+.actionBtn:active {
+  transform: scale(0.9);
+}
+
+.likedHeart {
+  fill: #ff3040;
+  stroke: #ff3040;
+}
+
+.unlikedHeart {
+  fill: none;
+  stroke: #262626;
+  stroke-width: 2;
+}
+
+.unlikedHeart:hover {
+  stroke: #8e8e8e;
+}
+
+.likesCount {
+  font-size: 14px;
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 8px;
+}
+
+.caption {
+  font-size: 14px;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.captionUsername {
+  font-weight: 600;
+  color: #262626;
+  text-decoration: none;
+}
+
+.captionText {
+  color: #262626;
+}
+
+.commentsPreview {
+  font-size: 14px;
+}
+
+.viewCommentsBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #737373;
+  cursor: pointer;
+  font-size: 14px;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.commentLine {
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.commentUser {
+  font-weight: 600;
+  color: #262626;
+}
+
+.commentText {
+  color: #262626;
+}
+
+.captionSection {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #000000;
+}
+
+.captionUsername {
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.captionText {
+  white-space: pre-line;
+  word-break: break-word;
+}
+
+.moreButton {
+  background: none;
+  border: none;
+  color: #737373;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 6px;
+  font-weight: 400;
+  display: inline-block;
+}
+
+.moreButton:hover {
+  color: #000000;
+}
+
+.heartOverlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.animatedHeart {
+  width: 110px;
+  height: 110px;
+  fill: #fff;
+  filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.3));
+  animation: heartPop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes heartPop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  15% {
+    transform: scale(1.2);
+    opacity: 0.9;
+  }
+  30% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  80% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
