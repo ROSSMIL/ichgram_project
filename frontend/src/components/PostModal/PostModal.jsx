@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
-import API from "../api/axios";
+import API from "../../api/axios";
 import EmojiPicker from "emoji-picker-react";
 import styles from "./PostModal.module.css";
 import Avatar from "../Avatar/Avatar";

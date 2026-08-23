@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import API from "../api/axios";
+import API from "../../api/axios";
 import Avatar from "../Avatar/Avatar";
 import styles from "./PostCard.module.css";
 

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import styles from "./SearchDrawer.module.css";
 import Avatar from "../Avatar/Avatar";
-import API from "../api/axios";
+import API from "../../api/axios";
 
 const getLoggedInUsername = () => {
   const token = localStorage.getItem("token");
