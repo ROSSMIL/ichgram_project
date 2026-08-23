@@ -64,12 +64,36 @@ const ProtectedRoute = ({ children }) => {
   );
 };
 
+const PublicOnlyRoute = ({ children }) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+};
+
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+        <Route
+          path="/login"
+          element={
+            <PublicOnlyRoute>
+              <LoginPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <PublicOnlyRoute>
+              <RegisterPage />
+            </PublicOnlyRoute>
+          }
+        />
 
         <Route
           path="/dashboard"
