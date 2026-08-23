@@ -171,4 +171,3 @@ function App() {
 }
 
 export default App;
-// Test comment: This is a test comment to check if the code is being processed correctly.
