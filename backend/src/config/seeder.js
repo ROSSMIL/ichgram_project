@@ -20,7 +20,8 @@ const seedDatabase = async () => {
         email: "hub@itcareer.com",
         password: hashedPassword,
         fullName: "IT Career Hub",
-        avatar: "https://api.dicebear.com/7.x/initials/svg?seed=ITCareerHub",
+        avatar:
+          "https://api.dicebear.com/7.x/initials/svg?seed=ITCareerHub&backgroundColor=0073b1",
         bio: "Your guide to the world of IT technologies and successful employment! 🚀",
         website: "itcareerhub.de",
       },
