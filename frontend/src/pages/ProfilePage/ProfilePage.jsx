@@ -70,18 +70,13 @@ const ProfilePage = () => {
 
   const handleFollowToggle = async (targetUserId) => {
     try {
-      const { data } = await API.post(`/api/users/${targetUserId}/follow`);
-
-      const currentUserInModal = modalUsersList.find(
-        (u) => u._id === targetUserId,
+      const isCurrentlyFollowing = user?.following?.some(
+        (f) => (typeof f === "string" ? f : f._id) === targetUserId,
       );
 
-      const nextState =
-        typeof data?.following !== "undefined"
-          ? Boolean(data.following)
-          : currentUserInModal
-            ? !currentUserInModal.isFollowing
-            : true;
+      const nextState = !isCurrentlyFollowing;
+
+      await API.post(`/api/users/${targetUserId}/follow`);
 
       setModalUsersList((prevList) =>
         prevList.map((u) =>
@@ -92,15 +87,10 @@ const ProfilePage = () => {
       setUser((prevUser) => {
         if (!prevUser) return prevUser;
         const currentFollowing = prevUser.following || [];
-        const exists = currentFollowing.some(
-          (id) => (typeof id === "string" ? id : id._id) === targetUserId,
-        );
 
         let updatedFollowing;
         if (nextState) {
-          updatedFollowing = exists
-            ? currentFollowing
-            : [...currentFollowing, targetUserId];
+          updatedFollowing = [...currentFollowing, targetUserId];
         } else {
           updatedFollowing = currentFollowing.filter(
             (id) => (typeof id === "string" ? id : id._id) !== targetUserId,
