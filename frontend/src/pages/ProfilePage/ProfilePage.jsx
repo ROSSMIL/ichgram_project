@@ -72,20 +72,21 @@ const ProfilePage = () => {
     try {
       const { data } = await API.post(`/api/users/${targetUserId}/follow`);
 
-      let isNowFollowing = false;
+      const currentUserInModal = modalUsersList.find(
+        (u) => u._id === targetUserId,
+      );
+
+      const nextState =
+        typeof data?.following !== "undefined"
+          ? Boolean(data.following)
+          : currentUserInModal
+            ? !currentUserInModal.isFollowing
+            : true;
 
       setModalUsersList((prevList) =>
-        prevList.map((u) => {
-          if (u._id === targetUserId) {
-            const nextState =
-              typeof data.following !== "undefined"
-                ? data.following
-                : !u.isFollowing;
-            isNowFollowing = nextState;
-            return { ...u, isFollowing: nextState };
-          }
-          return u;
-        }),
+        prevList.map((u) =>
+          u._id === targetUserId ? { ...u, isFollowing: nextState } : u,
+        ),
       );
 
       setUser((prevUser) => {
@@ -95,16 +96,24 @@ const ProfilePage = () => {
           (id) => (typeof id === "string" ? id : id._id) === targetUserId,
         );
 
-        const updatedFollowing = exists
-          ? currentFollowing.filter(
-              (id) => (typeof id === "string" ? id : id._id) !== targetUserId,
-            )
-          : [...currentFollowing, targetUserId];
+        let updatedFollowing;
+        if (nextState) {
+          updatedFollowing = exists
+            ? currentFollowing
+            : [...currentFollowing, targetUserId];
+        } else {
+          updatedFollowing = currentFollowing.filter(
+            (id) => (typeof id === "string" ? id : id._id) !== targetUserId,
+          );
+        }
 
         return { ...prevUser, following: updatedFollowing };
       });
 
-      setFollowingCount((prev) => (isNowFollowing ? prev + 1 : prev - 1));
+      setFollowingCount((prev) => {
+        const newCount = nextState ? prev + 1 : prev - 1;
+        return newCount < 0 ? 0 : newCount;
+      });
     } catch (error) {
       console.error("Error toggling follow status:", error);
     }
