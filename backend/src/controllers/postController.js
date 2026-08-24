@@ -1,3 +1,4 @@
+import { v2 as cloudinary } from "cloudinary";
 import Post from "../models/postModel.js";
 import User from "../models/userModel.js";
 
@@ -10,8 +11,19 @@ export const createPost = async (req, res) => {
       return res.status(400).json({ message: "Image is required" });
     }
 
+    const uploadResponse = await cloudinary.uploader.upload(url, {
+      folder: "instagram_posts",
+      transformation: [
+        { width: 1080, crop: "limit" },
+        { quality: "auto" },
+        { fetch_format: "auto" },
+      ],
+    });
+
+    const optimizedImageUrl = uploadResponse.secure_url;
+
     const newPost = new Post({
-      url,
+      url: optimizedImageUrl,
       caption: caption || "",
       user: userId,
     });

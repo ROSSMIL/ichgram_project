@@ -35,7 +35,11 @@ export const uploadToCloudinary = (fileBuffer, folder = "avatars") => {
       {
         folder,
         allowed_formats: ["jpg", "png", "jpeg", "webp"],
-        transformation: [{ width: 500, height: 500, crop: "limit" }],
+        transformation: [
+          { width: 300, height: 300, crop: "fill", gravity: "face" },
+          { quality: "auto" },
+          { fetch_format: "auto" },
+        ],
       },
       (error, result) => {
         if (error) return reject(error);
