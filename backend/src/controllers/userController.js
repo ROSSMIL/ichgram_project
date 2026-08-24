@@ -1,6 +1,5 @@
 import User from "../models/userModel.js";
-import fs from "fs/promises";
-import path from "path";
+import { uploadToCloudinary } from "../middlewares/uploadMiddleware.js";
 
 export const getProfile = async (req, res) => {
   try {
@@ -59,24 +58,13 @@ export const editProfile = async (req, res) => {
     if (website !== undefined) user.website = website;
     if (bio !== undefined) user.bio = bio;
 
-    const deletePhysicalFile = async (filePath) => {
-      if (filePath) {
-        const absolutePath = path.resolve(filePath);
-        try {
-          await fs.access(absolutePath);
-          await fs.unlink(absolutePath);
-        } catch (err) {
-          console.warn(`File physical deletion skipped: ${absolutePath}`);
-        }
-      }
-    };
-
+    // Обробка аватарки через Cloudinary
     if (deleteAvatar === "true") {
-      await deletePhysicalFile(user.avatar);
       user.avatar = "";
     } else if (req.file) {
-      await deletePhysicalFile(user.avatar);
-      user.avatar = req.file.path.replace(/\\/g, "/");
+      // Завантажуємо Buffer у пам'яті прямо в Cloudinary
+      const uploadResult = await uploadToCloudinary(req.file.buffer, "avatars");
+      user.avatar = uploadResult.secure_url; // Пряме HTTPS посилання
     }
 
     await user.save();

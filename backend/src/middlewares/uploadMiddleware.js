@@ -1,23 +1,14 @@
 import multer from "multer";
 import path from "path";
-import fs from "fs";
+import { v2 as cloudinary } from "cloudinary";
 
-const uploadDir = "uploads/avatars";
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const userId =
-      req.user?.userId || req.user?.id || req.user?._id || "anonymous";
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `${userId}-${Date.now()}${ext}`);
-  },
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   const allowedTypes = /jpeg|jpg|png|webp/;
@@ -37,3 +28,20 @@ export const uploadAvatar = multer({
   fileFilter,
   limits: { fileSize: 2 * 1024 * 1024 },
 });
+
+export const uploadToCloudinary = (fileBuffer, folder = "avatars") => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        allowed_formats: ["jpg", "png", "jpeg", "webp"],
+        transformation: [{ width: 500, height: 500, crop: "limit" }],
+      },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      },
+    );
+    stream.end(fileBuffer);
+  });
+};
