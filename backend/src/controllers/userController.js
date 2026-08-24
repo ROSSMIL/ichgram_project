@@ -58,13 +58,11 @@ export const editProfile = async (req, res) => {
     if (website !== undefined) user.website = website;
     if (bio !== undefined) user.bio = bio;
 
-    // Обробка аватарки через Cloudinary
     if (deleteAvatar === "true") {
       user.avatar = "";
     } else if (req.file) {
-      // Завантажуємо Buffer у пам'яті прямо в Cloudinary
       const uploadResult = await uploadToCloudinary(req.file.buffer, "avatars");
-      user.avatar = uploadResult.secure_url; // Пряме HTTPS посилання
+      user.avatar = uploadResult.secure_url;
     }
 
     await user.save();
