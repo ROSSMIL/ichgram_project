@@ -84,8 +84,10 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
         </div>
 
         <nav className={styles.navMenu}>
+          {/* Home */}
           <NavLink
             to="/dashboard"
+            data-nav="home"
             onClick={handleHomeClick}
             className={({ isActive }) =>
               isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
@@ -125,7 +127,9 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
             )}
           </NavLink>
 
+          {/* Search */}
           <div
+            data-nav="search"
             onClick={onSearchToggle}
             className={
               isSearchOpen
@@ -168,8 +172,10 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
             <span className={styles.text}>Search</span>
           </div>
 
+          {/* Explore */}
           <NavLink
             to="/explore"
+            data-nav="explore"
             onClick={handleExploreClick}
             className={({ isActive }) =>
               isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
@@ -212,8 +218,10 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
             )}
           </NavLink>
 
+          {/* Messages */}
           <NavLink
             to="/messages"
+            data-nav="messages"
             className={({ isActive }) =>
               isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
             }
@@ -245,6 +253,7 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
                       points="22 2 1.93 9.312 8.781 12.656 12.125 19.507 22 2"
                       stroke="currentColor"
                       strokeLinejoin="round"
+                      strokeLinejoin="round"
                       strokeWidth="2"
                     />
                   </svg>
@@ -254,8 +263,10 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
             )}
           </NavLink>
 
+          {/* Notifications */}
           <NavLink
             to="/notifications"
+            data-nav="notifications"
             className={({ isActive }) =>
               isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
             }
@@ -286,8 +297,9 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
             )}
           </NavLink>
 
-          {/* ВИПРАВЛЕНО: викликаємо setIsCreateModalOpen(true) замість пропа openCreateModal */}
+          {/* Create */}
           <div
+            data-nav="create"
             onClick={() => setIsCreateModalOpen(true)}
             className={styles.navItem}
             style={{ cursor: "pointer" }}
@@ -337,8 +349,10 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
             <span className={styles.text}>Create</span>
           </div>
 
+          {/* Profile */}
           <NavLink
             to="/profile"
+            data-nav="profile"
             className={({ isActive }) =>
               isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
             }

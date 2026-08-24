@@ -146,7 +146,7 @@
     border-top: 1px solid #dbdbdb;
     flex-direction: row;
     align-items: center;
-    padding: 0 16px;
+    padding: 0 12px;
   }
 
   .navMenu {
@@ -160,5 +160,35 @@
   .navItem {
     width: auto;
     padding: 8px;
+  }
+
+  /* ----------------------------------------------------
+     ПОРЯДОК ІКОНОК НА МОБІЛЬНИХ ПРИСТРОЯХ (Instagram style)
+     ---------------------------------------------------- */
+  .navItem[data-nav="home"] {
+    order: 1;
+  }
+
+  .navItem[data-nav="explore"] {
+    order: 2;
+  }
+
+  .navItem[data-nav="create"] {
+    order: 3;
+  }
+
+  .navItem[data-nav="messages"] {
+    order: 4;
+  }
+
+  .navItem[data-nav="profile"],
+  #profile {
+    order: 5;
+    margin-top: 0;
+  }
+
+  .navItem[data-nav="search"],
+  .navItem[data-nav="notifications"] {
+    display: none;
   }
 }
