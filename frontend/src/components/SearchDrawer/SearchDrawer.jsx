@@ -203,15 +203,11 @@ const SearchDrawer = ({ isOpen, onClose }) => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          {searchQuery ? (
+          {searchQuery && (
             <button
               className={styles.clearButton}
               onClick={() => setSearchQuery("")}
             >
-              ✕
-            </button>
-          ) : (
-            <button className={styles.clearButton} onClick={onClose}>
               ✕
             </button>
           )}
