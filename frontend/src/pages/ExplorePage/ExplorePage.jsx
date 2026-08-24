@@ -185,7 +185,18 @@ const ExplorePage = () => {
   };
 
   if (loading) {
-    return <div className={styles.centered}>Exploring new ideas...</div>;
+    return (
+      <div className={styles.exploreContainer}>
+        <div className={styles.postsGrid}>
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+            <div
+              key={n}
+              className={`${styles.skeletonGridItem} ${styles.skeletonPulse}`}
+            />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (

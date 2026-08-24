@@ -189,7 +189,32 @@ const DashboardPage = () => {
   };
 
   if (loading) {
-    return <div className={styles.centered}>Loading feed...</div>;
+    return (
+      <div className={styles.container}>
+        <div className={styles.feedList}>
+          {[1, 2, 3, 4].map((n) => (
+            <div
+              key={n}
+              className={`${styles.skeletonCard} ${styles.skeletonPulse}`}
+            >
+              <div className={styles.skeletonHeader}>
+                <div className={styles.skeletonAvatar} />
+                <div className={styles.skeletonUsername} />
+              </div>
+              <div className={styles.skeletonImage} />
+              <div className={styles.skeletonFooter}>
+                <div
+                  className={`${styles.skeletonLine} ${styles.skeletonLineShort}`}
+                />
+                <div
+                  className={`${styles.skeletonLine} ${styles.skeletonLineMedium}`}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -139,3 +139,26 @@
     height: 16px;
   }
 }
+
+.skeletonGridItem {
+  position: relative;
+  width: 100%;
+  padding-top: 100%;
+  background-color: #efefef;
+}
+
+.skeletonPulse {
+  animation: explorePulse 1.2s infinite ease-in-out;
+}
+
+@keyframes explorePulse {
+  0% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.5;
+  }
+}

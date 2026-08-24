@@ -3,13 +3,17 @@
   top: 0;
   left: 245px;
   width: calc(100vw - 245px);
-  height: calc(100vh - var(--footer-height, 115px));
+  height: 100vh;
   background-color: rgba(0, 0, 0, 0.4);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: flex-start;
   z-index: 200;
   animation: fadeInBackground 0.25s ease-out forwards;
+}
+
+.overlayLeaving {
+  animation: fadeOutBackground 0.25s ease-in forwards;
 }
 
 .drawerBox {
@@ -32,6 +36,16 @@
 
 .drawerLeaving {
   animation: popOutDrawer 0.25s ease-in forwards;
+}
+
+.drawerIndicator {
+  display: none;
+  width: 40px;
+  height: 4px;
+  background-color: #dbdbdb;
+  border-radius: 2px;
+  margin: 12px auto 0 auto;
+  flex-shrink: 0;
 }
 
 @keyframes fadeInBackground {
@@ -200,4 +214,98 @@
 .clearRecentButton:hover {
   opacity: 0.8;
   color: #00376b;
+}
+
+@media (max-width: 1024px) {
+  .overlay {
+    left: 72px;
+    width: calc(100vw - 72px);
+  }
+}
+
+@media (max-width: 768px) {
+  .overlay {
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 999;
+  }
+
+  .drawerBox {
+    max-width: 100%;
+    height: 75vh;
+    border-radius: 16px 16px 0 0;
+    transform-origin: bottom center;
+    animation: slideUpMobile 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .drawerLeaving {
+    animation: slideDownMobile 0.25s ease-in forwards;
+  }
+
+  .drawerIndicator {
+    display: block;
+  }
+
+  .title {
+    padding: 16px 24px 12px 24px;
+  }
+}
+
+@keyframes slideUpMobile {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDownMobile {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+.skeletonUserItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.skeletonAvatarCircle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: #efefef;
+  flex-shrink: 0;
+}
+
+.skeletonUsernameLine {
+  width: 120px;
+  height: 14px;
+  border-radius: 4px;
+  background-color: #efefef;
+}
+
+.skeletonPulse {
+  animation: searchPulse 1.2s infinite ease-in-out;
+}
+
+@keyframes searchPulse {
+  0% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.5;
+  }
 }

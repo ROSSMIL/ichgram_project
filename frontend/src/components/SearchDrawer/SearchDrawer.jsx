@@ -167,6 +167,21 @@ const SearchDrawer = ({ isOpen, onClose }) => {
 
   if (!shouldRender) return null;
 
+  const renderSkeletons = () => (
+    <>
+      {[1, 2, 3, 4].map((n) => (
+        <div key={n} className={styles.skeletonUserItem}>
+          <div
+            className={`${styles.skeletonAvatarCircle} ${styles.skeletonPulse}`}
+          />
+          <div
+            className={`${styles.skeletonUsernameLine} ${styles.skeletonPulse}`}
+          />
+        </div>
+      ))}
+    </>
+  );
+
   return (
     <div
       className={`${styles.overlay} ${isClosing ? styles.overlayLeaving : ""}`}
@@ -176,6 +191,8 @@ const SearchDrawer = ({ isOpen, onClose }) => {
         className={`${styles.drawerBox} ${isClosing ? styles.drawerLeaving : ""}`}
         onClick={(e) => e.stopPropagation()}
       >
+        <div className={styles.drawerIndicator} onClick={onClose} />
+
         <h2 className={styles.title}>Search</h2>
 
         <div className={styles.searchBarWrapper}>
@@ -236,9 +253,8 @@ const SearchDrawer = ({ isOpen, onClose }) => {
               <>
                 <span className={styles.sectionTitle}>Suggestions</span>
                 <div className={styles.usersList}>
-                  {loading && (
-                    <p className={styles.statusMessage}>Loading users...</p>
-                  )}
+                  {loading && renderSkeletons()}
+
                   {error && (
                     <p
                       className={styles.statusMessage}
@@ -271,9 +287,8 @@ const SearchDrawer = ({ isOpen, onClose }) => {
             <>
               <span className={styles.sectionTitle}>Search Results</span>
               <div className={styles.usersList}>
-                {loading && (
-                  <p className={styles.statusMessage}>Loading users...</p>
-                )}
+                {loading && renderSkeletons()}
+
                 {error && (
                   <p
                     className={styles.statusMessage}
