@@ -6,7 +6,7 @@ import logoImg from "../../assets/logo.png";
 import Avatar from "../Avatar/Avatar";
 import CreatePostModal from "../CreatePostModal/CreatePostModal";
 
-const Sidebar = ({ onSearchToggle, isSearchOpen, openCreateModal }) => {
+const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
@@ -286,8 +286,9 @@ const Sidebar = ({ onSearchToggle, isSearchOpen, openCreateModal }) => {
             )}
           </NavLink>
 
+          {/* ВИПРАВЛЕНО: викликаємо setIsCreateModalOpen(true) замість пропа openCreateModal */}
           <div
-            onClick={openCreateModal}
+            onClick={() => setIsCreateModalOpen(true)}
             className={styles.navItem}
             style={{ cursor: "pointer" }}
           >
