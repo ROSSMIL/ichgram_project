@@ -1,6 +1,6 @@
 .sidebar {
   width: 245px;
-  height: calc(100vh - 95px);
+  height: 100vh;
   position: fixed;
   top: 0;
   left: 0;
@@ -11,6 +11,7 @@
   background-color: #fff;
   box-sizing: border-box;
   z-index: 250;
+  transition: all 0.3s ease;
 }
 
 .logoContainer {
@@ -45,11 +46,12 @@
   background: none;
   border: none;
   cursor: pointer;
-  width: 90%;
+  width: 100%;
   text-align: left;
   transition:
     background 0.2s ease,
     opacity 0.2s ease;
+  box-sizing: border-box;
 }
 
 .navItem:hover {
@@ -67,6 +69,7 @@
 
 .text {
   font-weight: 400;
+  white-space: nowrap;
 }
 
 .navItem.active .text {
@@ -105,4 +108,57 @@
 
 #profile {
   margin-top: 1.5rem;
+}
+
+/* ==========================================
+   АДАПТИВНІСТЬ (RESPONSIVE STYLES)
+   ========================================== */
+
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 72px;
+    padding: 12px 8px;
+  }
+
+  .text,
+  .logoContainer {
+    display: none;
+  }
+
+  .navItem {
+    justify-content: center;
+    padding: 12px;
+  }
+
+  #profile {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    height: 60px;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    border-right: none;
+    border-top: 1px solid #dbdbdb;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 16px;
+  }
+
+  .navMenu {
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    width: 100%;
+    gap: 0;
+  }
+
+  .navItem {
+    width: auto;
+    padding: 8px;
+  }
 }
