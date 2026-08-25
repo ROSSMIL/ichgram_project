@@ -7,10 +7,11 @@ const Footer = ({ onSearchToggle, isSearchOpen, openCreateModal }) => {
 
   useEffect(() => {
     const updateFooterHeight = () => {
+      const isMobile = window.innerWidth <= 768;
       const isAnyModalOpen = !!document.querySelector("[class*='modal']");
 
       if (footerRef.current) {
-        if (isAnyModalOpen) {
+        if (isAnyModalOpen || isMobile) {
           document.documentElement.style.setProperty("--footer-height", "0px");
         } else {
           const height = footerRef.current.offsetHeight;
