@@ -36,9 +36,11 @@ const SearchDrawer = ({ isOpen, onClose }) => {
   const location = useLocation();
 
   const [recentlyViewed, setRecentlyViewed] = useState([]);
-
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isClosing, setIsClosing] = useState(false);
+
+  const [isExpanded, setIsExpanded] = useState(false);
+  const touchStartY = useRef(0);
 
   const prevIsOpenRef = useRef(isOpen);
 
@@ -49,6 +51,7 @@ const SearchDrawer = ({ isOpen, onClose }) => {
     if (isOpen && !prevIsOpen) {
       setShouldRender(true);
       setIsClosing(false);
+      setIsExpanded(false);
       setRecentlyViewed(getSavedRecentlyViewed());
     } else if (!isOpen && prevIsOpen) {
       setIsClosing(true);
@@ -62,6 +65,7 @@ const SearchDrawer = ({ isOpen, onClose }) => {
     const timer = setTimeout(() => {
       setShouldRender(false);
       setIsClosing(false);
+      setIsExpanded(false);
     }, 250);
 
     return () => clearTimeout(timer);
@@ -158,6 +162,25 @@ const SearchDrawer = ({ isOpen, onClose }) => {
     return `/user/${targetUsername}`;
   };
 
+  const handleTouchStart = (e) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e) => {
+    const touchEndY = e.changedTouches[0].clientY;
+    const diff = touchStartY.current - touchEndY;
+
+    if (diff > 50) {
+      setIsExpanded(true);
+    } else if (diff < -50) {
+      if (isExpanded) {
+        setIsExpanded(false);
+      } else {
+        onClose();
+      }
+    }
+  };
+
   const filteredUsers =
     searchQuery.trim() === ""
       ? users
@@ -188,10 +211,17 @@ const SearchDrawer = ({ isOpen, onClose }) => {
       onClick={onClose}
     >
       <div
-        className={`${styles.drawerBox} ${isClosing ? styles.drawerLeaving : ""}`}
+        className={`${styles.drawerBox} ${
+          isClosing ? styles.drawerLeaving : ""
+        } ${isExpanded ? styles.drawerExpanded : ""}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={styles.drawerIndicator} onClick={onClose} />
+        <div
+          className={styles.drawerIndicator}
+          onClick={() => setIsExpanded((prev) => !prev)}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        />
 
         <h2 className={styles.title}>Search</h2>
 
