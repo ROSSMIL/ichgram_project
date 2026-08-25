@@ -1,4 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useLayoutEffect,
+} from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import API from "../../api/axios";
@@ -114,14 +120,17 @@ const PostModal = ({
   const commentInputRef = useRef(null);
   const commentsAreaRef = useRef(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (autoFocusComment && commentInputRef.current) {
-      const timer = setTimeout(() => {
+      const focusInput = () => {
         if (commentInputRef.current) {
           commentInputRef.current.focus();
         }
-      }, 150);
-      return () => clearTimeout(timer);
+      };
+
+      focusInput();
+
+      requestAnimationFrame(focusInput);
     }
   }, [autoFocusComment, post?._id]);
 
@@ -651,6 +660,7 @@ const PostModal = ({
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               disabled={isSubmitting}
+              autoFocus={autoFocusComment}
             />
             <button
               type="submit"
