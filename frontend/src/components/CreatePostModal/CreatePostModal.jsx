@@ -205,6 +205,18 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
                   <path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25" />
                 </svg>
 
+                <p className={styles.dropText}>Drag photos here</p>
+                <button
+                  type="button"
+                  className={styles.selectFileBtn}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerFileInput();
+                  }}
+                >
+                  Select from computer
+                </button>
+
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -234,7 +246,7 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
           <div className={styles.rightColumn}>
             <div className={styles.userInfo} onClick={handleProfileClick}>
               <div className={styles.avatarWrapper}>
-                <Avatar user={currentUser} size={32} />
+                <Avatar user={currentUser} size={28} />
               </div>
               <span className={styles.username}>
                 {currentUser?.username || "username"}
@@ -281,17 +293,17 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
                         skinTonesDisabled={true}
                         previewConfig={{ showPreview: false }}
                         height={280}
-                        width={390}
+                        width={300}
                       />
                     </div>
                   )}
                 </div>
 
-                <span className={styles.charCount}>{caption.length}/2,200</span>
+                <span className={styles.charCount}>
+                  {caption.length.toLocaleString()}/2,200
+                </span>
               </div>
             </div>
-
-            <div className={styles.extraSection}></div>
           </div>
         </div>
       </div>
