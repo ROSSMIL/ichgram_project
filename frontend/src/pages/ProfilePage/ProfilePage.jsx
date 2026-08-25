@@ -223,25 +223,25 @@ const ProfilePage = () => {
             <div className={styles.statsRow}>
               <div
                 className={`${styles.skeletonTextLine} ${styles.skeletonPulse}`}
-                style={{ width: "80px" }}
+                style={{ width: "70px" }}
               />
               <div
                 className={`${styles.skeletonTextLine} ${styles.skeletonPulse}`}
-                style={{ width: "80px" }}
+                style={{ width: "70px" }}
               />
               <div
                 className={`${styles.skeletonTextLine} ${styles.skeletonPulse}`}
-                style={{ width: "80px" }}
+                style={{ width: "70px" }}
               />
             </div>
             <div className={styles.bioSection}>
               <div
                 className={`${styles.skeletonTextLine} ${styles.skeletonPulse}`}
-                style={{ width: "160px", marginBottom: "8px" }}
+                style={{ width: "140px", marginBottom: "8px" }}
               />
               <div
                 className={`${styles.skeletonTextLine} ${styles.skeletonPulse}`}
-                style={{ width: "240px" }}
+                style={{ width: "200px" }}
               />
             </div>
           </section>
@@ -269,10 +269,64 @@ const ProfilePage = () => {
   return (
     <div className={styles.profileContainer}>
       <header className={styles.header}>
-        <div className={styles.avatarContainer}>
-          <div className={styles.avatarGradient}>
-            <div className={styles.whiteBorderWrapper}>
-              <Avatar user={user} size={143} />
+        <div className={styles.headerTopMobile}>
+          <div className={styles.avatarContainer}>
+            <div className={styles.avatarGradient}>
+              <div className={styles.whiteBorderWrapper}>
+                <Avatar user={user} size={150} />
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.mobileRightBlock}>
+            <div className={styles.mobileUsernameRow}>
+              <h2>{user.username}</h2>
+              <button
+                onClick={() => setIsSettingsOpen(true)}
+                className={styles.settingsButton}
+              >
+                <svg
+                  aria-label="Options"
+                  color="rgb(0, 0, 0)"
+                  fill="rgb(0, 0, 0)"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  width="24"
+                >
+                  <circle
+                    cx="12.001"
+                    cy="12.001"
+                    fill="none"
+                    r="10.5"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  ></circle>
+                  <circle cx="7.001" cy="12.001" r="1.5"></circle>
+                  <circle cx="12.001" cy="12.001" r="1.5"></circle>
+                  <circle cx="17.001" cy="12.001" r="1.5"></circle>
+                </svg>
+              </button>
+            </div>
+
+            <div className={`${styles.statsRow} ${styles.mobileStats}`}>
+              <div className={styles.statItem}>
+                <strong>{posts.length}</strong>
+                <span>posts</span>
+              </div>
+              <div
+                onClick={() => openUsersModal("followers")}
+                className={`${styles.statItem} ${styles.clickableStat}`}
+              >
+                <strong>{followersCount}</strong>
+                <span>followers</span>
+              </div>
+              <div
+                onClick={() => openUsersModal("following")}
+                className={`${styles.statItem} ${styles.clickableStat}`}
+              >
+                <strong>{followingCount}</strong>
+                <span>following</span>
+              </div>
             </div>
           </div>
         </div>
@@ -313,21 +367,19 @@ const ProfilePage = () => {
             </button>
           </div>
 
-          <div className={styles.statsRow}>
+          <div className={`${styles.statsRow} ${styles.desktopStats}`}>
             <span>
               <strong>{posts.length}</strong> posts
             </span>
             <span
               onClick={() => openUsersModal("followers")}
               className={styles.clickableStat}
-              style={{ cursor: "pointer" }}
             >
               <strong>{followersCount}</strong> followers
             </span>
             <span
               onClick={() => openUsersModal("following")}
               className={styles.clickableStat}
-              style={{ cursor: "pointer" }}
             >
               <strong>{followingCount}</strong> following
             </span>
@@ -375,6 +427,15 @@ const ProfilePage = () => {
               </a>
             )}
           </div>
+
+          <div className={styles.mobileActionsRow}>
+            <button
+              className={styles.mobileEditButton}
+              onClick={() => navigate("/edit-profile")}
+            >
+              Edit profile
+            </button>
+          </div>
         </section>
       </header>
 
@@ -391,8 +452,6 @@ const ProfilePage = () => {
               onClick={() => setSelectedPost(post)}
             >
               <img src={post.url} alt="Post" className={styles.postImage} />
-
-              {/* INSTAGRAM HOVER OVERLAY */}
               <div className={styles.gridItemOverlay}>
                 <div className={styles.overlayStat}>
                   <svg
