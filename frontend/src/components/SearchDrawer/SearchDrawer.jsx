@@ -132,6 +132,19 @@ const SearchDrawer = ({ isOpen, onClose }) => {
     fetchUsers();
   }, [isOpen, users.length]);
 
+  useEffect(() => {
+    const preventGesture = (e) => {
+      e.preventDefault();
+    };
+
+    document.addEventListener("gesturestart", preventGesture);
+    document.addEventListener("gesturechange", preventGesture);
+
+    return () => {
+      document.removeEventListener("gesturestart", preventGesture);
+      document.removeEventListener("gesturechange", preventGesture);
+    };
+  }, []);
   const addToRecentlyViewed = (user) => {
     setRecentlyViewed((prevList) => {
       const filtered = prevList.filter((item) => item._id !== user._id);
