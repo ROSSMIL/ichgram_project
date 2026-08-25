@@ -232,7 +232,7 @@
   .overlay {
     left: 0 !important;
     width: 100vw !important;
-    height: 100vh !important;
+    height: 100dvh !important;
     align-items: flex-end !important;
     justify-content: center !important;
     z-index: 9999 !important;
@@ -241,8 +241,7 @@
   .drawerBox {
     width: 94vw !important;
     max-width: 480px !important;
-    height: 72vh !important;
-    height: 72dvh !important;
+    height: 85dvh !important;
     border-radius: 20px 20px 0 0 !important;
     border-bottom-right-radius: 0 !important;
     border-bottom-left-radius: 0 !important;
@@ -254,8 +253,9 @@
   .drawerBox.drawerExpanded {
     width: 100vw !important;
     max-width: 100vw !important;
-    height: calc(100dvh - 50px) !important;
+    height: calc(100dvh - 30px) !important;
     border-radius: 20px 20px 0 0 !important;
+    padding-top: env(safe-area-inset-top, 10px);
   }
 
   .drawerLeaving {
@@ -264,14 +264,18 @@
 
   .drawerIndicator {
     display: block !important;
-    margin: 10px auto 6px auto !important;
-    padding: 0.5px 0;
-    border-radius: 2px;
+    width: 40px !important;
+    height: 5px !important;
+    background-color: #c7c7c7 !important;
+    border-radius: 3px !important;
+    margin: 10px auto 8px auto !important;
+    cursor: pointer;
+    flex-shrink: 0;
   }
 
   .title {
     font-size: 20px !important;
-    padding: 12px 20px 8px 20px !important;
+    padding: 8px 20px 8px 20px !important;
   }
 
   .searchBarWrapper {
@@ -280,7 +284,7 @@
   }
 
   .resultsContainer {
-    padding: 16px 20px calc(env(safe-area-inset-bottom, 20px) + 100px) 20px !important;
+    padding: 16px 20px calc(env(safe-area-inset-bottom, 20px) + 90px) 20px !important;
   }
 }
 
