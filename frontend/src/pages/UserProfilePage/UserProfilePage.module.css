@@ -1,33 +1,47 @@
 .profileContainer {
   max-width: 935px;
-  margin: 0 auto;
-  padding: 0px 20px 140px 20px;
+  margin-left: 245px;
+  margin-right: auto;
+  padding: 30px 20px 80px 20px;
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
+  box-sizing: border-box;
+  transition: margin-left 0.3s ease;
 }
 
 .header {
   display: flex;
-  margin-bottom: 60px;
+  margin-bottom: 44px;
+}
+
+.headerTopMobile {
+  display: contents;
+}
+
+.mobileRightBlock {
+  display: none;
+}
+
+.mobileActionsRow {
+  display: none;
 }
 
 .avatarContainer {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 10px;
-  margin-left: 40px;
-  margin-right: 80px;
+  margin-left: 35px;
+  margin-right: 75px;
   flex-shrink: 0;
-  width: 160px;
-  height: 160px;
+  width: 150px;
+  height: 150px;
   transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   cursor: pointer;
 }
 
 .avatarContainer:hover {
-  transform: scale(1.04);
+  transform: scale(1.03);
 }
 
 .avatarGradient {
@@ -55,7 +69,7 @@
   height: 100%;
   border-radius: 50%;
   background-color: #fff;
-  border: 4.5px solid #fff;
+  border: 4px solid #fff;
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -81,6 +95,7 @@
   font-size: 20px;
   font-weight: 300;
   margin: 0;
+  color: #262626;
 }
 
 .followButton {
@@ -116,6 +131,15 @@
   gap: 40px;
   margin-bottom: 20px;
   font-size: 16px;
+  color: #262626;
+}
+
+.desktopStats {
+  display: flex;
+}
+
+.mobileStats {
+  display: none;
 }
 
 .clickableStat {
@@ -131,6 +155,7 @@
   font-size: 14px;
   font-weight: 600;
   margin: 0 0 4px 0;
+  color: #262626;
 }
 
 .bioText {
@@ -147,7 +172,7 @@
   font-size: 14px;
   font-weight: 600;
   display: inline-block;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .postsGrid {
@@ -172,14 +197,45 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition:
-    transform 0.3s ease,
-    filter 0.3s ease;
+  transition: transform 0.3s ease;
+}
+
+.gridItemOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.35);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 30px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 2;
+}
+
+.gridItem:hover .gridItemOverlay {
+  opacity: 1;
 }
 
 .gridItem:hover .postImage {
-  transform: scale(1.05);
-  filter: brightness(0.85);
+  transform: scale(1.03);
+}
+
+.overlayStat {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.overlayIcon {
+  width: 20px;
+  height: 20px;
 }
 
 .moreButton {
@@ -231,9 +287,6 @@
   line-height: 36px;
   margin: 0 0 12px 0;
   color: #000000;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-    sans-serif;
 }
 
 .noPostsSubtitle {
@@ -248,13 +301,13 @@
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 100;
+  z-index: 9999;
   animation: fadeIn 0.15s ease-out;
 }
 
@@ -314,7 +367,7 @@
 .modalBody {
   flex-grow: 1;
   overflow-y: auto;
-  padding: 8px;
+  padding: 12px 8px;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -322,17 +375,9 @@
   width: 6px;
 }
 
-.modalBody::-webkit-scrollbar-track {
-  background: transparent;
-}
-
 .modalBody::-webkit-scrollbar-thumb {
   background: #dbdbdb;
   border-radius: 10px;
-}
-
-.modalBody::-webkit-scrollbar-thumb:hover {
-  background: #c7c7c7;
 }
 
 .modalLoading,
@@ -356,11 +401,13 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #fafafa;
+  border-radius: 8px;
+  padding: 4px 8px;
+  transition: background-color 0.2s ease;
 }
 
-.userItem:last-child {
-  border-bottom: none;
+.userItem:hover {
+  background-color: #f5f5f5;
 }
 
 .userItemLeftLink {
@@ -368,27 +415,16 @@
   align-items: center;
   gap: 12px;
   text-decoration: none;
-  padding: 8px 12px;
-  border-radius: 8px;
+  padding: 6px 4px;
+  border-radius: 6px;
   flex-grow: 1;
-  transition:
-    background-color 0.2s ease,
-    transform 0.1s ease;
-}
-
-.userItemLeftLink:hover {
-  background-color: #f5f5f5;
-}
-
-.userItemLeftLink:active {
-  transform: scale(0.99);
 }
 
 .avatarWrapper {
   transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.userItemLeftLink:hover .avatarWrapper {
+.userItem:hover .avatarWrapper {
   transform: scale(1.05);
 }
 
@@ -401,10 +437,9 @@
   color: #262626;
   font-weight: 600;
   font-size: 14px;
-  transition: color 0.15s ease;
 }
 
-.userItemLeftLink:hover .userUsername {
+.userItem:hover .userUsername {
   color: #0095f6;
 }
 
@@ -430,5 +465,176 @@
   to {
     transform: scale(1);
     opacity: 1;
+  }
+}
+
+.skeletonAvatarCircle {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background-color: #efefef;
+}
+
+.skeletonTextLine {
+  height: 14px;
+  border-radius: 4px;
+  background-color: #efefef;
+}
+
+.skeletonTitleLine {
+  width: 140px;
+  height: 20px;
+  border-radius: 4px;
+  background-color: #efefef;
+}
+
+.skeletonGridItem {
+  position: relative;
+  width: 100%;
+  padding-top: 100%;
+  background-color: #efefef;
+}
+
+.skeletonPulse {
+  animation: profilePulse 1.2s infinite ease-in-out;
+}
+
+@keyframes profilePulse {
+  0% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.5;
+  }
+}
+
+@media (max-width: 1024px) {
+  .profileContainer {
+    margin-left: 72px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .avatarContainer {
+    margin-left: 10px;
+    margin-right: 40px;
+    width: 120px;
+    height: 120px;
+  }
+}
+
+@media (max-width: 768px) {
+  .profileContainer {
+    margin-left: 0;
+    padding: 16px 12px 80px 12px;
+  }
+
+  .header {
+    flex-direction: column;
+    margin-bottom: 24px;
+  }
+
+  .headerTopMobile {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 16px;
+  }
+
+  .avatarContainer {
+    margin: 0;
+    width: 86px;
+    height: 86px;
+  }
+
+  .mobileRightBlock {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    gap: 12px;
+  }
+
+  .mobileUsernameRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .mobileUsernameRow h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .userInfo .usernameRow {
+    display: none;
+  }
+
+  .desktopStats {
+    display: none;
+  }
+
+  .mobileStats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0;
+  }
+
+  .statItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 13px;
+    color: #737373;
+  }
+
+  .statItem strong {
+    font-size: 15px;
+    color: #000;
+    font-weight: 600;
+  }
+
+  .bioSection {
+    margin-bottom: 16px;
+  }
+
+  .mobileActionsRow {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .mobileFollowButton {
+    width: 100%;
+    background-color: #0095f6;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 0;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .mobileFollowButton.followingActive {
+    background-color: #efefef;
+    color: #000000;
+    border: 1px solid #dbdbdb;
+  }
+
+  .mobileFollowButton:active {
+    opacity: 0.7;
+  }
+
+  .postsGrid {
+    gap: 2px;
+  }
+
+  .gridItemOverlay {
+    display: none;
   }
 }
