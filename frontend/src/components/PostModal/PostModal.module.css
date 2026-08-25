@@ -13,6 +13,9 @@
   padding-left: 245px;
   box-sizing: border-box;
   animation: fadeInBackground 0.25s ease-out forwards;
+
+  overscroll-behavior: none;
+  touch-action: none;
 }
 
 .overlayLeaving {
@@ -53,6 +56,7 @@
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  touch-action: auto;
 }
 
 .modalBoxLeaving {
@@ -169,6 +173,10 @@
   flex-direction: column;
   justify-content: flex-start;
   gap: 16px;
+
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 .commentItemContainer {
@@ -651,8 +659,8 @@
   .imageSection {
     flex: none !important;
     width: 100% !important;
-    height: 42vh !important;
-    max-height: 42vh !important;
+    height: 40vh !important;
+    max-height: 40vh !important;
     background-color: #000;
   }
 

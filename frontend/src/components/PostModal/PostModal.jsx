@@ -112,6 +112,7 @@ const PostModal = ({
 
   const emojiPickerRef = useRef(null);
   const commentInputRef = useRef(null);
+  const commentsAreaRef = useRef(null);
 
   useEffect(() => {
     if (autoFocusComment && commentInputRef.current) {
@@ -146,8 +147,28 @@ const PostModal = ({
 
   useEffect(() => {
     if (!post) return;
-    const prevOverflow = document.body.style.overflow;
+
+    const scrollY = window.scrollY;
+
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
     document.body.style.overflow = "hidden";
+
+    const preventTouchMove = (e) => {
+      if (
+        commentsAreaRef.current &&
+        commentsAreaRef.current.contains(e.target)
+      ) {
+        return;
+      }
+      e.preventDefault();
+    };
+
+    document.addEventListener("touchmove", preventTouchMove, {
+      passive: false,
+    });
 
     const handleKeyDown = (event) => {
       if (event.key === "Escape") handleClose();
@@ -155,7 +176,14 @@ const PostModal = ({
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.body.style.overflow = prevOverflow;
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.overflow = "";
+      window.scrollTo(0, scrollY);
+
+      document.removeEventListener("touchmove", preventTouchMove);
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [post, handleClose]);
@@ -431,7 +459,7 @@ const PostModal = ({
             )}
           </header>
 
-          <div className={styles.commentsArea}>
+          <div className={styles.commentsArea} ref={commentsAreaRef}>
             {post.caption && (
               <div className={styles.commentItemContainer}>
                 <div className={styles.commentItem}>
