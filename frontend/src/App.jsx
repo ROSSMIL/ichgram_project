@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -73,6 +73,24 @@ const PublicOnlyRoute = ({ children }) => {
 };
 
 function App() {
+  useEffect(() => {
+    const preventZoom = (e) => {
+      if (e.scale !== 1) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener("gesturestart", preventZoom, { passive: false });
+    document.addEventListener("gesturechange", preventZoom, { passive: false });
+    document.addEventListener("gestureend", preventZoom, { passive: false });
+
+    return () => {
+      document.removeEventListener("gesturestart", preventZoom);
+      document.removeEventListener("gesturechange", preventZoom);
+      document.removeEventListener("gestureend", preventZoom);
+    };
+  }, []);
+
   return (
     <Router>
       <Routes>
