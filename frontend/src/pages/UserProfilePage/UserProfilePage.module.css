@@ -1,13 +1,12 @@
 .profileContainer {
   max-width: 935px;
-  margin-left: 245px;
-  margin-right: auto;
-  padding: 30px 20px 80px 20px;
+  margin: 0 auto;
+  padding: 30px 20px 80px 265px;
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
   box-sizing: border-box;
-  transition: margin-left 0.3s ease;
+  transition: padding-left 0.3s ease;
 }
 
 .header {
@@ -513,8 +512,7 @@
 
 @media (max-width: 1024px) {
   .profileContainer {
-    margin-left: 72px;
-    padding-left: 16px;
+    padding-left: 88px;
     padding-right: 16px;
   }
 
@@ -528,7 +526,6 @@
 
 @media (max-width: 768px) {
   .profileContainer {
-    margin-left: 0;
     padding: 16px 12px 80px 12px;
   }
 
