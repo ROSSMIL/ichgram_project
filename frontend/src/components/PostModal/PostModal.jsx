@@ -117,8 +117,10 @@ const PostModal = ({
   useEffect(() => {
     if (autoFocusComment && commentInputRef.current) {
       const timer = setTimeout(() => {
-        commentInputRef.current.focus();
-      }, 50);
+        if (commentInputRef.current) {
+          commentInputRef.current.focus();
+        }
+      }, 150);
       return () => clearTimeout(timer);
     }
   }, [autoFocusComment, post?._id]);
@@ -148,19 +150,27 @@ const PostModal = ({
   useEffect(() => {
     if (!post) return;
 
+    const isMobile = window.innerWidth <= 768;
     const scrollY = window.scrollY;
 
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.left = "0";
-    document.body.style.right = "0";
-    document.body.style.overflow = "hidden";
+    if (!isMobile) {
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.left = "0";
+      document.body.style.right = "0";
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "hidden";
+    }
 
     const preventTouchMove = (e) => {
       if (
         commentsAreaRef.current &&
         commentsAreaRef.current.contains(e.target)
       ) {
+        return;
+      }
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") {
         return;
       }
       e.preventDefault();
@@ -176,12 +186,14 @@ const PostModal = ({
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.body.style.position = "";
-      document.body.style.top = "";
-      document.body.style.left = "";
-      document.body.style.right = "";
+      if (!isMobile) {
+        document.body.style.position = "";
+        document.body.style.top = "";
+        document.body.style.left = "";
+        document.body.style.right = "";
+        window.scrollTo(0, scrollY);
+      }
       document.body.style.overflow = "";
-      window.scrollTo(0, scrollY);
 
       document.removeEventListener("touchmove", preventTouchMove);
       window.removeEventListener("keydown", handleKeyDown);
@@ -581,7 +593,7 @@ const PostModal = ({
                   viewBox="0 0 24 24"
                   width="24"
                   fill="none"
-                  stroke="currentColor"
+                  stroke="#262626"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"

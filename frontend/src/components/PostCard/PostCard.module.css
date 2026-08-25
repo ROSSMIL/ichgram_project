@@ -56,9 +56,6 @@
   transition:
     opacity 0.15s ease,
     color 0.15s ease;
-}
-
-.followBtn {
   color: #0095f6;
 }
 
@@ -119,7 +116,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.1s ease;
+  transition:
+    transform 0.1s ease,
+    opacity 0.2s ease;
+  color: #262626;
+}
+
+.actionBtn svg {
+  color: #262626;
+  stroke: #262626;
+}
+
+.actionBtn:hover {
+  opacity: 0.7;
 }
 
 .actionBtn:active {
@@ -127,8 +136,8 @@
 }
 
 .likedHeart {
-  fill: #ff3040;
-  stroke: #ff3040;
+  fill: #ff3040 !important;
+  stroke: #ff3040 !important;
 }
 
 .unlikedHeart {
