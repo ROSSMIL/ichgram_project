@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import API from "../../api/axios";
 import EmojiPicker from "emoji-picker-react";
@@ -145,29 +146,16 @@ const PostModal = ({
 
   useEffect(() => {
     if (!post) return;
-
-    const originalOverflow = document.body.style.overflow;
-    const originalPosition = document.body.style.position;
-    const originalWidth = document.body.style.width;
-    const scrollY = window.scrollY;
-
+    const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = "100%";
 
     const handleKeyDown = (event) => {
       if (event.key === "Escape") handleClose();
     };
-
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.body.style.overflow = originalOverflow;
-      document.body.style.position = originalPosition;
-      document.body.style.top = "";
-      document.body.style.width = originalWidth;
-      window.scrollTo(0, scrollY);
+      document.body.style.overflow = prevOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [post, handleClose]);
@@ -373,7 +361,7 @@ const PostModal = ({
     (currentUsername &&
       currentUsername.toLowerCase() === authorUsername.toLowerCase());
 
-  return (
+  return createPortal(
     <div
       className={`${styles.overlay} ${isClosing ? styles.overlayLeaving : ""}`}
       onClick={handleClose}
@@ -680,7 +668,8 @@ const PostModal = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 
