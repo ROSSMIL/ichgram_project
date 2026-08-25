@@ -415,7 +415,11 @@ const PostModal = ({
       className={`${styles.overlay} ${isClosing ? styles.overlayLeaving : ""}`}
       onClick={handleClose}
     >
-      <button className={styles.closeButton} onClick={handleClose}>
+      <button
+        className={styles.closeButton}
+        onClick={handleClose}
+        aria-label="Close modal"
+      >
         &times;
       </button>
 
@@ -436,6 +440,44 @@ const PostModal = ({
 
         <div className={styles.infoSection}>
           <header className={styles.header}>
+            <div className={styles.mobileBackRow}>
+              <button
+                className={styles.mobileBackBtn}
+                onClick={handleClose}
+                aria-label="Back"
+              >
+                <svg
+                  aria-label="Back"
+                  color="rgb(38, 38, 38)"
+                  fill="rgb(38, 38, 38)"
+                  height="24"
+                  role="img"
+                  viewBox="0 0 24 24"
+                  width="24"
+                >
+                  <line
+                    fill="none"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    x1="2.909"
+                    x2="21.413"
+                    y1="12"
+                    y2="12"
+                  ></line>
+                  <polyline
+                    fill="none"
+                    points="11.692 3.22 2.909 12 11.692 20.78"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                  ></polyline>
+                </svg>
+              </button>
+            </div>
+
             <div className={styles.userInfo}>
               <Link to={getProfileLink(authorUsername)} onClick={onClose}>
                 <Avatar user={authorUser} size={32} />
