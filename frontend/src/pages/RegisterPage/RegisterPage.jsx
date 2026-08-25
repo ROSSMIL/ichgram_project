@@ -13,6 +13,7 @@ const RegisterPage = () => {
   const [password, setPassword] = useState("");
 
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -35,10 +36,11 @@ const RegisterPage = () => {
     }
 
     try {
+      setIsLoading(true);
       const response = await API.post("/api/auth/register", {
-        email,
-        fullName,
-        username,
+        email: email.trim(),
+        fullName: fullName.trim(),
+        username: username.trim(),
         password,
       });
 
@@ -52,13 +54,17 @@ const RegisterPage = () => {
         "Something went wrong. Please try again.";
       setError(serverMessage);
       setPassword("");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <div className={styles.container}>
       <div className={styles.authSection}>
-        <div className={styles.formBox}>
+        <div
+          className={`${styles.formBox} ${isLoading ? styles.loadingBox : ""}`}
+        >
           <img src={logoImg} alt="ICHGRAM" className={styles.logoImage} />
 
           <p className={styles.subtitle}>
@@ -71,6 +77,7 @@ const RegisterPage = () => {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
             />
             {error.toLowerCase().includes("email") && (
               <div className={styles.errorMessage}>{error}</div>
@@ -81,6 +88,7 @@ const RegisterPage = () => {
               placeholder="Full Name"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
+              disabled={isLoading}
             />
 
             <Input
@@ -88,6 +96,7 @@ const RegisterPage = () => {
               placeholder="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              disabled={isLoading}
             />
             {error.toLowerCase().includes("username") && (
               <div className={styles.errorMessage}>{error}</div>
@@ -98,6 +107,7 @@ const RegisterPage = () => {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
             />
 
             {error &&
@@ -121,7 +131,24 @@ const RegisterPage = () => {
               <a href="#cookies">Cookies Policy</a>.
             </p>
 
-            <Button>Sign up</Button>
+            <Button disabled={isLoading}>
+              {isLoading ? (
+                <div className={styles.spinnerWrapper}>
+                  <svg className={styles.spinner} viewBox="0 0 50 50">
+                    <circle
+                      className={styles.path}
+                      cx="25"
+                      cy="25"
+                      r="20"
+                      fill="none"
+                      strokeWidth="5"
+                    ></circle>
+                  </svg>
+                </div>
+              ) : (
+                "Sign up"
+              )}
+            </Button>
           </form>
         </div>
 

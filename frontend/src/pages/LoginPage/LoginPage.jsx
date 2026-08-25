@@ -61,7 +61,9 @@ const LoginPage = () => {
       </div>
 
       <div className={styles.authSection}>
-        <div className={styles.formBox}>
+        <div
+          className={`${styles.formBox} ${isLoading ? styles.loadingBox : ""}`}
+        >
           <img src={logoImg} alt="ICHGRAM" className={styles.logoImage} />
 
           <form onSubmit={handleSubmit} className={styles.form} noValidate>
@@ -83,7 +85,22 @@ const LoginPage = () => {
             {error && <div className={styles.errorMessage}>{error}</div>}
 
             <Button disabled={isLoading}>
-              {isLoading ? "Logging in..." : "Log in"}
+              {isLoading ? (
+                <div className={styles.spinnerWrapper}>
+                  <svg className={styles.spinner} viewBox="0 0 50 50">
+                    <circle
+                      className={styles.path}
+                      cx="25"
+                      cy="25"
+                      r="20"
+                      fill="none"
+                      strokeWidth="5"
+                    ></circle>
+                  </svg>
+                </div>
+              ) : (
+                "Log in"
+              )}
             </Button>
           </form>
 

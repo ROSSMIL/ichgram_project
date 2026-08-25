@@ -31,6 +31,11 @@
   box-sizing: border-box;
   position: relative;
   bottom: 2.5rem;
+  transition: opacity 0.2s ease;
+}
+
+.loadingBox {
+  opacity: 0.85;
 }
 
 .logoImage {
@@ -109,4 +114,44 @@
   margin: 0 0 0.4rem 0.2rem;
   width: 100%;
   text-align: left;
+}
+
+.spinnerWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 18px;
+}
+
+.spinner {
+  animation: rotate 2s linear infinite;
+  width: 18px;
+  height: 18px;
+}
+
+.spinner .path {
+  stroke: #ffffff;
+  stroke-linecap: round;
+  animation: dash 1.5s ease-in-out infinite;
+}
+
+@keyframes rotate {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes dash {
+  0% {
+    stroke-dasharray: 1, 150;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dasharray: 90, 150;
+    stroke-dashoffset: -35;
+  }
+  100% {
+    stroke-dasharray: 90, 150;
+    stroke-dashoffset: -124;
+  }
 }
