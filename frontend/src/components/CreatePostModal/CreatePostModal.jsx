@@ -164,13 +164,43 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
 
   return (
     <div className={styles.overlay} onClick={handleClose}>
-      <button className={styles.closeBtn} onClick={handleClose}>
-        &times;
-      </button>
-
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
-          <div className={styles.headerSpacer}></div>
+          <button
+            className={styles.backBtn}
+            onClick={handleClose}
+            aria-label="Back"
+          >
+            <svg
+              aria-label="Back"
+              color="rgb(38, 38, 38)"
+              fill="rgb(38, 38, 38)"
+              height="24"
+              role="img"
+              viewBox="0 0 24 24"
+              width="24"
+            >
+              <line
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                x1="2.909"
+                x2="21.413"
+                y1="12"
+                y2="12"
+              ></line>
+              <polyline
+                fill="none"
+                points="11.692 3.22 2.909 12 11.692 20.78"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+              ></polyline>
+            </svg>
+          </button>
           <h3>Create new post</h3>
           <button
             className={styles.shareBtn}
