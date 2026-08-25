@@ -103,16 +103,6 @@ const LoginPage = () => {
               )}
             </Button>
           </form>
-
-          <div className={styles.dividerContainer}>
-            <div className={styles.dividerLine}></div>
-            <span className={styles.dividerText}>OR</span>
-            <div className={styles.dividerLine}></div>
-          </div>
-
-          <a href="#forgot" className={styles.forgotPassword}>
-            Forgot password?
-          </a>
         </div>
 
         <div className={styles.redirectBox}>
