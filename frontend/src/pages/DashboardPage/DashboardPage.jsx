@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import API from "../../api/axios";
 import PostModal from "../../components/PostModal/PostModal";
 import PostCard from "../../components/PostCard/PostCard";
@@ -10,6 +11,8 @@ const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [currentUserFollowing, setCurrentUserFollowing] = useState([]);
   const [selectedPost, setSelectedPost] = useState(null);
+
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   const [autoFocusComment, setAutoFocusComment] = useState(false);
 
@@ -101,6 +104,25 @@ const DashboardPage = () => {
       window.removeEventListener("refreshDashboard", handleRefresh);
     };
   }, [fetchFeedData, token]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 150) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const handleFollowToggle = async (targetUserId) => {
     try {
@@ -277,6 +299,28 @@ const DashboardPage = () => {
           </div>
         )}
       </div>
+
+      {createPortal(
+        <button
+          className={`${styles.scrollTopBtn} ${showScrollTop ? styles.showScrollBtn : ""}`}
+          onClick={scrollToTop}
+          aria-label="Back to top"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="22"
+            height="22"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="18 15 12 9 6 15" />
+          </svg>
+        </button>,
+        document.body,
+      )}
 
       {selectedPost && (
         <PostModal
