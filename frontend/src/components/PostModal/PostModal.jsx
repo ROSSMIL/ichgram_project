@@ -112,10 +112,10 @@ const PostModal = ({
   const [isCommentMenuClosing, setIsCommentMenuClosing] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
-  const overlayRef = useRef(null);
   const emojiPickerRef = useRef(null);
   const commentInputRef = useRef(null);
   const commentsAreaRef = useRef(null);
+  const modalBoxRef = useRef(null);
   const clickTimerRef = useRef(null);
 
   const scrollToBottom = useCallback(() => {
@@ -123,44 +123,6 @@ const PostModal = ({
       commentsAreaRef.current.scrollTop = commentsAreaRef.current.scrollHeight;
     }
   }, []);
-
-  useLayoutEffect(() => {
-    const handleViewportChange = () => {
-      if (!overlayRef.current) return;
-
-      const isMobile = window.innerWidth <= 768;
-
-      if (isMobile && window.visualViewport) {
-        overlayRef.current.style.height = `${window.visualViewport.height}px`;
-        overlayRef.current.style.top = `${window.visualViewport.offsetTop}px`;
-      } else {
-        overlayRef.current.style.height = "100vh";
-        overlayRef.current.style.top = "0px";
-      }
-
-      scrollToBottom();
-    };
-
-    handleViewportChange();
-
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", handleViewportChange);
-      window.visualViewport.addEventListener("scroll", handleViewportChange);
-    }
-
-    return () => {
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener(
-          "resize",
-          handleViewportChange,
-        );
-        window.visualViewport.removeEventListener(
-          "scroll",
-          handleViewportChange,
-        );
-      }
-    };
-  }, [scrollToBottom]);
 
   useLayoutEffect(() => {
     if (autoFocusComment) {
@@ -173,8 +135,8 @@ const PostModal = ({
 
       focusAndScroll();
       requestAnimationFrame(focusAndScroll);
-      const timer1 = setTimeout(focusAndScroll, 150);
-      const timer2 = setTimeout(focusAndScroll, 350);
+      const timer1 = setTimeout(focusAndScroll, 100);
+      const timer2 = setTimeout(focusAndScroll, 300);
 
       return () => {
         clearTimeout(timer1);
@@ -209,18 +171,7 @@ const PostModal = ({
     if (!post) return;
 
     const originalOverflow = window.getComputedStyle(document.body).overflow;
-    const originalTouchAction = window.getComputedStyle(
-      document.body,
-    ).touchAction;
-    const scrollY = window.scrollY;
-
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.left = "0";
-    document.body.style.right = "0";
-    document.body.style.width = "100%";
     document.body.style.overflow = "hidden";
-    document.body.style.touchAction = "none";
 
     const handleKeyDown = (event) => {
       if (event.key === "Escape") handleClose();
@@ -228,14 +179,7 @@ const PostModal = ({
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.body.style.position = "";
-      document.body.style.top = "";
-      document.body.style.left = "";
-      document.body.style.right = "";
-      document.body.style.width = "";
       document.body.style.overflow = originalOverflow;
-      document.body.style.touchAction = originalTouchAction;
-      window.scrollTo(0, scrollY);
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [post, handleClose]);
@@ -391,8 +335,8 @@ const PostModal = ({
 
   const handleFocusCommentInput = () => {
     if (commentInputRef.current) commentInputRef.current.focus();
-    setTimeout(scrollToBottom, 200);
-    setTimeout(scrollToBottom, 400);
+
+    setTimeout(scrollToBottom, 300);
   };
 
   const handleEmojiClick = (emojiData) => {
@@ -469,7 +413,6 @@ const PostModal = ({
 
   return createPortal(
     <div
-      ref={overlayRef}
       className={`${styles.overlay} ${isClosing ? styles.overlayLeaving : ""}`}
       onClick={handleClose}
     >
@@ -482,6 +425,7 @@ const PostModal = ({
       </button>
 
       <div
+        ref={modalBoxRef}
         className={`${styles.modalBox} ${isClosing ? styles.modalBoxLeaving : ""}`}
         onClick={(e) => e.stopPropagation()}
       >
