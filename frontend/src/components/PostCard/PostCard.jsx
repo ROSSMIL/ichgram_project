@@ -1,70 +1,100 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
-import API from "../../api/axios";
-import Avatar from "../Avatar/Avatar";
-import styles from "./PostCard.module.css";
 
-const triggerHaptic = () => {
-  if ("vibrate" in navigator) {
-    navigator.vibrate(40);
-  }
-};
+import { Link } from "react-router-dom";
+
+import API from "../../api/axios";
+
+import Avatar from "../Avatar/Avatar";
+
+import styles from "./PostCard.module.css";
 
 const formatTimeAgo = (dateInput) => {
   if (!dateInput) return "just now";
+
   const date = new Date(dateInput);
+
   const now = new Date();
+
   const diffInSeconds = Math.floor((now - date) / 1000);
 
   if (diffInSeconds < 60) return "just now";
+
   const diffInMinutes = Math.floor(diffInSeconds / 60);
+
   if (diffInMinutes < 60) return `${diffInMinutes} min.`;
+
   const diffInHours = Math.floor(diffInMinutes / 60);
+
   if (diffInHours < 24)
     return diffInHours === 1 ? "1 hour" : `${diffInHours} hours`;
+
   const diffInDays = Math.floor(diffInHours / 24);
+
   if (diffInDays < 7) return diffInDays === 1 ? "1 day" : `${diffInDays} days`;
+
   const diffInWeeks = Math.floor(diffInDays / 7);
+
   if (diffInWeeks < 4)
     return diffInWeeks === 1 ? "1 week" : `${diffInWeeks} weeks`;
+
   const diffInMonths = Math.floor(diffInDays / 30);
+
   if (diffInMonths < 12)
     return diffInMonths === 1 ? "1 month" : `${diffInMonths} months`;
+
   const diffInYears = Math.floor(diffInDays / 365);
+
   return diffInYears === 1 ? "1 year" : `${diffInYears} years`;
 };
 
 const PostCard = ({
   post,
+
   currentUserId,
+
   currentUsername,
+
   onOpenModal,
+
   onFollowToggle,
+
   currentUserFollowing,
+
   onPostUpdate,
 }) => {
   const [isCaptionExpanded, setIsCaptionExpanded] = useState(false);
+
   const [isLiking, setIsLiking] = useState(false);
+
   const [isFollowLoading, setIsFollowLoading] = useState(false);
+
   const [showHeartAnim, setShowHeartAnim] = useState(false);
+
   const clickTimerRef = useRef(null);
 
   const [prevPostId, setPrevPostId] = useState(post._id);
+
   const [localLike, setLocalLike] = useState(null);
 
   if (post._id !== prevPostId) {
     setPrevPostId(post._id);
+
     setLocalLike(null);
   }
 
   const captionText = post.caption || "";
+
   const CAPTION_LIMIT = 70;
+
   const isLongCaption = captionText.length > CAPTION_LIMIT;
 
   const authorId = post?.user?._id || post?.user?.id || post?.user;
+
   const authorUsername = post?.user?.username || "user";
+
   const authorUser = post.user || {
     username: authorUsername,
+
     avatar: post.user?.avatar,
   };
 
@@ -72,6 +102,7 @@ const PostCard = ({
     post && currentUserId && post.likes
       ? post.likes.some((like) => {
           const id = typeof like === "string" ? like : like._id || like.id;
+
           return id === currentUserId;
         })
       : false;
@@ -87,6 +118,7 @@ const PostCard = ({
     post?.likesCount !== undefined ? post.likesCount : post?.likes?.length || 0;
 
   let likesCount = serverLikesCount;
+
   if (localLike === "liked" && !initialIsLiked) {
     likesCount = serverLikesCount + 1;
   } else if (localLike === "unliked" && initialIsLiked) {
@@ -94,12 +126,14 @@ const PostCard = ({
   }
 
   let isFollowing = false;
+
   if (post && authorId) {
     if (currentUserFollowing) {
       isFollowing = currentUserFollowing.includes(authorId.toString());
     } else if (post.user && post.user.followers) {
       isFollowing = post.user.followers.some((fId) => {
         const id = typeof fId === "string" ? fId : fId._id || fId.id;
+
         return id === currentUserId;
       });
     } else {
@@ -114,10 +148,13 @@ const PostCard = ({
 
   const toggleLikeApiCall = async () => {
     if (isLiking) return;
+
     setIsLiking(true);
 
     const previousLocalLike = localLike;
+
     const newLocalLike = isLiked ? "unliked" : "liked";
+
     setLocalLike(newLocalLike);
 
     try {
@@ -125,7 +162,9 @@ const PostCard = ({
 
       const response = await API.put(
         `/api/posts/${post._id}/like`,
+
         {},
+
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
@@ -134,6 +173,7 @@ const PostCard = ({
       }
     } catch (error) {
       console.error("Error toggling like:", error);
+
       setLocalLike(previousLocalLike);
     } finally {
       setIsLiking(false);
@@ -142,16 +182,18 @@ const PostCard = ({
 
   const handleLikeToggle = (e) => {
     e.stopPropagation();
+
     toggleLikeApiCall();
   };
 
   const handleImageClick = () => {
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current);
+
       clickTimerRef.current = null;
 
       setShowHeartAnim(true);
-      triggerHaptic();
+
       setTimeout(() => setShowHeartAnim(false), 800);
 
       if (!isLiked) {
@@ -160,6 +202,7 @@ const PostCard = ({
     } else {
       clickTimerRef.current = setTimeout(() => {
         onOpenModal(post, false);
+
         clickTimerRef.current = null;
       }, 250);
     }
@@ -173,9 +216,11 @@ const PostCard = ({
 
   const handleFollowClick = async (e) => {
     e.stopPropagation();
+
     if (!onFollowToggle || !authorId || isFollowLoading) return;
 
     setIsFollowLoading(true);
+
     try {
       await onFollowToggle(authorId.toString());
     } catch (err) {
@@ -187,6 +232,7 @@ const PostCard = ({
 
   const handleCommentClick = (e) => {
     e.stopPropagation();
+
     if (typeof onOpenModal === "function") {
       onOpenModal(post, true);
     }
@@ -199,11 +245,13 @@ const PostCard = ({
     ) {
       return "/profile";
     }
+
     return `/user/${username}`;
   };
 
   const handleCaptionClick = (e) => {
     e.stopPropagation();
+
     if (isLongCaption && isCaptionExpanded) {
       setIsCaptionExpanded(false);
     }
@@ -218,6 +266,7 @@ const PostCard = ({
               <Avatar user={authorUser} size={32} />
             </Link>
           </div>
+
           <div className={styles.userMeta}>
             <div>
               <Link
@@ -227,12 +276,15 @@ const PostCard = ({
                 {authorUsername}
               </Link>
             </div>
+
             <span className={styles.dot}>•</span>
+
             <span className={styles.time}>{formatTimeAgo(post.createdAt)}</span>
 
             {!isAuthor && (
               <>
                 <span className={styles.dot}>•</span>
+
                 <button
                   className={`${styles.followBtn} ${isFollowing ? styles.following : styles.follow}`}
                   onClick={handleFollowClick}
@@ -325,6 +377,7 @@ const PostCard = ({
                   className={styles.moreButton}
                   onClick={(e) => {
                     e.stopPropagation();
+
                     setIsCaptionExpanded(true);
                   }}
                 >
