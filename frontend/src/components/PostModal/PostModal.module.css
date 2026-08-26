@@ -15,6 +15,7 @@
   padding-left: 245px;
   box-sizing: border-box;
   animation: fadeInBackground 0.25s ease-out forwards;
+  overscroll-behavior: none;
 }
 
 .overlayLeaving {
@@ -614,13 +615,14 @@
     flex-direction: column !important;
     box-shadow: none !important;
     background-color: #000000 !important;
+    transition: height 0.1s ease-out;
   }
 
   .imageSection {
     flex: none !important;
     width: 100% !important;
-    height: 35vh !important;
-    max-height: 35vh !important;
+    height: 25vh !important;
+    max-height: 200px !important;
     background-color: #000000 !important;
   }
 
@@ -644,28 +646,29 @@
   }
 
   .header {
-    padding: 12px 14px !important;
+    padding: 10px 14px !important;
     background-color: #ffffff;
     border-bottom: 1px solid #f0f0f0 !important;
   }
 
   .commentsArea {
     flex: 1 !important;
-    padding: 14px 16px !important;
-    gap: 14px !important;
+    padding: 12px 16px !important;
+    gap: 12px !important;
     background-color: #ffffff;
     overflow-y: auto !important;
+    overscroll-behavior: contain !important;
     -webkit-overflow-scrolling: touch;
   }
 
   .actionsArea {
-    padding: 10px 16px 6px 16px !important;
+    padding: 8px 16px 4px 16px !important;
     background-color: #ffffff !important;
     border-top: 1px solid #f4f4f5 !important;
   }
 
   .inputFooter {
-    padding: 8px 16px 24px 16px !important;
+    padding: 8px 16px 12px 16px !important;
     background-color: #ffffff !important;
     border-top: none !important;
   }

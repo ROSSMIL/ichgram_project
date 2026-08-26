@@ -115,18 +115,12 @@ const PostModal = ({
   const emojiPickerRef = useRef(null);
   const commentInputRef = useRef(null);
   const commentsAreaRef = useRef(null);
+  const modalBoxRef = useRef(null);
   const clickTimerRef = useRef(null);
 
-  const scrollToInputAndBottom = useCallback(() => {
+  const scrollToBottom = useCallback(() => {
     if (commentsAreaRef.current) {
       commentsAreaRef.current.scrollTop = commentsAreaRef.current.scrollHeight;
-    }
-    if (commentInputRef.current) {
-      commentInputRef.current.scrollIntoView({
-        block: "end",
-        inline: "nearest",
-        behavior: "smooth",
-      });
     }
   }, []);
 
@@ -136,20 +130,41 @@ const PostModal = ({
         if (commentInputRef.current) {
           commentInputRef.current.focus();
         }
-        scrollToInputAndBottom();
+        scrollToBottom();
       };
 
       focusAndScroll();
       requestAnimationFrame(focusAndScroll);
-      const timer1 = setTimeout(focusAndScroll, 150);
-      const timer2 = setTimeout(focusAndScroll, 400);
+      const timer1 = setTimeout(focusAndScroll, 100);
+      const timer2 = setTimeout(focusAndScroll, 300);
 
       return () => {
         clearTimeout(timer1);
         clearTimeout(timer2);
       };
     }
-  }, [autoFocusComment, post?._id, scrollToInputAndBottom]);
+  }, [autoFocusComment, post?._id, scrollToBottom]);
+
+  useEffect(() => {
+    if (!window.visualViewport) return;
+
+    const handleResize = () => {
+      if (modalBoxRef.current && window.innerWidth <= 768) {
+        modalBoxRef.current.style.height = `${window.visualViewport.height}px`;
+        scrollToBottom();
+      }
+    };
+
+    window.visualViewport.addEventListener("resize", handleResize);
+    window.visualViewport.addEventListener("scroll", handleResize);
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", handleResize);
+        window.visualViewport.removeEventListener("scroll", handleResize);
+      }
+    };
+  }, [scrollToBottom]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -176,18 +191,12 @@ const PostModal = ({
   useEffect(() => {
     if (!post) return;
 
-    const isMobile = window.innerWidth <= 768;
     const scrollY = window.scrollY;
-
-    if (!isMobile) {
-      document.body.style.position = "fixed";
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.left = "0";
-      document.body.style.right = "0";
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "hidden";
-    }
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.overflow = "hidden";
 
     const handleKeyDown = (event) => {
       if (event.key === "Escape") handleClose();
@@ -195,14 +204,12 @@ const PostModal = ({
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      if (!isMobile) {
-        document.body.style.position = "";
-        document.body.style.top = "";
-        document.body.style.left = "";
-        document.body.style.right = "";
-        window.scrollTo(0, scrollY);
-      }
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
       document.body.style.overflow = "";
+      window.scrollTo(0, scrollY);
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [post, handleClose]);
@@ -347,7 +354,7 @@ const PostModal = ({
 
       setNewComment("");
       setShowEmojiPicker(false);
-      setTimeout(scrollToInputAndBottom, 80);
+      setTimeout(scrollToBottom, 50);
     } catch (error) {
       console.error("Error adding comment:", error);
       alert(error.response?.data?.message || "Failed to add comment.");
@@ -358,7 +365,7 @@ const PostModal = ({
 
   const handleFocusCommentInput = () => {
     if (commentInputRef.current) commentInputRef.current.focus();
-    setTimeout(scrollToInputAndBottom, 300);
+    setTimeout(scrollToBottom, 200);
   };
 
   const handleEmojiClick = (emojiData) => {
@@ -447,6 +454,7 @@ const PostModal = ({
       </button>
 
       <div
+        ref={modalBoxRef}
         className={`${styles.modalBox} ${isClosing ? styles.modalBoxLeaving : ""}`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -716,7 +724,7 @@ const PostModal = ({
                 className={styles.commentInput}
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                onFocus={() => setTimeout(scrollToInputAndBottom, 350)}
+                onFocus={() => setTimeout(scrollToBottom, 200)}
                 disabled={isSubmitting}
                 autoFocus={autoFocusComment}
               />
