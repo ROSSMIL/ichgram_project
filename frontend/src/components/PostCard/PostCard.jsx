@@ -4,6 +4,12 @@ import API from "../../api/axios";
 import Avatar from "../Avatar/Avatar";
 import styles from "./PostCard.module.css";
 
+const triggerHaptic = () => {
+  if ("vibrate" in navigator) {
+    navigator.vibrate(40);
+  }
+};
+
 const formatTimeAgo = (dateInput) => {
   if (!dateInput) return "just now";
   const date = new Date(dateInput);
@@ -145,6 +151,7 @@ const PostCard = ({
       clickTimerRef.current = null;
 
       setShowHeartAnim(true);
+      triggerHaptic();
       setTimeout(() => setShowHeartAnim(false), 800);
 
       if (!isLiked) {
