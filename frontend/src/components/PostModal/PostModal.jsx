@@ -240,6 +240,12 @@ const PostModal = ({
     return `/user/${targetUsername}`;
   };
 
+  const triggerHapticFeedback = () => {
+    if ("vibrate" in navigator) {
+      navigator.vibrate(40);
+    }
+  };
+
   const handleLikeToggle = async () => {
     if (isLiking) return;
     setIsLiking(true);
@@ -251,6 +257,7 @@ const PostModal = ({
     setLikesCount((prev) => (isLiked ? prev - 1 : prev + 1));
 
     if (nextLikedState) {
+      triggerHapticFeedback();
       setAnimateHeart(true);
       setTimeout(() => setAnimateHeart(false), 450);
 
@@ -284,6 +291,7 @@ const PostModal = ({
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
 
+      triggerHapticFeedback();
       setShowBigHeart(true);
       setTimeout(() => setShowBigHeart(false), 800);
 
@@ -451,79 +459,74 @@ const PostModal = ({
 
         <div className={styles.infoSection}>
           <header className={styles.header}>
-            <div className={styles.mobileBackRow}>
-              <button
-                className={styles.mobileBackBtn}
-                onClick={handleClose}
-                aria-label="Back"
-              >
-                <svg
+            <div className={styles.headerLeftGroup}>
+              <div className={styles.mobileBackRow}>
+                <button
+                  className={styles.mobileBackBtn}
+                  onClick={handleClose}
                   aria-label="Back"
-                  color="rgb(38, 38, 38)"
-                  fill="rgb(38, 38, 38)"
-                  height="24"
-                  role="img"
-                  viewBox="0 0 24 24"
-                  width="24"
                 >
-                  <line
-                    fill="none"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    x1="2.909"
-                    x2="21.413"
-                    y1="12"
-                    y2="12"
-                  ></line>
-                  <polyline
-                    fill="none"
-                    points="11.692 3.22 2.909 12 11.692 20.78"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                  ></polyline>
-                </svg>
-              </button>
-            </div>
-
-            <div className={styles.userInfo}>
-              <Link to={getProfileLink(authorUsername)} onClick={onClose}>
-                <Avatar user={authorUser} size={32} />
-              </Link>
-              <Link
-                to={getProfileLink(authorUsername)}
-                onClick={onClose}
-                className={styles.usernameLink}
-              >
-                <span className={styles.username}>{authorUsername}</span>
-              </Link>
-
-              {!isAuthor && (
-                <>
-                  <span className={styles.divider}>•</span>
-                  <button
-                    className={`${styles.followBtn} ${isFollowing ? styles.following : styles.follow}`}
-                    onClick={handleFollowToggleInModal}
-                    disabled={isFollowLoading}
+                  <svg
+                    aria-label="Back"
+                    color="currentColor"
+                    fill="currentColor"
+                    height="20"
+                    role="img"
+                    viewBox="0 0 24 24"
+                    width="20"
                   >
-                    {isFollowing ? "Following" : "Follow"}
-                  </button>
-                </>
-              )}
+                    <polyline
+                      fill="none"
+                      points="16.5 3 7.5 12 16.5 21"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2.5"
+                    ></polyline>
+                  </svg>
+                </button>
+              </div>
+
+              <div className={styles.userInfo}>
+                <Link
+                  to={getProfileLink(authorUsername)}
+                  onClick={onClose}
+                  className={styles.avatarLink}
+                >
+                  <Avatar user={authorUser} size={32} />
+                </Link>
+                <Link
+                  to={getProfileLink(authorUsername)}
+                  onClick={onClose}
+                  className={styles.usernameLink}
+                >
+                  <span className={styles.username}>{authorUsername}</span>
+                </Link>
+
+                {!isAuthor && (
+                  <>
+                    <span className={styles.divider}>•</span>
+                    <button
+                      className={`${styles.followBtn} ${isFollowing ? styles.following : styles.follow}`}
+                      onClick={handleFollowToggleInModal}
+                      disabled={isFollowLoading}
+                    >
+                      {isFollowing ? "Following" : "Follow"}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
             {isAuthor && (
               <button className={styles.moreOptions} onClick={handleOpenMenu}>
                 <svg
                   aria-label="More options"
-                  color="rgb(0, 0, 0)"
-                  fill="rgb(0, 0, 0)"
-                  height="24"
+                  color="currentColor"
+                  fill="currentColor"
+                  height="20"
                   viewBox="0 0 24 24"
-                  width="24"
+                  width="20"
                 >
                   <circle cx="12" cy="12" r="1.5"></circle>
                   <circle cx="6" cy="12" r="1.5"></circle>
@@ -655,7 +658,7 @@ const PostModal = ({
                   viewBox="0 0 24 24"
                   width="24"
                   fill="none"
-                  stroke="#262626"
+                  stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -666,62 +669,64 @@ const PostModal = ({
             </div>
             <div className={styles.likesCount}>{likesCount} likes</div>
             <div className={styles.postDate}>
-              {post.createdAt ? formatTimeAgo(post.createdAt) : "RECENTLY"}
+              {post.createdAt ? formatTimeAgo(post.createdAt) : "just now"}
             </div>
           </div>
 
           <form className={styles.inputFooter} onSubmit={handleSendComment}>
-            <div className={styles.emojiWrapper} ref={emojiPickerRef}>
-              <button
-                type="button"
-                className={styles.emojiBtn}
-                onClick={() => setShowEmojiPicker((prev) => !prev)}
-              >
-                <svg
-                  aria-label="Emoji"
-                  color="rgb(115, 115, 115)"
-                  fill="rgb(115, 115, 115)"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  width="24"
+            <div className={styles.inputPill}>
+              <div className={styles.emojiWrapper} ref={emojiPickerRef}>
+                <button
+                  type="button"
+                  className={styles.emojiBtn}
+                  onClick={() => setShowEmojiPicker((prev) => !prev)}
                 >
-                  <path d="M15.83 10.96a1.75 1.75 0 1 1 1.75-1.76 1.75 1.75 0 0 1-1.75 1.76Zm-7.66 0a1.75 1.75 0 1 1 1.75-1.76 1.75 1.75 0 0 1-1.75 1.76Zm4.17 6.64a5.12 5.12 0 0 1-4.08-2.03.75.75 0 0 1 1.18-.93 3.6 3.6 0 0 0 5.8 0 .75.75 0 0 1 1.18.93 5.12 5.12 0 0 1-4.08 2.03ZM12 2.5a9.5 9.5 0 1 0 9.5 9.5 9.51 9.51 0 0 0-9.5-9.5Zm0 21a11.5 11.5 0 1 1 11.5-11.5 11.51 11.51 0 0 1-11.5 11.5Z"></path>
-                </svg>
+                  <svg
+                    aria-label="Emoji"
+                    color="rgb(115, 115, 115)"
+                    fill="rgb(115, 115, 115)"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    width="24"
+                  >
+                    <path d="M15.83 10.96a1.75 1.75 0 1 1 1.75-1.76 1.75 1.75 0 0 1-1.75 1.76Zm-7.66 0a1.75 1.75 0 1 1 1.75-1.76 1.75 1.75 0 0 1-1.75 1.76Zm4.17 6.64a5.12 5.12 0 0 1-4.08-2.03.75.75 0 0 1 1.18-.93 3.6 3.6 0 0 0 5.8 0 .75.75 0 0 1 1.18.93 5.12 5.12 0 0 1-4.08 2.03ZM12 2.5a9.5 9.5 0 1 0 9.5 9.5 9.51 9.51 0 0 0-9.5-9.5Zm0 21a11.5 11.5 0 1 1 11.5-11.5 11.51 11.51 0 0 1-11.5 11.5Z"></path>
+                  </svg>
+                </button>
+
+                {showEmojiPicker && (
+                  <div className={styles.emojiContainer}>
+                    <EmojiPicker
+                      onEmojiClick={handleEmojiClick}
+                      autoFocusSearch={false}
+                      theme="light"
+                      searchDisabled={true}
+                      skinTonesDisabled={true}
+                      previewConfig={{ showPreview: false }}
+                      height={300}
+                      width={270}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <input
+                ref={commentInputRef}
+                type="text"
+                placeholder="Add a comment..."
+                className={styles.commentInput}
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                disabled={isSubmitting}
+                autoFocus={autoFocusComment}
+              />
+              <button
+                type="submit"
+                className={styles.sendBtn}
+                disabled={!newComment.trim() || isSubmitting}
+              >
+                {isSubmitting ? "..." : "Send"}
               </button>
-
-              {showEmojiPicker && (
-                <div className={styles.emojiContainer}>
-                  <EmojiPicker
-                    onEmojiClick={handleEmojiClick}
-                    autoFocusSearch={false}
-                    theme="light"
-                    searchDisabled={true}
-                    skinTonesDisabled={true}
-                    previewConfig={{ showPreview: false }}
-                    height={320}
-                    width={280}
-                  />
-                </div>
-              )}
             </div>
-
-            <input
-              ref={commentInputRef}
-              type="text"
-              placeholder="Add a comment..."
-              className={styles.commentInput}
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              disabled={isSubmitting}
-              autoFocus={autoFocusComment}
-            />
-            <button
-              type="submit"
-              className={styles.sendBtn}
-              disabled={!newComment.trim() || isSubmitting}
-            >
-              {isSubmitting ? "..." : "Send"}
-            </button>
           </form>
 
           {showMenu && (
