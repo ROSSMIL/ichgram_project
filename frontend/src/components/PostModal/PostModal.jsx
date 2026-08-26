@@ -36,6 +36,14 @@ const formatTimeAgo = (dateInput) => {
   return diffInYears === 1 ? "1 year" : `${diffInYears} years`;
 };
 
+const checkIsLiked = (postObj, userId) => {
+  if (!postObj || !userId || !postObj.likes) return false;
+  return postObj.likes.some((like) => {
+    if (typeof like === "string") return like === userId;
+    return (like._id || like.id) === userId;
+  });
+};
+
 const PostModal = ({
   post,
   onClose,
@@ -50,40 +58,28 @@ const PostModal = ({
   const currentUserId = getLoggedInUserId();
   const currentUsername = getLoggedInUsername();
 
-  const [comments, setComments] = useState(() => post?.comments || []);
+  const [prevPostId, setPrevPostId] = useState(post?._id);
 
+  const [comments, setComments] = useState(() => post?.comments || []);
   const [likesCount, setLikesCount] = useState(() => {
     if (!post) return 0;
     return post.likesCount !== undefined
       ? post.likesCount
       : post.likes?.length || 0;
   });
+  const [isLiked, setIsLiked] = useState(() =>
+    checkIsLiked(post, currentUserId),
+  );
 
-  const [isLiked, setIsLiked] = useState(() => {
-    if (!post || !currentUserId || !post.likes) return false;
-    return post.likes.some((like) => {
-      if (typeof like === "string") return like === currentUserId;
-      return (like._id || like.id) === currentUserId;
-    });
-  });
-
-  const [prevPostId, setPrevPostId] = useState(post?._id);
   if (post?._id !== prevPostId) {
+    setPrevPostId(post?._id);
     setComments(post?.comments || []);
     setLikesCount(
       post?.likesCount !== undefined
         ? post.likesCount
         : post?.likes?.length || 0,
     );
-    setIsLiked(
-      post?.likes
-        ? post.likes.some((like) => {
-            const id = typeof like === "string" ? like : like._id || like.id;
-            return id === currentUserId;
-          })
-        : false,
-    );
-    setPrevPostId(post?._id);
+    setIsLiked(checkIsLiked(post, currentUserId));
   }
 
   const [animateHeart, setAnimateHeart] = useState(false);
@@ -119,6 +115,7 @@ const PostModal = ({
   const emojiPickerRef = useRef(null);
   const commentInputRef = useRef(null);
   const commentsAreaRef = useRef(null);
+  const clickTimerRef = useRef(null);
 
   useLayoutEffect(() => {
     if (autoFocusComment && commentInputRef.current) {
@@ -129,7 +126,6 @@ const PostModal = ({
       };
 
       focusInput();
-
       requestAnimationFrame(focusInput);
     }
   }, [autoFocusComment, post?._id]);
@@ -283,14 +279,29 @@ const PostModal = ({
     }
   };
 
-  const handleDoubleClick = () => {
-    if (!isLiked) {
-      handleLikeToggle();
-    } else {
+  const handleImageClick = () => {
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+
       setShowBigHeart(true);
       setTimeout(() => setShowBigHeart(false), 800);
+
+      if (!isLiked) {
+        handleLikeToggle();
+      }
+    } else {
+      clickTimerRef.current = setTimeout(() => {
+        clickTimerRef.current = null;
+      }, 250);
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    };
+  }, []);
 
   const handleFollowToggleInModal = async () => {
     if (!onFollowToggle || !authorId || isFollowLoading) return;
@@ -427,7 +438,7 @@ const PostModal = ({
         className={`${styles.modalBox} ${isClosing ? styles.modalBoxLeaving : ""}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={styles.imageSection} onDoubleClick={handleDoubleClick}>
+        <div className={styles.imageSection} onClick={handleImageClick}>
           <img src={post.url} alt="Post content" className={styles.postImg} />
           {showBigHeart && (
             <div className={styles.bigHeartOverlay}>
