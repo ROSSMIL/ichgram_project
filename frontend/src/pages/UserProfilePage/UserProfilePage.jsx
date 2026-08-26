@@ -10,6 +10,7 @@ const UserProfilePage = () => {
   const { username } = useParams();
 
   const [user, setUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isBioExpanded, setIsBioExpanded] = useState(false);
@@ -34,6 +35,9 @@ const UserProfilePage = () => {
         }
 
         const headers = { Authorization: `Bearer ${token}` };
+
+        const myRes = await API.get("/api/users/profile", { headers });
+        setCurrentUser(myRes.data);
 
         const userRes = await API.get(`/api/users/${username}`, { headers });
         const userData = userRes.data;
@@ -87,6 +91,34 @@ const UserProfilePage = () => {
     }
   };
 
+  const handleModalFollowToggle = async (targetUserId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await API.post(
+        `/api/users/${targetUserId}/follow`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      const nextState = response.data.isFollowing;
+
+      setModalUsersList((prevList) =>
+        prevList.map((u) =>
+          u._id === targetUserId ? { ...u, isFollowing: nextState } : u,
+        ),
+      );
+
+      if (user && user._id === targetUserId) {
+        setIsFollowing(nextState);
+        setFollowersCount((prev) =>
+          nextState ? prev + 1 : Math.max(0, prev - 1),
+        );
+      }
+    } catch (error) {
+      console.error("Error toggling modal follow status:", error);
+    }
+  };
+
   const openUsersModal = async (type) => {
     setActiveModal(type);
     setLoadingModalList(true);
@@ -95,7 +127,20 @@ const UserProfilePage = () => {
       const { data } = await API.get(`/api/users/${user._id}/${type}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setModalUsersList(data);
+
+      const myFollowingIds = (currentUser?.following || []).map((f) =>
+        typeof f === "string" ? f : f._id || f.id,
+      );
+
+      const formattedData = data.map((u) => ({
+        ...u,
+        isFollowing:
+          typeof u.isFollowing !== "undefined"
+            ? u.isFollowing
+            : myFollowingIds.includes(u._id),
+      }));
+
+      setModalUsersList(formattedData);
     } catch (error) {
       console.error(`Error fetching ${type}:`, error);
       setModalUsersList([]);
@@ -185,6 +230,47 @@ const UserProfilePage = () => {
 
   return (
     <div className={styles.profileContainer}>
+      <div className={styles.topBar}>
+        <button
+          type="button"
+          className={styles.backBtn}
+          onClick={() => navigate(-1)}
+          aria-label="Back"
+        >
+          <svg
+            aria-label="Back"
+            color="rgb(38, 38, 38)"
+            fill="rgb(38, 38, 38)"
+            height="24"
+            role="img"
+            viewBox="0 0 24 24"
+            width="24"
+          >
+            <line
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              x1="2.909"
+              x2="21.413"
+              y1="12"
+              y2="12"
+            ></line>
+            <polyline
+              fill="none"
+              points="11.692 3.22 2.909 12 11.692 20.78"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+            ></polyline>
+          </svg>
+        </button>
+        <span className={styles.topBarUsername}>{user.username}</span>
+        <div className={styles.topBarSpacer} />
+      </div>
+
       <header className={styles.header}>
         <div className={styles.headerTopMobile}>
           <div className={styles.avatarContainer}>
@@ -450,6 +536,25 @@ const UserProfilePage = () => {
                           </span>
                         </div>
                       </Link>
+
+                      {currentUser && modalUser._id !== currentUser._id ? (
+                        <div className={styles.actionBtnWrapper}>
+                          <button
+                            className={`${styles.listFollowBtn} ${
+                              modalUser.isFollowing
+                                ? styles.following
+                                : styles.follow
+                            }`}
+                            onClick={() =>
+                              handleModalFollowToggle(modalUser._id)
+                            }
+                          >
+                            {modalUser.isFollowing ? "Following" : "Follow"}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className={styles.actionBtnWrapperPlaceholder} />
+                      )}
                     </li>
                   ))}
                 </ul>
