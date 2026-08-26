@@ -117,11 +117,18 @@ const PostModal = ({
   const commentsAreaRef = useRef(null);
   const clickTimerRef = useRef(null);
 
-  const scrollToBottom = () => {
+  const scrollToInputAndBottom = useCallback(() => {
     if (commentsAreaRef.current) {
       commentsAreaRef.current.scrollTop = commentsAreaRef.current.scrollHeight;
     }
-  };
+    if (commentInputRef.current) {
+      commentInputRef.current.scrollIntoView({
+        block: "end",
+        inline: "nearest",
+        behavior: "smooth",
+      });
+    }
+  }, []);
 
   useLayoutEffect(() => {
     if (autoFocusComment) {
@@ -129,14 +136,20 @@ const PostModal = ({
         if (commentInputRef.current) {
           commentInputRef.current.focus();
         }
-        scrollToBottom();
+        scrollToInputAndBottom();
       };
 
       focusAndScroll();
       requestAnimationFrame(focusAndScroll);
-      setTimeout(focusAndScroll, 120);
+      const timer1 = setTimeout(focusAndScroll, 150);
+      const timer2 = setTimeout(focusAndScroll, 400);
+
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+      };
     }
-  }, [autoFocusComment, post?._id]);
+  }, [autoFocusComment, post?._id, scrollToInputAndBottom]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -176,23 +189,6 @@ const PostModal = ({
       document.body.style.overflow = "hidden";
     }
 
-    const preventTouchMove = (e) => {
-      if (
-        commentsAreaRef.current &&
-        commentsAreaRef.current.contains(e.target)
-      ) {
-        return;
-      }
-      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") {
-        return;
-      }
-      e.preventDefault();
-    };
-
-    document.addEventListener("touchmove", preventTouchMove, {
-      passive: false,
-    });
-
     const handleKeyDown = (event) => {
       if (event.key === "Escape") handleClose();
     };
@@ -207,8 +203,6 @@ const PostModal = ({
         window.scrollTo(0, scrollY);
       }
       document.body.style.overflow = "";
-
-      document.removeEventListener("touchmove", preventTouchMove);
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [post, handleClose]);
@@ -353,7 +347,7 @@ const PostModal = ({
 
       setNewComment("");
       setShowEmojiPicker(false);
-      setTimeout(scrollToBottom, 60);
+      setTimeout(scrollToInputAndBottom, 80);
     } catch (error) {
       console.error("Error adding comment:", error);
       alert(error.response?.data?.message || "Failed to add comment.");
@@ -364,7 +358,7 @@ const PostModal = ({
 
   const handleFocusCommentInput = () => {
     if (commentInputRef.current) commentInputRef.current.focus();
-    scrollToBottom();
+    setTimeout(scrollToInputAndBottom, 300);
   };
 
   const handleEmojiClick = (emojiData) => {
@@ -722,6 +716,7 @@ const PostModal = ({
                 className={styles.commentInput}
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
+                onFocus={() => setTimeout(scrollToInputAndBottom, 350)}
                 disabled={isSubmitting}
                 autoFocus={autoFocusComment}
               />
