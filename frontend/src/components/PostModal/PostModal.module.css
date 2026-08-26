@@ -325,10 +325,20 @@
   display: flex;
   align-items: center;
   transition: opacity 0.2s;
+  color: #262626;
 }
 
 .iconBtn:hover {
   opacity: 0.6;
+}
+
+.commentSvgIcon {
+  fill: none;
+  stroke: #262626 !important;
+  stroke-width: 2px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: #262626 !important;
 }
 
 .likesCount {
