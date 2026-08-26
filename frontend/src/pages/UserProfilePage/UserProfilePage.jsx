@@ -86,6 +86,22 @@ const UserProfilePage = () => {
       setFollowersCount((prev) =>
         updatedIsFollowing ? prev + 1 : Math.max(0, prev - 1),
       );
+
+      setCurrentUser((prevMy) => {
+        if (!prevMy) return prevMy;
+        const currentFollowing = prevMy.following || [];
+        let updatedFollowing;
+
+        if (updatedIsFollowing) {
+          updatedFollowing = [...currentFollowing, user._id];
+        } else {
+          updatedFollowing = currentFollowing.filter(
+            (id) => (typeof id === "string" ? id : id._id) !== user._id,
+          );
+        }
+
+        return { ...prevMy, following: updatedFollowing };
+      });
     } catch (error) {
       console.error("Error toggling follow:", error);
     }
@@ -107,6 +123,22 @@ const UserProfilePage = () => {
           u._id === targetUserId ? { ...u, isFollowing: nextState } : u,
         ),
       );
+
+      setCurrentUser((prevMy) => {
+        if (!prevMy) return prevMy;
+        const currentFollowing = prevMy.following || [];
+        let updatedFollowing;
+
+        if (nextState) {
+          updatedFollowing = [...currentFollowing, targetUserId];
+        } else {
+          updatedFollowing = currentFollowing.filter(
+            (id) => (typeof id === "string" ? id : id._id) !== targetUserId,
+          );
+        }
+
+        return { ...prevMy, following: updatedFollowing };
+      });
 
       if (user && user._id === targetUserId) {
         setIsFollowing(nextState);
@@ -134,13 +166,16 @@ const UserProfilePage = () => {
 
       const formattedData = data.map((u) => ({
         ...u,
-        isFollowing:
-          typeof u.isFollowing !== "undefined"
-            ? u.isFollowing
-            : myFollowingIds.includes(u._id),
+        isFollowing: myFollowingIds.includes(u._id),
       }));
 
       setModalUsersList(formattedData);
+
+      if (type === "followers") {
+        setFollowersCount(formattedData.length);
+      } else if (type === "following") {
+        setFollowingCount(formattedData.length);
+      }
     } catch (error) {
       console.error(`Error fetching ${type}:`, error);
       setModalUsersList([]);
@@ -491,7 +526,7 @@ const UserProfilePage = () => {
         <PostModal
           post={selectedPost}
           onClose={() => setSelectedPost(null)}
-          currentUserFollowing={isFollowing ? [user._id.toString()] : []}
+          currentUserFollowing={currentUser?.following || []}
           onFollowToggle={handleFollowToggle}
         />
       )}
