@@ -192,3 +192,49 @@
     opacity: 0.5;
   }
 }
+
+.mobileHeader {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobileHeader {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 50px;
+    background-color: #ffffff;
+    border-bottom: 1px solid #dbdbdb;
+    padding: 0 16px;
+    z-index: 200;
+    box-sizing: border-box;
+  }
+
+  .mobileLogo {
+    height: 28px;
+    width: auto;
+    cursor: pointer;
+  }
+
+  .container {
+    margin-left: 0 !important;
+    max-width: 100% !important;
+
+    padding: 60px 8px 80px 8px !important;
+  }
+
+  .feedList {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+    width: 100% !important;
+  }
+
+  .emptyFeed,
+  .allCaughtUp {
+    grid-column: span 1 !important;
+  }
+}

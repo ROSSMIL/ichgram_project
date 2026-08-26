@@ -3,6 +3,7 @@ import API from "../../api/axios";
 import PostModal from "../../components/PostModal/PostModal";
 import PostCard from "../../components/PostCard/PostCard";
 import styles from "./DashboardPage.module.css";
+import logoImg from "../../assets/logo.png";
 
 const DashboardPage = () => {
   const [posts, setPosts] = useState([]);
@@ -56,8 +57,6 @@ const DashboardPage = () => {
         const profileRes = await API.get("/api/users/profile", {
           headers: { Authorization: `Bearer ${token}` },
         });
-
-        console.log("Response from /profile:", profileRes.data);
 
         const followingIds =
           profileRes.data.following
@@ -188,9 +187,23 @@ const DashboardPage = () => {
     setAutoFocusComment(false);
   };
 
+  const handleLogoClick = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    fetchFeedData(true);
+  };
+
   if (loading) {
     return (
       <div className={styles.container}>
+        <header className={styles.mobileHeader}>
+          <img
+            src={logoImg}
+            alt="ICHGRAM"
+            className={styles.mobileLogo}
+            onClick={handleLogoClick}
+          />
+        </header>
+
         <div className={styles.feedList}>
           {[1, 2, 3, 4].map((n) => (
             <div
@@ -219,6 +232,15 @@ const DashboardPage = () => {
 
   return (
     <div className={styles.container}>
+      <header className={styles.mobileHeader}>
+        <img
+          src={logoImg}
+          alt="ICHGRAM"
+          className={styles.mobileLogo}
+          onClick={handleLogoClick}
+        />
+      </header>
+
       <div className={styles.feedList}>
         {posts.length > 0 ? (
           posts.map((post) => (
