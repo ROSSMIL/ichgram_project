@@ -12,6 +12,24 @@ import EmojiPicker from "emoji-picker-react";
 import styles from "./PostModal.module.css";
 import Avatar from "../Avatar/Avatar";
 
+const safeSlice = (str, maxLen = 150) => {
+  if (str.length <= maxLen) return str;
+
+  if (typeof Intl !== "undefined" && Intl.Segmenter) {
+    const segmenter = new Intl.Segmenter(undefined, {
+      granularity: "grapheme",
+    });
+    let result = "";
+    for (const segment of segmenter.segment(str)) {
+      if ((result + segment.segment).length > maxLen) break;
+      result += segment.segment;
+    }
+    return result;
+  }
+
+  return Array.from(str).slice(0, maxLen).join("");
+};
+
 const formatTimeAgo = (dateInput) => {
   if (!dateInput) return "just now";
   const date = new Date(dateInput);
@@ -340,10 +358,40 @@ const PostModal = ({
   };
 
   const handleEmojiClick = (emojiData) => {
-    setNewComment((prev) => prev + emojiData.emoji);
-    if (commentInputRef.current) {
-      commentInputRef.current.focus();
+    const emoji = emojiData.emoji;
+    const input = commentInputRef.current;
+
+    if (!input) {
+      setNewComment((prev) => {
+        if ((prev + emoji).length > 150) return prev;
+        return prev + emoji;
+      });
+      return;
     }
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
+    const currentValue = input.value;
+
+    const before = currentValue.slice(0, start);
+    const after = currentValue.slice(end);
+
+    if ((before + emoji + after).length > 150) return;
+
+    const updatedText = before + emoji + after;
+    setNewComment(updatedText);
+    const newCursorPos = start + emoji.length;
+
+    requestAnimationFrame(() => {
+      if (document.activeElement !== input) {
+        input.focus();
+      }
+      input.setSelectionRange(newCursorPos, newCursorPos);
+
+      input.style.height = "20px";
+      if (updatedText) {
+        input.style.height = `${Math.min(input.scrollHeight, 100)}px`;
+      }
+    });
   };
 
   const handleOpenMenu = () => setShowMenu(true);
@@ -653,6 +701,10 @@ const PostModal = ({
           </div>
 
           <form className={styles.inputFooter} onSubmit={handleSendComment}>
+            {newComment.length > 10 && (
+              <div className={styles.charCounter}>{newComment.length}/150</div>
+            )}
+
             <div className={styles.inputPill}>
               <div className={styles.emojiWrapper} ref={emojiPickerRef}>
                 <button
@@ -688,17 +740,28 @@ const PostModal = ({
                 )}
               </div>
 
-              <input
+              <textarea
                 ref={commentInputRef}
-                type="text"
+                rows={1}
                 placeholder="Add a comment..."
                 className={styles.commentInput}
                 value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
+                maxLength={150}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const trimmedVal = safeSlice(val, 150);
+                  setNewComment(trimmedVal);
+
+                  e.target.style.height = "20px";
+                  if (trimmedVal) {
+                    e.target.style.height = `${Math.min(e.target.scrollHeight, 100)}px`;
+                  }
+                }}
                 onFocus={handleFocusCommentInput}
                 disabled={isSubmitting}
                 autoFocus={autoFocusComment}
               />
+
               <button
                 type="submit"
                 className={styles.sendBtn}

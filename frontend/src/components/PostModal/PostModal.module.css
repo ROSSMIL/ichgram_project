@@ -356,15 +356,26 @@
   flex-shrink: 0;
 }
 
+.charCounter {
+  font-size: 11px;
+  color: #8e8e8e;
+  text-align: right;
+  margin-bottom: 4px;
+  margin-right: 12px;
+  animation: fadeIn 0.15s ease-in;
+}
+
 .inputPill {
   display: flex;
   align-items: center;
   background-color: #f4f4f5;
-  border-radius: 24px;
+  border-radius: 20px;
   padding: 6px 14px;
   transition:
     background-color 0.2s ease,
     box-shadow 0.2s ease;
+  min-height: 40px;
+  box-sizing: border-box;
 }
 
 .inputPill:focus-within {
@@ -383,9 +394,11 @@
   background: none;
   border: none;
   cursor: pointer;
-  padding: 2px;
+  padding: 0;
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .emojiContainer {
@@ -405,8 +418,15 @@
   font-size: 14px;
   color: #262626;
   background: transparent;
-  padding: 6px 0;
+  padding: 0;
+  margin: 0;
   font-family: inherit;
+  resize: none;
+  max-height: 100px;
+  line-height: 20px;
+  height: 20px;
+  overflow-y: auto;
+  display: block;
 }
 
 .sendBtn {
@@ -418,6 +438,12 @@
   cursor: pointer;
   padding-left: 10px;
   transition: opacity 0.2s ease;
+  height: 20px;
+  line-height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .sendBtn:disabled {
@@ -460,21 +486,6 @@
   animation: heartPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
-@keyframes heartPop {
-  0% {
-    transform: scale(1);
-  }
-  30% {
-    transform: scale(1.35);
-  }
-  60% {
-    transform: scale(0.85);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
 .bigHeartOverlay {
   position: absolute;
   top: 50%;
@@ -493,29 +504,6 @@
   fill: #ffffff;
   filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.3));
   animation: heartBlowUp 0.8s ease-out forwards;
-}
-
-@keyframes heartBlowUp {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-  15% {
-    transform: scale(1.2);
-    opacity: 0.9;
-  }
-  30% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  80% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1.4);
-    opacity: 0;
-  }
 }
 
 .menuDrawer {
@@ -578,6 +566,102 @@
   border-bottom: 1px solid #f0f0f0;
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes heartPop {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.35);
+  }
+  60% {
+    transform: scale(0.85);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes heartBlowUp {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  15% {
+    transform: scale(1.2);
+    opacity: 0.9;
+  }
+  30% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInBackground {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOutBackground {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes popInModal {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes popOutModal {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
 @media (max-width: 1024px) {
   .overlay {
     padding-left: 72px !important;
@@ -590,7 +674,6 @@
     align-items: flex-end !important;
     background-color: rgba(0, 0, 0, 0.85) !important;
     position: fixed !important;
-
     height: 100dvh !important;
     max-height: 100dvh !important;
   }
@@ -673,54 +756,5 @@
 
   .commentMoreOptions {
     opacity: 1 !important;
-  }
-}
-
-@keyframes fadeInBackground {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes fadeOutBackground {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-
-@keyframes popInModal {
-  from {
-    opacity: 0;
-    transform: scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes popOutModal {
-  from {
-    opacity: 1;
-    transform: scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: scale(0.96);
-  }
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
   }
 }

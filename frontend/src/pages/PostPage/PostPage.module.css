@@ -285,15 +285,26 @@
   flex-shrink: 0;
 }
 
+.charCounter {
+  font-size: 11px;
+  color: #8e8e8e;
+  text-align: right;
+  margin-bottom: 4px;
+  margin-right: 12px;
+  animation: fadeIn 0.15s ease-in;
+}
+
 .inputPill {
   display: flex;
   align-items: center;
   background-color: #f4f4f5;
-  border-radius: 24px;
+  border-radius: 20px;
   padding: 6px 14px;
   transition:
     background-color 0.2s ease,
     box-shadow 0.2s ease;
+  min-height: 40px;
+  box-sizing: border-box;
 }
 
 .inputPill:focus-within {
@@ -312,9 +323,11 @@
   background: none;
   border: none;
   cursor: pointer;
-  padding: 2px;
+  padding: 0;
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .emojiContainer {
@@ -334,8 +347,15 @@
   font-size: 14px;
   color: #262626;
   background: transparent;
-  padding: 6px 0;
+  padding: 0;
+  margin: 0;
   font-family: inherit;
+  resize: none;
+  max-height: 100px;
+  line-height: 20px;
+  height: 20px;
+  overflow-y: auto;
+  display: block;
 }
 
 .sendBtn {
@@ -347,6 +367,12 @@
   cursor: pointer;
   padding-left: 10px;
   transition: opacity 0.2s ease;
+  height: 20px;
+  line-height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .sendBtn:disabled {
@@ -462,6 +488,15 @@
 .deleteBtn {
   color: #ed4956;
   border-bottom: 1px solid #f0f0f0;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes heartPop {
