@@ -26,7 +26,7 @@ Navigate to the backend directory and start the server:
 ```bash
 cd backend
 npm install
-npm run dev
+npm start
 ```
 
 ### 2. Frontend

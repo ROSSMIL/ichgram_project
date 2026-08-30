@@ -12,39 +12,31 @@ const formatTimeAgo = (dateInput) => {
   if (!dateInput) return "just now";
 
   const date = new Date(dateInput);
-
   const now = new Date();
-
   const diffInSeconds = Math.floor((now - date) / 1000);
 
   if (diffInSeconds < 60) return "just now";
 
   const diffInMinutes = Math.floor(diffInSeconds / 60);
-
   if (diffInMinutes < 60) return `${diffInMinutes} min.`;
 
   const diffInHours = Math.floor(diffInMinutes / 60);
-
   if (diffInHours < 24)
     return diffInHours === 1 ? "1 hour" : `${diffInHours} hours`;
 
   const diffInDays = Math.floor(diffInHours / 24);
-
   if (diffInDays < 7) return diffInDays === 1 ? "1 day" : `${diffInDays} days`;
 
   const diffInWeeks = Math.floor(diffInDays / 7);
-
-  if (diffInWeeks < 4)
-    return diffInWeeks === 1 ? "1 week" : `${diffInWeeks} weeks`;
+  if (diffInDays < 30)
+    return diffInWeeks <= 1 ? "1 week" : `${diffInWeeks} weeks`;
 
   const diffInMonths = Math.floor(diffInDays / 30);
-
   if (diffInMonths < 12)
-    return diffInMonths === 1 ? "1 month" : `${diffInMonths} months`;
+    return diffInMonths <= 1 ? "1 month" : `${diffInMonths} months`;
 
   const diffInYears = Math.floor(diffInDays / 365);
-
-  return diffInYears === 1 ? "1 year" : `${diffInYears} years`;
+  return diffInYears <= 1 ? "1 year" : `${diffInYears} years`;
 };
 
 const PostCard = ({
