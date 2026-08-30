@@ -205,7 +205,7 @@ const DashboardPage = () => {
     const isMobile = window.innerWidth <= 768;
 
     if (isMobile) {
-      navigate(`/post/${post._id}`);
+      navigate(`/post/${post._id}${focusComment ? "?focus=true" : ""}`);
     } else {
       setSelectedPost(post);
       setAutoFocusComment(focusComment);
