@@ -111,10 +111,6 @@ const PostPage = () => {
   const handleFocusCommentInput = useCallback(() => {
     if (commentInputRef.current) {
       commentInputRef.current.focus();
-      commentInputRef.current.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
     }
     setTimeout(scrollToBottom, 300);
   }, [scrollToBottom]);
@@ -147,31 +143,31 @@ const PostPage = () => {
   }, [id, currentUserId]);
 
   useLayoutEffect(() => {
-    if (!loading && post && autoFocusComment) {
-      const focusAndScroll = () => {
+    if (autoFocusComment) {
+      const tryFocus = () => {
         if (commentInputRef.current) {
           commentInputRef.current.focus();
         }
-        scrollToBottom();
       };
 
-      focusAndScroll();
-      requestAnimationFrame(focusAndScroll);
-      const timer1 = setTimeout(focusAndScroll, 100);
-      const timer2 = setTimeout(focusAndScroll, 300);
+      tryFocus();
+      const t1 = setTimeout(tryFocus, 50);
+      const t2 = setTimeout(tryFocus, 150);
+      const t3 = setTimeout(tryFocus, 300);
 
       return () => {
-        clearTimeout(timer1);
-        clearTimeout(timer2);
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
       };
     }
-  }, [loading, post, autoFocusComment, scrollToBottom]);
+  }, [autoFocusComment]);
 
   useLayoutEffect(() => {
-    if (post && !autoFocusComment) {
+    if (post) {
       scrollToBottom();
     }
-  }, [post, comments.length, autoFocusComment, scrollToBottom]);
+  }, [post, comments.length, scrollToBottom]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -336,13 +332,9 @@ const PostPage = () => {
     return `/user/${targetUsername}`;
   };
 
-  if (loading) return <div className={styles.loadingContainer}>Loading...</div>;
-  if (!post)
-    return <div className={styles.loadingContainer}>Post not found</div>;
-
-  const authorUsername = post.user?.username || "user";
-  const authorUser = post.user || { username: authorUsername };
-  const authorId = post.user?._id || post.user?.id || post.user;
+  const authorUsername = post?.user?.username || "user";
+  const authorUser = post?.user || { username: authorUsername };
+  const authorId = post?.user?._id || post?.user?.id || post?.user;
 
   const isAuthor =
     (currentUserId &&
@@ -355,7 +347,11 @@ const PostPage = () => {
     <div className={styles.pageWrapper}>
       <div className={styles.modalBox}>
         <div className={styles.imageSection} onClick={handleImageClick}>
-          <img src={post.url} alt="Post content" className={styles.postImg} />
+          {post?.url ? (
+            <img src={post.url} alt="Post content" className={styles.postImg} />
+          ) : (
+            <div className={styles.imgPlaceholder} />
+          )}
           {showBigHeart && (
             <div className={styles.bigHeartOverlay}>
               <svg viewBox="0 0 24 24" className={styles.bigHeartIcon}>
@@ -403,12 +399,14 @@ const PostPage = () => {
                   to={getProfileLink(authorUsername)}
                   className={styles.usernameLink}
                 >
-                  <span className={styles.username}>{authorUsername}</span>
+                  <span className={styles.username}>
+                    {loading ? "Loading..." : authorUsername}
+                  </span>
                 </Link>
               </div>
             </div>
 
-            {isAuthor && (
+            {isAuthor && !loading && (
               <button className={styles.moreOptions} onClick={handleOpenMenu}>
                 <svg
                   aria-label="More options"
@@ -427,7 +425,7 @@ const PostPage = () => {
           </header>
 
           <div className={styles.commentsArea} ref={commentsAreaRef}>
-            {post.caption && (
+            {post?.caption && (
               <div className={styles.commentItemContainer}>
                 <div className={styles.commentItem}>
                   <Link to={getProfileLink(authorUsername)}>
@@ -515,7 +513,9 @@ const PostPage = () => {
               })
             ) : (
               <div className={styles.noComments}>
-                No comments yet. Be the first!
+                {loading
+                  ? "Loading comments..."
+                  : "No comments yet. Be the first!"}
               </div>
             )}
           </div>
@@ -552,7 +552,7 @@ const PostPage = () => {
             </div>
             <div className={styles.likesCount}>{likesCount} likes</div>
             <div className={styles.postDate}>
-              {post.createdAt ? formatTimeAgo(post.createdAt) : "just now"}
+              {post?.createdAt ? formatTimeAgo(post.createdAt) : "just now"}
             </div>
           </div>
 
