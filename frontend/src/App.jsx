@@ -12,6 +12,7 @@ import ProfilePage from "./pages/ProfilePage/ProfilePage";
 import EditProfilePage from "./pages/EditProfilePage/EditProfilePage";
 import UserProfilePage from "./pages/UserProfilePage/UserProfilePage";
 import ExplorePage from "./pages/ExplorePage/ExplorePage";
+import PostPage from "./pages/PostPage/PostPage";
 import CreatePostModal from "./components/CreatePostModal/CreatePostModal";
 import Sidebar from "./components/Sidebar/Sidebar";
 import Footer from "./components/Footer/Footer";
@@ -100,6 +101,15 @@ function App() {
           element={
             <ProtectedRoute>
               <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/post/:id"
+          element={
+            <ProtectedRoute>
+              <PostPage />
             </ProtectedRoute>
           }
         />

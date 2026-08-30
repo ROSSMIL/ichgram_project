@@ -1,0 +1,91 @@
+.pageContainer {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background-color: #ffffff;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 10;
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.headerTitle {
+  flex: 1;
+  text-align: center;
+  font-weight: 600;
+  margin-right: 40px;
+}
+
+.mainContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.imageBox {
+  width: 100%;
+  max-height: 400px;
+  background: #000;
+}
+
+.postImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.detailsBox {
+  padding: 16px;
+  flex: 1;
+}
+
+.authorRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.username {
+  font-weight: 600;
+}
+
+.commentsList {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inputFooter {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid #f0f0f0;
+  background: #ffffff;
+}
+
+.commentInput {
+  flex: 1;
+  border: 1px solid #e0e0e0;
+  border-radius: 20px;
+  padding: 8px 16px;
+  outline: none;
+}

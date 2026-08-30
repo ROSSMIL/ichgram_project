@@ -124,15 +124,6 @@ const PostModal = ({
     }
   }, []);
 
-  const ensureInputInView = useCallback(() => {
-    if (commentInputRef.current) {
-      commentInputRef.current.scrollIntoView({
-        block: "nearest",
-        behavior: "smooth",
-      });
-    }
-  }, []);
-
   useLayoutEffect(() => {
     if (autoFocusComment) {
       const focusAndScroll = () => {
@@ -140,7 +131,6 @@ const PostModal = ({
           commentInputRef.current.focus();
         }
         scrollToBottom();
-        ensureInputInView();
       };
 
       focusAndScroll();
@@ -153,29 +143,7 @@ const PostModal = ({
         clearTimeout(timer2);
       };
     }
-  }, [autoFocusComment, post?._id, scrollToBottom, ensureInputInView]);
-
-  useEffect(() => {
-    if (!autoFocusComment) return;
-
-    const handleViewportResize = () => {
-      scrollToBottom();
-      ensureInputInView();
-    };
-
-    const viewport = window.visualViewport;
-    if (viewport) {
-      viewport.addEventListener("resize", handleViewportResize);
-      viewport.addEventListener("scroll", handleViewportResize);
-    }
-
-    return () => {
-      if (viewport) {
-        viewport.removeEventListener("resize", handleViewportResize);
-        viewport.removeEventListener("scroll", handleViewportResize);
-      }
-    };
-  }, [autoFocusComment, scrollToBottom, ensureInputInView]);
+  }, [autoFocusComment, post?._id, scrollToBottom]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -356,10 +324,7 @@ const PostModal = ({
 
       setNewComment("");
       setShowEmojiPicker(false);
-      setTimeout(() => {
-        scrollToBottom();
-        ensureInputInView();
-      }, 50);
+      setTimeout(scrollToBottom, 50);
     } catch (error) {
       console.error("Error adding comment:", error);
       alert(error.response?.data?.message || "Failed to add comment.");
@@ -371,10 +336,7 @@ const PostModal = ({
   const handleFocusCommentInput = () => {
     if (commentInputRef.current) commentInputRef.current.focus();
 
-    setTimeout(() => {
-      scrollToBottom();
-      ensureInputInView();
-    }, 300);
+    setTimeout(scrollToBottom, 300);
   };
 
   const handleEmojiClick = (emojiData) => {

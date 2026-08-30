@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import API from "../../api/axios";
 import PostModal from "../../components/PostModal/PostModal";
 import PostCard from "../../components/PostCard/PostCard";
@@ -7,6 +8,7 @@ import styles from "./DashboardPage.module.css";
 import logoImg from "../../assets/logo.png";
 
 const DashboardPage = () => {
+  const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUserFollowing, setCurrentUserFollowing] = useState([]);
@@ -200,8 +202,14 @@ const DashboardPage = () => {
   };
 
   const handleOpenModal = (post, focusComment = false) => {
-    setSelectedPost(post);
-    setAutoFocusComment(focusComment);
+    const isMobile = window.innerWidth <= 768;
+
+    if (isMobile) {
+      navigate(`/post/${post._id}`);
+    } else {
+      setSelectedPost(post);
+      setAutoFocusComment(focusComment);
+    }
   };
 
   const handleCloseModal = () => {
