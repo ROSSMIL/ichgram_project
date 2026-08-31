@@ -1,6 +1,7 @@
 # ICHGRAM
 
 **Disclaimer:** This is a non-commercial educational project developed as part of a web development portfolio. All product designs and interface concepts are inspired by Instagram UI.
+
 **Project History:** This application originated as a final project during my Web Development program at ITCareerHub. Since then, it has been enhanced with an updated responsive layout (mobile/desktop), full cloud deployment via Vercel and Render, and additional design changes and decisions.
 
 This repository contains a full-stack social media application inspired by Instagram, built using React for the frontend and Node.js for the backend.
@@ -8,6 +9,7 @@ This repository contains a full-stack social media application inspired by Insta
 🌐 **Live Demo:** [CLICK ME](https://ichgram-project.vercel.app/dashboard)
 
 ⚙️ **Backend Services:** Deployed on Render
+
 ⚙️ **Frontend Services:** Deployed on Vercel
 
 📋 Features & Functionality
