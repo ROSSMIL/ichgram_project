@@ -22,6 +22,9 @@ const ProfilePage = () => {
   const [modalUsersList, setModalUsersList] = useState([]);
   const [loadingModalList, setLoadingModalList] = useState(false);
 
+  const [isClosingSettings, setIsClosingSettings] = useState(false);
+  const [isClosingUsersModal, setIsClosingUsersModal] = useState(false);
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     navigate("/login");
@@ -110,9 +113,21 @@ const ProfilePage = () => {
     }
   };
 
+  const closeSettings = () => {
+    setIsClosingSettings(true);
+    setTimeout(() => {
+      setIsSettingsOpen(false);
+      setIsClosingSettings(false);
+    }, 150);
+  };
+
   const closeUsersModal = () => {
-    setActiveModal(null);
-    setModalUsersList([]);
+    setIsClosingUsersModal(true);
+    setTimeout(() => {
+      setActiveModal(null);
+      setModalUsersList([]);
+      setIsClosingUsersModal(false);
+    }, 150);
   };
 
   const openUsersModal = async (type) => {
@@ -194,8 +209,8 @@ const ProfilePage = () => {
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
-        if (isSettingsOpen) setIsSettingsOpen(false);
-        if (activeModal) closeUsersModal();
+        if (isSettingsOpen && !isClosingSettings) closeSettings();
+        if (activeModal && !isClosingUsersModal) closeUsersModal();
         if (selectedPost) setSelectedPost(null);
       }
     };
@@ -204,7 +219,13 @@ const ProfilePage = () => {
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isSettingsOpen, activeModal, selectedPost]);
+  }, [
+    isSettingsOpen,
+    isClosingSettings,
+    activeModal,
+    isClosingUsersModal,
+    selectedPost,
+  ]);
 
   if (loading) {
     return (
@@ -524,11 +545,11 @@ const ProfilePage = () => {
       {isSettingsOpen &&
         createPortal(
           <div
-            className={styles.modalOverlay}
-            onClick={() => setIsSettingsOpen(false)}
+            className={`${styles.modalOverlay} ${isClosingSettings ? styles.fadeOut : ""}`}
+            onClick={closeSettings}
           >
             <div
-              className={styles.settingsModalContent}
+              className={`${styles.settingsModalContent} ${isClosingSettings ? styles.scaleDown : ""}`}
               onClick={(e) => e.stopPropagation()}
             >
               <button
@@ -537,10 +558,7 @@ const ProfilePage = () => {
               >
                 Log out
               </button>
-              <button
-                onClick={() => setIsSettingsOpen(false)}
-                className={styles.modalAction}
-              >
+              <button onClick={closeSettings} className={styles.modalAction}>
                 Cancel
               </button>
             </div>
@@ -562,9 +580,12 @@ const ProfilePage = () => {
 
       {activeModal &&
         createPortal(
-          <div className={styles.modalOverlay} onClick={closeUsersModal}>
+          <div
+            className={`${styles.modalOverlay} ${isClosingUsersModal ? styles.fadeOut : ""}`}
+            onClick={closeUsersModal}
+          >
             <div
-              className={styles.modalContent}
+              className={`${styles.modalContent} ${isClosingUsersModal ? styles.scaleDown : ""}`}
               onClick={(e) => e.stopPropagation()}
             >
               <div className={styles.modalHeader}>

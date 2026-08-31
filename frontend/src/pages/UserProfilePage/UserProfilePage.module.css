@@ -1,50 +1,38 @@
 .profileContainer {
   max-width: 935px;
   margin: 0 auto;
-  padding: 20px 20px 80px 265px;
+  padding: 30px 20px 80px 265px;
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
   box-sizing: border-box;
   transition: padding-left 0.3s ease;
-}
-
-.topBar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24px;
+  position: relative;
 }
 
 .backBtn {
+  position: absolute;
+  top: 32px;
+  left: 215px;
   background: none;
   border: none;
   color: #262626;
   cursor: pointer;
-  padding: 4px;
+  padding: 6px;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   transition:
     opacity 0.15s ease,
     transform 0.15s ease;
-  width: 32px;
+  border-radius: 50%;
+  z-index: 5;
 }
 
 .backBtn:hover {
-  opacity: 0.6;
+  opacity: 0.7;
   transform: translateX(-3px);
-}
-
-.topBarUsername {
-  font-size: 18px;
-  font-weight: 700;
-  color: #000000;
-  text-align: center;
-}
-
-.topBarSpacer {
-  width: 32px;
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .header {
@@ -340,12 +328,20 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.65);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  transform: translateZ(0);
+  will-change: opacity, backdrop-filter;
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 9999;
-  animation: fadeIn 0.15s ease-out;
+  z-index: 999999;
+  animation: fadeIn 0.15s ease-out forwards;
+}
+
+.modalOverlay.fadeOut {
+  animation: fadeOut 0.15s ease-in forwards;
 }
 
 .modalContent {
@@ -357,8 +353,12 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-  animation: scaleUp 0.15s cubic-bezier(0.1, 0.8, 0.25, 1);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  animation: scaleUp 0.15s cubic-bezier(0.1, 0.8, 0.25, 1) forwards;
+}
+
+.modalContent.scaleDown {
+  animation: scaleDown 0.15s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
 .modalHeader {
@@ -534,13 +534,34 @@
   }
 }
 
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 @keyframes scaleUp {
   from {
-    transform: scale(0.95);
+    transform: scale(0.92);
     opacity: 0;
   }
   to {
+    transform: scale(1);
     opacity: 1;
+  }
+}
+
+@keyframes scaleDown {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.92);
+    opacity: 0;
   }
 }
 
@@ -593,6 +614,11 @@
     padding-right: 16px;
   }
 
+  .backBtn {
+    left: 40px;
+    top: 20px;
+  }
+
   .avatarContainer {
     margin-left: 10px;
     margin-right: 40px;
@@ -604,6 +630,11 @@
 @media (max-width: 768px) {
   .profileContainer {
     padding: 16px 12px 80px 12px;
+  }
+
+  .backBtn {
+    position: static;
+    margin-bottom: 12px;
   }
 
   .header {

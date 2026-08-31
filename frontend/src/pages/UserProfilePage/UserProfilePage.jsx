@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
+import { createPortal } from "react-dom";
 import API from "../../api/axios";
 import styles from "./UserProfilePage.module.css";
 import PostModal from "../../components/PostModal/PostModal";
@@ -23,6 +24,8 @@ const UserProfilePage = () => {
   const [activeModal, setActiveModal] = useState(null);
   const [modalUsersList, setModalUsersList] = useState([]);
   const [loadingModalList, setLoadingModalList] = useState(false);
+
+  const [isClosingUsersModal, setIsClosingUsersModal] = useState(false);
 
   useEffect(() => {
     const fetchUserProfileAndPosts = async () => {
@@ -185,14 +188,18 @@ const UserProfilePage = () => {
   };
 
   const closeUsersModal = () => {
-    setActiveModal(null);
-    setModalUsersList([]);
+    setIsClosingUsersModal(true);
+    setTimeout(() => {
+      setActiveModal(null);
+      setModalUsersList([]);
+      setIsClosingUsersModal(false);
+    }, 150);
   };
 
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
-        if (activeModal) closeUsersModal();
+        if (activeModal && !isClosingUsersModal) closeUsersModal();
         if (selectedPost) setSelectedPost(null);
       }
     };
@@ -201,7 +208,7 @@ const UserProfilePage = () => {
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [activeModal, selectedPost]);
+  }, [activeModal, isClosingUsersModal, selectedPost]);
 
   if (loading) {
     return (
@@ -265,46 +272,42 @@ const UserProfilePage = () => {
 
   return (
     <div className={styles.profileContainer}>
-      <div className={styles.topBar}>
-        <button
-          type="button"
-          className={styles.backBtn}
-          onClick={() => navigate(-1)}
+      <button
+        type="button"
+        className={styles.backBtn}
+        onClick={() => navigate(-1)}
+        aria-label="Back"
+      >
+        <svg
           aria-label="Back"
+          color="rgb(38, 38, 38)"
+          fill="rgb(38, 38, 38)"
+          height="24"
+          role="img"
+          viewBox="0 0 24 24"
+          width="24"
         >
-          <svg
-            aria-label="Back"
-            color="rgb(38, 38, 38)"
-            fill="rgb(38, 38, 38)"
-            height="24"
-            role="img"
-            viewBox="0 0 24 24"
-            width="24"
-          >
-            <line
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              x1="2.909"
-              x2="21.413"
-              y1="12"
-              y2="12"
-            ></line>
-            <polyline
-              fill="none"
-              points="11.692 3.22 2.909 12 11.692 20.78"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-            ></polyline>
-          </svg>
-        </button>
-        <span className={styles.topBarUsername}>{user.username}</span>
-        <div className={styles.topBarSpacer} />
-      </div>
+          <line
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            x1="2.909"
+            x2="21.413"
+            y1="12"
+            y2="12"
+          ></line>
+          <polyline
+            fill="none"
+            points="11.692 3.22 2.909 12 11.692 20.78"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+          ></polyline>
+        </svg>
+      </button>
 
       <header className={styles.header}>
         <div className={styles.headerTopMobile}>
@@ -531,79 +534,86 @@ const UserProfilePage = () => {
         />
       )}
 
-      {activeModal && (
-        <div className={styles.modalOverlay} onClick={closeUsersModal}>
+      {activeModal &&
+        createPortal(
           <div
-            className={styles.modalContent}
-            onClick={(e) => e.stopPropagation()}
+            className={`${styles.modalOverlay} ${isClosingUsersModal ? styles.fadeOut : ""}`}
+            onClick={closeUsersModal}
           >
-            <div className={styles.modalHeader}>
-              <h3>{activeModal === "followers" ? "Followers" : "Following"}</h3>
-              <button
-                className={styles.closeModalBtn}
-                onClick={closeUsersModal}
-              >
-                ✕
-              </button>
-            </div>
+            <div
+              className={`${styles.modalContent} ${isClosingUsersModal ? styles.scaleDown : ""}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={styles.modalHeader}>
+                <h3>
+                  {activeModal === "followers" ? "Followers" : "Following"}
+                </h3>
+                <button
+                  className={styles.closeModalBtn}
+                  onClick={closeUsersModal}
+                >
+                  ✕
+                </button>
+              </div>
 
-            <div className={styles.modalBody}>
-              {loadingModalList ? (
-                <div className={styles.modalLoading}>Loading users...</div>
-              ) : modalUsersList.length > 0 ? (
-                <ul className={styles.usersList}>
-                  {modalUsersList.map((modalUser) => (
-                    <li key={modalUser._id} className={styles.userItem}>
-                      <Link
-                        to={`/user/${modalUser.username}`}
-                        className={styles.userItemLeftLink}
-                        onClick={closeUsersModal}
-                      >
-                        <div className={styles.avatarWrapper}>
-                          <Avatar user={modalUser} size={40} />
-                        </div>
-                        <div className={styles.userNames}>
-                          <span className={styles.userUsername}>
-                            {modalUser.username}
-                          </span>
-                          <span className={styles.userFullName}>
-                            {modalUser.fullName || modalUser.username}
-                          </span>
-                        </div>
-                      </Link>
+              <div className={styles.modalBody}>
+                {loadingModalList ? (
+                  <div className={styles.modalLoading}>Loading users...</div>
+                ) : modalUsersList.length > 0 ? (
+                  <ul className={styles.usersList}>
+                    {modalUsersList.map((modalUser) => (
+                      <li key={modalUser._id} className={styles.userItem}>
+                        <Link
+                          to={`/user/${modalUser.username}`}
+                          className={styles.userItemLeftLink}
+                          onClick={closeUsersModal}
+                        >
+                          <div className={styles.avatarWrapper}>
+                            <Avatar user={modalUser} size={40} />
+                          </div>
+                          <div className={styles.userNames}>
+                            <span className={styles.userUsername}>
+                              {modalUser.username}
+                            </span>
+                            <span className={styles.userFullName}>
+                              {modalUser.fullName || modalUser.username}
+                            </span>
+                          </div>
+                        </Link>
 
-                      {currentUser && modalUser._id !== currentUser._id ? (
-                        <div className={styles.actionBtnWrapper}>
-                          <button
-                            className={`${styles.listFollowBtn} ${
-                              modalUser.isFollowing
-                                ? styles.following
-                                : styles.follow
-                            }`}
-                            onClick={() =>
-                              handleModalFollowToggle(modalUser._id)
-                            }
-                          >
-                            {modalUser.isFollowing ? "Following" : "Follow"}
-                          </button>
-                        </div>
-                      ) : (
-                        <div className={styles.actionBtnWrapperPlaceholder} />
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className={styles.noUsersMessage}>
-                  {activeModal === "followers"
-                    ? "No followers yet."
-                    : "No followings yet."}
-                </div>
-              )}
+                        {currentUser && modalUser._id !== currentUser._id ? (
+                          <div className={styles.actionBtnWrapper}>
+                            <button
+                              className={`${styles.listFollowBtn} ${
+                                modalUser.isFollowing
+                                  ? styles.following
+                                  : styles.follow
+                              }`}
+                              onClick={() =>
+                                handleModalFollowToggle(modalUser._id)
+                              }
+                            >
+                              {modalUser.isFollowing ? "Following" : "Follow"}
+                            </button>
+                          </div>
+                        ) : (
+                          <div className={styles.actionBtnWrapperPlaceholder} />
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className={styles.noUsersMessage}>
+                    {activeModal === "followers"
+                      ? "No followers yet."
+                      : "No followings yet."}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };

@@ -315,20 +315,33 @@
   justify-content: center;
   align-items: center;
   z-index: 999999;
-  animation: fadeIn 0.15s ease-out;
+  animation: fadeIn 0.15s ease-out forwards;
 }
 
-.modalContent {
+.modalOverlay.fadeOut {
+  animation: fadeOut 0.15s ease-in forwards;
+}
+
+.modalContent,
+.settingsModalContent {
   background-color: #ffffff;
   width: 100%;
   max-width: 400px;
-  height: 400px;
   border-radius: 12px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
-  animation: scaleUp 0.15s cubic-bezier(0.1, 0.8, 0.25, 1);
+  animation: scaleUp 0.15s cubic-bezier(0.1, 0.8, 0.25, 1) forwards;
+}
+
+.modalContent {
+  height: 400px;
+}
+
+.modalContent.scaleDown,
+.settingsModalContent.scaleDown {
+  animation: scaleDown 0.15s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
 .modalHeader {
@@ -495,18 +508,6 @@
   background-color: #dbdbdb;
 }
 
-.settingsModalContent {
-  background-color: #ffffff;
-  width: 100%;
-  max-width: 400px;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
-  animation: scaleUp 0.15s cubic-bezier(0.1, 0.8, 0.25, 1);
-}
-
 .modalAction {
   background: none;
   border: none;
@@ -542,14 +543,34 @@
   }
 }
 
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 @keyframes scaleUp {
   from {
-    transform: scale(0.95);
+    transform: scale(0.92);
     opacity: 0;
   }
   to {
     transform: scale(1);
     opacity: 1;
+  }
+}
+
+@keyframes scaleDown {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.92);
+    opacity: 0;
   }
 }
 
