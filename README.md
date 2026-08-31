@@ -11,7 +11,7 @@ This repository contains a full-stack social media application inspired by Insta
 - **Content Management:** Create and share new posts via the "Create" functionality.
 - **User Search:** Find and navigate to other user profiles.
 - **Profile Page:** Dedicated view for personal content and account information.
-- **In Development:** Messaging and Notifications features are currently under active development.
+- **In Development:** Messaging, Notifications, Password recovery features are currently under active development.
 
 ---
 
