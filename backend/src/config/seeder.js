@@ -156,7 +156,7 @@ const seedDatabase = async () => {
     const postsData = [
       {
         user: hub._id,
-        url: "https://picsum.photos/id/20/600/600",
+        url: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&h=600&q=80",
         caption:
           "Starting the week with a clean slate and ambitious plans. May everything you've planned come true! 🎯✨",
         createdAt: new Date(now - 2 * 24 * 60 * 60 * 1000),
@@ -177,7 +177,7 @@ const seedDatabase = async () => {
       },
       {
         user: tonia._id,
-        url: "https://picsum.photos/id/26/600/600",
+        url: "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=600&h=600&q=80",
         caption:
           "Beauty is in the details we often overlook in a rush. Stop for a minute and just look around. 🌿🍂",
         createdAt: new Date(now - 4 * 24 * 60 * 60 * 1000),
@@ -192,7 +192,7 @@ const seedDatabase = async () => {
       },
       {
         user: society._id,
-        url: "https://picsum.photos/id/36/600/600",
+        url: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=600&h=600&q=80",
         caption:
           "The perfect balance between work, creativity, and rest. What helps you recharge? ☕🔋",
         createdAt: new Date(now - 21 * 24 * 60 * 60 * 1000),
@@ -213,7 +213,7 @@ const seedDatabase = async () => {
       },
       {
         user: pixel._id,
-        url: "https://picsum.photos/id/48/600/600",
+        url: "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=600&h=600&q=80",
         caption:
           "Minimalism in everything is one of the main trends of our reality. Less noise, more essence. 📐🤍",
         createdAt: new Date(now - 15 * 60 * 1000),
@@ -234,7 +234,7 @@ const seedDatabase = async () => {
       },
       {
         user: gamer._id,
-        url: "https://picsum.photos/id/64/600/600",
+        url: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=600&h=600&q=80",
         caption:
           "Cozy evening vibes. The best time to dive into your favorite hobby and mute phone notifications. 🌌🎮",
         createdAt: new Date(now - 18 * 60 * 60 * 1000),
@@ -249,7 +249,7 @@ const seedDatabase = async () => {
       },
       {
         user: nature._id,
-        url: "https://picsum.photos/id/103/600/600",
+        url: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=600&h=600&q=80",
         caption:
           "Nature is the best artist. No filters can capture these natural textures and light. 🪵☀️",
         createdAt: new Date(now - 12 * 60 * 60 * 1000),
@@ -264,7 +264,7 @@ const seedDatabase = async () => {
       },
       {
         user: foodie._id,
-        url: "https://picsum.photos/id/106/600/600",
+        url: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=600&h=600&q=80",
         caption:
           "The little joys of everyday life make up the big happy picture. Have a great mood, everyone! 🌸🍰",
         createdAt: new Date(now - 1 * 24 * 60 * 60 * 1000),
@@ -279,7 +279,7 @@ const seedDatabase = async () => {
       },
       {
         user: sound._id,
-        url: "https://picsum.photos/id/119/600/600",
+        url: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&h=600&q=80",
         caption:
           "Inspiration can be found in absolutely everything, as long as you look at it from the right angle. 🔎💡",
         createdAt: new Date(now - 5 * 60 * 60 * 1000),
@@ -294,7 +294,7 @@ const seedDatabase = async () => {
       },
       {
         user: ninja._id,
-        url: "https://picsum.photos/id/160/600/600",
+        url: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=600&h=600&q=80",
         caption:
           "Work process is in full swing. Productivity is at its peak today, moving only forward! 📈💪",
         createdAt: new Date(now - 3 * 24 * 60 * 60 * 1000),
@@ -309,7 +309,7 @@ const seedDatabase = async () => {
       },
       {
         user: volley._id,
-        url: "https://picsum.photos/id/180/600/600",
+        url: "https://images.unsplash.com/photo-1519861531473-9200262188bf?auto=format&fit=crop&w=600&h=600&q=80",
         caption:
           "A fresh perspective on familiar things helps find unexpected solutions to complex tasks. Have a productive day! 🧠🚀",
         createdAt: new Date(now - 6 * 24 * 60 * 60 * 1000),
@@ -324,7 +324,7 @@ const seedDatabase = async () => {
       },
       {
         user: volley._id,
-        url: "https://picsum.photos/id/223/600/600",
+        url: "https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?auto=format&fit=crop&w=600&h=600&q=80",
         caption:
           "Great game today! Teamwork and dedication always pay off on the field. 🏐🏆",
         createdAt: new Date(now - 8 * 24 * 60 * 60 * 1000),
