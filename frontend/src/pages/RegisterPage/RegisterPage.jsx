@@ -45,7 +45,6 @@ const RegisterPage = () => {
       });
 
       if (response.status === 201 || response.status === 200) {
-        console.log("Register successful!");
         navigate("/login");
       }
     } catch (err) {

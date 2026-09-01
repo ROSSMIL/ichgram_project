@@ -66,6 +66,22 @@
   bottom: 1.2rem;
 }
 
+.form button {
+  transition:
+    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.25s ease,
+    opacity 0.25s ease;
+  will-change: transform;
+}
+
+.form button:hover:not(:disabled) {
+  transform: scale(1.02);
+}
+
+.form button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
 .policyText {
   color: #8e8e8e;
   font-size: 0.75rem;
@@ -80,6 +96,12 @@
   color: #00376b;
   text-decoration: none;
   font-weight: 400;
+  transition: opacity 0.2s ease;
+}
+
+.policyText a:hover {
+  text-decoration: underline;
+  opacity: 0.8;
 }
 
 .redirectBox {
@@ -103,7 +125,36 @@
 .link {
   color: #0095f6;
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 600;
+  position: relative;
+  padding-bottom: 2px;
+  transition: color 0.25s ease;
+}
+
+.link::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 1.5px;
+  background-color: #00376b;
+  transition:
+    width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.link:hover {
+  color: #00376b;
+}
+
+.link:hover::after {
+  width: 100%;
+  left: 0;
+}
+
+.link:active {
+  opacity: 0.7;
 }
 
 .errorMessage {
