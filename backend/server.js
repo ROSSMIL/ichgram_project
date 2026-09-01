@@ -4,9 +4,7 @@ import "dotenv/config";
 import path from "path";
 import { fileURLToPath } from "url";
 import connectDB from "./src/config/db.js";
-// 1. 👇 Додаємо імпорт сідера (переконайся в точності шляху!)
 import seedDatabase from "./src/config/seeder.js";
-
 import authRoutes from "./src/routes/authRoutes.js";
 import userRoutes from "./src/routes/userRoutes.js";
 import postRoutes from "./src/routes/postRoutes.js";
@@ -53,16 +51,14 @@ app.get("/", (req, res) => {
 
 const startServer = async () => {
   try {
-    console.log("⏳ Підключаємося до MongoDB...");
     await connectDB();
-
     await seedDatabase();
 
     app.listen(PORT, () => {
-      console.log(`🚀 Server is live on port ${PORT}`);
+      console.log(`Server running on port ${PORT}`);
     });
   } catch (error) {
-    console.error("❌ Не вдалося підключитися до бази даних:", error);
+    console.error("Failed to start server:", error);
   }
 };
 

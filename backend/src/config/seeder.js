@@ -2,15 +2,20 @@ import bcrypt from "bcrypt";
 import User from "../models/userModel.js";
 import Post from "../models/postModel.js";
 
+let isSeedingPerformed = false;
+
 const seedDatabase = async () => {
+  if (isSeedingPerformed) return;
+  isSeedingPerformed = true;
+
   try {
     const userCount = await User.countDocuments();
     if (userCount > 0) {
-      console.log("🌱 Database already seeded. Skipping...");
+      console.log("Database already seeded. Skipping...");
       return;
     }
 
-    console.log("🚧 Database is empty. Starting auto-seeding process...");
+    console.log("Database is empty. Starting auto-seeding process...");
 
     const hashedPassword = await bcrypt.hash("password123", 10);
 
@@ -22,7 +27,7 @@ const seedDatabase = async () => {
         fullName: "Guest Recruiter",
         avatar:
           "https://api.dicebear.com/7.x/initials/svg?seed=Guest&backgroundColor=ffc107",
-        bio: "Welcome to my demo profile! I am exploring this awesome app as a guest recruiter. 🚀",
+        bio: "Welcome to my demo profile! I am exploring this app as a guest recruiter.",
         website: "github.com",
       },
       {
@@ -32,7 +37,7 @@ const seedDatabase = async () => {
         fullName: "IT Career Hub",
         avatar:
           "https://api.dicebear.com/7.x/initials/svg?seed=ITCareerHub&backgroundColor=0073b1",
-        bio: "Your guide to the world of IT technologies and successful employment! 🚀",
+        bio: "Your guide to the world of IT technologies and successful employment!",
         website: "itcareerhub.de",
       },
       {
@@ -42,7 +47,7 @@ const seedDatabase = async () => {
         fullName: "Tonia Coach",
         avatar:
           "https://api.dicebear.com/7.x/initials/svg?seed=Tonia&backgroundColor=ff4081",
-        bio: "Fitness coach & Healthy lifestyle motivator. Create the body of your dreams! 💪",
+        bio: "Fitness coach & Healthy lifestyle motivator. Create the body of your dreams!",
         website: "toniafit.com",
       },
       {
@@ -52,7 +57,7 @@ const seedDatabase = async () => {
         fullName: "FS Society",
         avatar:
           "https://api.dicebear.com/7.x/initials/svg?seed=Society&backgroundColor=4caf50",
-        bio: "Our world is digital. Cyber-security, tech discussions and web development. 💻⌨️",
+        bio: "Our world is digital. Cyber-security, tech discussions and web development.",
         website: "fs-society.org",
       },
       {
@@ -61,7 +66,7 @@ const seedDatabase = async () => {
         password: hashedPassword,
         fullName: "Alex Design",
         avatar: "https://api.dicebear.com/7.x/initials/svg?seed=pixel",
-        bio: "UI/UX Designer. Pixel perfect is my religion. Looking for freelance projects. 🎨",
+        bio: "UI/UX Designer. Pixel perfect is my religion. Looking for freelance projects.",
       },
       {
         username: "gamer_pro",
@@ -69,7 +74,7 @@ const seedDatabase = async () => {
         password: hashedPassword,
         fullName: "Max Payne",
         avatar: "https://api.dicebear.com/7.x/initials/svg?seed=gamer",
-        bio: "Competitive online PC gamer. The Finals & CS2 veteran. High FPS enthusiast. 🎮",
+        bio: "Competitive online PC gamer. The Finals & CS2 veteran. High FPS enthusiast.",
       },
       {
         username: "nature_wild",
@@ -77,7 +82,7 @@ const seedDatabase = async () => {
         password: hashedPassword,
         fullName: "Jane Wild",
         avatar: "https://api.dicebear.com/7.x/initials/svg?seed=nature",
-        bio: "Landscape photographer. Traveling the world and catching perfect moments 🌍",
+        bio: "Landscape photographer. Traveling the world and catching perfect moments.",
       },
       {
         username: "foodie_travel",
@@ -85,7 +90,7 @@ const seedDatabase = async () => {
         password: hashedPassword,
         fullName: "Elena Gastronome",
         avatar: "https://api.dicebear.com/7.x/initials/svg?seed=food",
-        bio: "Exploring cultures through their kitchens. Posting the best recipes here. 🍕🍣🍜",
+        bio: "Exploring cultures through their kitchens. Posting the best recipes here.",
       },
       {
         username: "sound_wave",
@@ -93,7 +98,7 @@ const seedDatabase = async () => {
         password: hashedPassword,
         fullName: "Rhythm Master",
         avatar: "https://api.dicebear.com/7.x/initials/svg?seed=sound",
-        bio: "Sound producer, synthesizer collector and music lover. Ambient & Techno tracks. 🎵",
+        bio: "Sound producer, synthesizer collector and music lover. Ambient & Techno tracks.",
       },
       {
         username: "cyber_ninja",
@@ -109,14 +114,11 @@ const seedDatabase = async () => {
         password: hashedPassword,
         fullName: "Dan Volleyball",
         avatar: "https://api.dicebear.com/7.x/initials/svg?seed=volley",
-        bio: "Active volleyball player. Team captain. Training every single day. 🏐💪",
+        bio: "Active volleyball player. Team captain. Training every single day.",
       },
     ];
 
     const createdUsers = await User.insertMany(usersData);
-    console.log(`\n👥 Created ${createdUsers.length} test users.`);
-
-    console.log("🔗 Generating real following/follower connections...");
 
     for (let i = 0; i < createdUsers.length; i++) {
       const currentUser = createdUsers[i];
@@ -146,9 +148,6 @@ const seedDatabase = async () => {
       user.followingCount = user.following.length;
       await user.save();
     }
-    console.log(
-      "✅ Followers and following connections established successfully.",
-    );
 
     const hub = createdUsers.find((u) => u.username === "itcareerhub");
     const tonia = createdUsers.find((u) => u.username === "coach.tonia");
@@ -167,8 +166,7 @@ const seedDatabase = async () => {
       {
         user: createdUsers.find((u) => u.username === "guest_user")._id,
         url: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=600&h=600&q=80",
-        caption:
-          "Testing this cool app! The interface and UX are top-notch. 💻✨",
+        caption: "Testing this cool app! The interface and UX are top-notch.",
         createdAt: new Date(now - 1 * 60 * 60 * 1000),
         comments: [],
       },
@@ -176,7 +174,7 @@ const seedDatabase = async () => {
         user: hub._id,
         url: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&h=600&q=80",
         caption:
-          "Starting the week with a clean slate and ambitious plans. May everything you've planned come true! 🎯✨",
+          "Starting the week with a clean slate and ambitious plans. May everything you've planned come true!",
         createdAt: new Date(now - 2 * 24 * 60 * 60 * 1000),
         comments: [
           {
@@ -188,7 +186,7 @@ const seedDatabase = async () => {
           {
             user: pixel._id,
             username: pixel.username,
-            text: "Inspiring shot! Have a great week everyone 🙌",
+            text: "Inspiring shot! Have a great week everyone.",
             createdAt: new Date(now - 12 * 60 * 60 * 1000),
           },
         ],
@@ -197,13 +195,13 @@ const seedDatabase = async () => {
         user: tonia._id,
         url: "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=600&h=600&q=80",
         caption:
-          "Beauty is in the details we often overlook in a rush. Stop for a minute and just look around. 🌿🍂",
+          "Beauty is in the details we often overlook in a rush. Stop for a minute and just look around.",
         createdAt: new Date(now - 4 * 24 * 60 * 60 * 1000),
         comments: [
           {
             user: nature._id,
             username: nature.username,
-            text: "Oh yes, being able to slow down is a superpower nowadays 😌",
+            text: "Oh yes, being able to slow down is a superpower nowadays.",
             createdAt: new Date(now - 3 * 24 * 60 * 60 * 1000),
           },
         ],
@@ -212,7 +210,7 @@ const seedDatabase = async () => {
         user: society._id,
         url: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=600&h=600&q=80",
         caption:
-          "The perfect balance between work, creativity, and rest. What helps you recharge? ☕🔋",
+          "The perfect balance between work, creativity, and rest. What helps you recharge?",
         createdAt: new Date(now - 21 * 24 * 60 * 60 * 1000),
         comments: [
           {
@@ -224,7 +222,7 @@ const seedDatabase = async () => {
           {
             user: foodie._id,
             username: foodie.username,
-            text: "A delicious break always saves the day in the middle of a busy schedule! 🥑",
+            text: "A delicious break always saves the day in the middle of a busy schedule!",
             createdAt: new Date(now - 19 * 24 * 60 * 60 * 1000),
           },
         ],
@@ -233,7 +231,7 @@ const seedDatabase = async () => {
         user: pixel._id,
         url: "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=600&h=600&q=80",
         caption:
-          "Minimalism in everything is one of the main trends of our reality. Less noise, more essence. 📐🤍",
+          "Minimalism in everything is one of the main trends of our reality. Less noise, more essence.",
         createdAt: new Date(now - 15 * 60 * 1000),
         comments: [
           {
@@ -254,7 +252,7 @@ const seedDatabase = async () => {
         user: gamer._id,
         url: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=600&h=600&q=80",
         caption:
-          "Cozy evening vibes. The best time to dive into your favorite hobby and mute phone notifications. 🌌🎮",
+          "Cozy evening vibes. The best time to dive into your favorite hobby and mute phone notifications.",
         createdAt: new Date(now - 18 * 60 * 60 * 1000),
         comments: [
           {
@@ -269,7 +267,7 @@ const seedDatabase = async () => {
         user: nature._id,
         url: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=600&h=600&q=80",
         caption:
-          "Nature is the best artist. No filters can capture these natural textures and light. 🪵☀️",
+          "Nature is the best artist. No filters can capture these natural textures and light.",
         createdAt: new Date(now - 12 * 60 * 60 * 1000),
         comments: [
           {
@@ -284,7 +282,7 @@ const seedDatabase = async () => {
         user: foodie._id,
         url: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=600&h=600&q=80",
         caption:
-          "The little joys of everyday life make up the big happy picture. Have a great mood, everyone! 🌸🍰",
+          "The little joys of everyday life make up the big happy picture. Have a great mood, everyone!",
         createdAt: new Date(now - 1 * 24 * 60 * 60 * 1000),
         comments: [
           {
@@ -299,7 +297,7 @@ const seedDatabase = async () => {
         user: sound._id,
         url: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&h=600&q=80",
         caption:
-          "Inspiration can be found in absolutely everything, as long as you look at it from the right angle. 🔎💡",
+          "Inspiration can be found in absolutely everything, as long as you look at it from the right angle.",
         createdAt: new Date(now - 5 * 60 * 60 * 1000),
         comments: [
           {
@@ -314,7 +312,7 @@ const seedDatabase = async () => {
         user: ninja._id,
         url: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=600&h=600&q=80",
         caption:
-          "Work process is in full swing. Productivity is at its peak today, moving only forward! 📈💪",
+          "Work process is in full swing. Productivity is at its peak today, moving only forward!",
         createdAt: new Date(now - 3 * 24 * 60 * 60 * 1000),
         comments: [
           {
@@ -329,7 +327,7 @@ const seedDatabase = async () => {
         user: volley._id,
         url: "https://images.unsplash.com/photo-1519861531473-9200262188bf?auto=format&fit=crop&w=600&h=600&q=80",
         caption:
-          "A fresh perspective on familiar things helps find unexpected solutions to complex tasks. Have a productive day! 🧠🚀",
+          "A fresh perspective on familiar things helps find unexpected solutions to complex tasks. Have a productive day!",
         createdAt: new Date(now - 6 * 24 * 60 * 60 * 1000),
         comments: [
           {
@@ -344,13 +342,13 @@ const seedDatabase = async () => {
         user: volley._id,
         url: "https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?auto=format&fit=crop&w=600&h=600&q=80",
         caption:
-          "Great game today! Teamwork and dedication always pay off on the field. 🏐🏆",
+          "Great game today! Teamwork and dedication always pay off on the field.",
         createdAt: new Date(now - 8 * 24 * 60 * 60 * 1000),
         comments: [
           {
             user: tonia._id,
             username: tonia.username,
-            text: "Congrats! Working as a team is always the key to success 🥇",
+            text: "Congrats! Working as a team is always the key to success.",
             createdAt: new Date(now - 7 * 24 * 60 * 60 * 1000),
           },
         ],
@@ -358,19 +356,17 @@ const seedDatabase = async () => {
     ];
 
     await Post.deleteMany({});
-    const createdPosts = await Post.insertMany(postsData);
-    console.log(`📸 Created ${createdPosts.length} test posts.`);
+    await Post.insertMany(postsData);
 
-    console.log("📝 Calculating and updating postsCount for each user...");
     for (const user of createdUsers) {
       const postsCountForUser = await Post.countDocuments({ user: user._id });
       user.postsCount = postsCountForUser;
       await user.save();
     }
 
-    console.log("\n🎉 Database auto-seeding completed successfully!");
+    console.log("Database auto-seeding completed successfully!");
   } catch (error) {
-    console.error("❌ Seeding database failed:", error);
+    console.error("Seeding database failed:", error);
   }
 };
 

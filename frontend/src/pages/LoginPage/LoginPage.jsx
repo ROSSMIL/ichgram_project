@@ -51,20 +51,16 @@ const LoginPage = () => {
 
   const handleGuestLogin = async () => {
     setError("");
-    console.log("🚀 Starting guest login request...");
     try {
       setIsGuestLoading(true);
 
       const response = await API.post("/api/auth/guest-login");
-      console.log("✅ Response received:", response);
 
       if (response.status === 200) {
         localStorage.setItem("token", response.data.token);
-        console.log("🔑 Token saved, navigating to dashboard...");
         navigate("/dashboard");
       }
     } catch (err) {
-      console.error("❌ Guest login error:", err);
       const serverMessage =
         err.response?.data?.message ||
         "Failed to log in as guest. Please try again.";
@@ -141,7 +137,7 @@ const LoginPage = () => {
               onClick={handleGuestLogin}
               disabled={isLoading || isGuestLoading}
             >
-              {isGuestLoading ? "Connecting..." : "Log in as Guest 🚀"}
+              {isGuestLoading ? "Connecting..." : "Log in as Guest"}
             </button>
           </form>
         </div>
