@@ -69,10 +69,36 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
   if (!isOpen) return null;
 
   const handleEmojiClick = (emojiData) => {
-    setCaption((prev) => prev + emojiData.emoji);
-    if (captionInputRef.current) {
-      captionInputRef.current.focus();
+    const emoji = emojiData.emoji;
+    const input = captionInputRef.current;
+
+    if (!input) {
+      setCaption((prev) => {
+        if ((prev + emoji).length > 2200) return prev;
+        return prev + emoji;
+      });
+      return;
     }
+
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
+    const currentValue = input.value;
+
+    const before = currentValue.slice(0, start);
+    const after = currentValue.slice(end);
+
+    if ((before + emoji + after).length > 2200) return;
+
+    const updatedText = before + emoji + after;
+    setCaption(updatedText);
+    const newCursorPos = start + emoji.length;
+
+    requestAnimationFrame(() => {
+      if (document.activeElement !== input) {
+        input.focus();
+      }
+      input.setSelectionRange(newCursorPos, newCursorPos);
+    });
   };
 
   const handleProfileClick = () => {
