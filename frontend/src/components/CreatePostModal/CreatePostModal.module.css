@@ -5,13 +5,24 @@
   width: 100vw;
   height: 100vh;
   background-color: rgba(0, 0, 0, 0.65);
+
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+
+  transform: translateZ(0);
+  will-change: opacity, backdrop-filter;
+
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 9999;
+  z-index: 999999;
   padding: 20px;
   box-sizing: border-box;
-  animation: fadeIn 0.15s ease-out;
+  animation: fadeIn 0.15s ease-out forwards;
+}
+
+.overlay.fadeOut {
+  animation: fadeOut 0.15s ease-in forwards;
 }
 
 .modal {
@@ -27,7 +38,11 @@
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
-  animation: scaleUp 0.15s cubic-bezier(0.1, 0.8, 0.25, 1);
+  animation: scaleUp 0.15s cubic-bezier(0.1, 0.8, 0.25, 1) forwards;
+}
+
+.modal.scaleDown {
+  animation: scaleDown 0.15s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
 .header {
@@ -49,12 +64,11 @@
   padding: 4px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   transition:
     opacity 0.15s ease,
     transform 0.15s ease;
   width: 45px;
-  justify-content: flex-start;
 }
 
 .backBtn:hover {
@@ -238,6 +252,7 @@
   flex-direction: column;
   border-bottom: 1px solid #efefef;
   flex-grow: 1;
+  position: relative;
 }
 
 .captionArea {
@@ -290,16 +305,18 @@
 
 .emojiContainer {
   position: absolute;
-  top: 30px;
+  top: auto;
+  bottom: 35px;
   left: 0;
-  z-index: 100;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
-  border-radius: 8px;
+  z-index: 1000;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
   overflow: hidden;
+  background-color: #ffffff;
 }
 
 .emojiContainer :global(.epr-main) {
-  border-radius: 8px !important;
+  border-radius: 12px !important;
   border: 1px solid #dbdbdb !important;
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
@@ -315,14 +332,34 @@
   }
 }
 
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 @keyframes scaleUp {
   from {
-    transform: scale(0.95);
+    transform: scale(0.92);
     opacity: 0;
   }
   to {
     transform: scale(1);
     opacity: 1;
+  }
+}
+
+@keyframes scaleDown {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.92);
+    opacity: 0;
   }
 }
 

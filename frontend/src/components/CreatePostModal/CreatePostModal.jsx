@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import API from "../../api/axios";
 import EmojiPicker from "emoji-picker-react";
 import styles from "./CreatePostModal.module.css";
@@ -13,32 +13,26 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
+  const [isClosing, setIsClosing] = useState(false);
+
   const fileInputRef = useRef(null);
   const emojiPickerRef = useRef(null);
   const captionInputRef = useRef(null);
 
   const navigate = useNavigate();
-  const location = useLocation();
 
   const handleClose = useCallback(() => {
-    setImage(null);
-    setCaption("");
-    setError("");
-    setIsDragOver(false);
-    setShowEmojiPicker(false);
-    onClose();
+    setIsClosing(true);
+    setTimeout(() => {
+      setImage(null);
+      setCaption("");
+      setError("");
+      setIsDragOver(false);
+      setShowEmojiPicker(false);
+      setIsClosing(false);
+      onClose();
+    }, 150);
   }, [onClose]);
-
-  const prevPathRef = useRef(location.pathname);
-
-  useEffect(() => {
-    if (prevPathRef.current !== location.pathname) {
-      prevPathRef.current = location.pathname;
-      if (isOpen) {
-        onClose();
-      }
-    }
-  }, [location.pathname, isOpen, onClose]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -59,7 +53,7 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
     document.body.style.overflow = "hidden";
 
     const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !isClosing) {
         handleClose();
       }
     };
@@ -70,7 +64,7 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
       document.body.style.overflow = "unset";
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, handleClose]);
+  }, [isOpen, isClosing, handleClose]);
 
   if (!isOpen) return null;
 
@@ -163,8 +157,14 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
   };
 
   return (
-    <div className={styles.overlay} onClick={handleClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+    <div
+      className={`${styles.overlay} ${isClosing ? styles.fadeOut : ""}`}
+      onClick={handleClose}
+    >
+      <div
+        className={`${styles.modal} ${isClosing ? styles.scaleDown : ""}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className={styles.header}>
           <button
             className={styles.backBtn}
