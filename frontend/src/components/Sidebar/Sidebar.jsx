@@ -98,21 +98,18 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
                 <span className={styles.icon}>
                   <svg
                     aria-label="Home"
-                    color="rgb(0, 0, 0)"
-                    fill="rgb(0, 0, 0)"
+                    color="currentColor"
+                    fill="currentColor"
                     height="24"
                     role="img"
                     viewBox="0 0 24 24"
                     width="24"
                   >
                     {isActive ? (
-                      <path
-                        d="M22 9.24V20a2 2 0 0 1-2 2h-3a2 2 0 0 1-2-2v-6H9v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9.24a2 2 0 0 1 .73-1.53l7-5.9a2 2 0 0 1 2.54 0l7 5.9a2 2 0 0 1 .73 1.53Z"
-                        fill="currentColor"
-                      />
+                      <path d="M22 23h-6.001a1 1 0 0 1-1-1v-5.455a2.81 2.81 0 0 0-5.998 0V22a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V11.543a1.002 1.002 0 0 1 .31-.724l10-9.543a1.001 1.001 0 0 1 1.38 0l10 9.543a1.002 1.002 0 0 1 .31.724V22a1 1 0 0 1-1 1Z" />
                     ) : (
                       <path
-                        d="M9.005 22v-6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v6a1 1 0 0 0 1 1h3a2 2 0 0 0 2-2V10.702a2 2 0 0 0-.586-1.414l-7.707-7.707a2 2 0 0 0-2.828 0L2.586 9.288A2 2 0 0 0 2 10.702V20a2 2 0 0 0 2 2h3a2 2 0 0 0 2-2Z"
+                        d="M9 16.5 A3 3 0 0 1 15 16.5 V22 H22 V11.5 L12 2 L2 11.5 V22 H9 Z"
                         fill="none"
                         stroke="currentColor"
                         strokeLinecap="round"
@@ -252,7 +249,6 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
                       fill={isActive ? "currentColor" : "none"}
                       points="22 2 1.93 9.312 8.781 12.656 12.125 19.507 22 2"
                       stroke="currentColor"
-                      strokeLinejoin="round"
                       strokeLinejoin="round"
                       strokeWidth="2"
                     />
