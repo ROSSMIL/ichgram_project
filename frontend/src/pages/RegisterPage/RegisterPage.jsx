@@ -66,10 +66,6 @@ const RegisterPage = () => {
         >
           <img src={logoImg} alt="ICHGRAM" className={styles.logoImage} />
 
-          <p className={styles.subtitle}>
-            Sign up to see photos and videos from your friends.
-          </p>
-
           <form onSubmit={handleSubmit} className={styles.form} noValidate>
             <Input
               type="email"
@@ -119,16 +115,6 @@ const RegisterPage = () => {
                   {error}
                 </div>
               )}
-
-            <p className={styles.policyText}>
-              People who use our service may have uploaded your contact
-              information to Instagram. <a href="#learnmore">Learn More</a>
-              <br />
-              <br />
-              By signing up, you agree to our <a href="#terms">Terms</a>,{" "}
-              <a href="#privacy">Privacy Policy</a> and{" "}
-              <a href="#cookies">Cookies Policy</a>.
-            </p>
 
             <Button disabled={isLoading}>
               {isLoading ? (
