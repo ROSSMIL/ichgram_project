@@ -177,3 +177,48 @@
     display: none;
   }
 }
+.dividerContainer {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin: 0.8rem 0;
+}
+
+.dividerLine {
+  flex: 1;
+  height: 1px;
+  background-color: #dbdbdb;
+}
+
+.dividerText {
+  color: #8e8e8e;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin: 0 0.8rem;
+  text-transform: uppercase;
+}
+
+.guestButton {
+  background: none;
+  border: none;
+  color: #385185;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.2rem;
+  padding: 6px 12px;
+  border-radius: 4px;
+  transition:
+    opacity 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.guestButton:hover:not(:disabled) {
+  opacity: 0.8;
+  background-color: #f8f9fa;
+}
+
+.guestButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

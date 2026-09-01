@@ -19,12 +19,15 @@ import Footer from "./components/Footer/Footer";
 import SearchDrawer from "./components/SearchDrawer/SearchDrawer";
 import ComingSoonPage from "./pages/ComingSoonPage/ComingSoonPage";
 import NotFoundPage from "./pages/NotFoundPage/NotFoundPage";
+import useAutoLogout from "./hooks/useAutoLogout";
 import "./App.css";
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  useAutoLogout();
 
   const openCreateModal = () => setIsCreateModalOpen(true);
   const closeCreateModal = () => setIsCreateModalOpen(false);

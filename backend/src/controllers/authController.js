@@ -92,3 +92,56 @@ export const login = async (req, res) => {
       .json({ message: "Server error during login", error: error.message });
   }
 };
+
+export const guestLogin = async (req, res) => {
+  try {
+    let guestUser = await User.findOne({ username: "guest_user" });
+
+    if (!guestUser) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash("guest123456", salt);
+
+      guestUser = new User({
+        email: "guest@example.com",
+        fullName: "Guest Recruiter",
+        username: "guest_user",
+        password: hashedPassword,
+        avatar:
+          "https://api.dicebear.com/7.x/initials/svg?seed=Guest&backgroundColor=ffc107",
+        bio: "Welcome! Exploring as a guest recruiter. 🚀",
+        website: "github.com",
+        followers: [],
+        following: [],
+        followersCount: 0,
+        followingCount: 0,
+        postsCount: 0,
+      });
+      await guestUser.save();
+    }
+
+    const jwtSecret = process.env.JWT_SECRET;
+
+    const token = jwt.sign(
+      { userId: guestUser._id, username: guestUser.username },
+      jwtSecret,
+      { expiresIn: "7d" },
+    );
+
+    return res.status(200).json({
+      token,
+      user: {
+        id: guestUser._id,
+        email: guestUser.email,
+        fullName: guestUser.fullName,
+        username: guestUser.username,
+        avatar: guestUser.avatar,
+      },
+    });
+  } catch (error) {
+    console.error("Error in guestLogin controller:", error);
+    return res.status(500).json({
+      message: "Server error during guest login",
+      error: error.message,
+    });
+  }
+};

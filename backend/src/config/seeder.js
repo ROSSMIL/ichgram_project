@@ -16,6 +16,16 @@ const seedDatabase = async () => {
 
     const usersData = [
       {
+        username: "guest_user",
+        email: "guest@example.com",
+        password: hashedPassword,
+        fullName: "Guest Recruiter",
+        avatar:
+          "https://api.dicebear.com/7.x/initials/svg?seed=Guest&backgroundColor=ffc107",
+        bio: "Welcome to my demo profile! I am exploring this awesome app as a guest recruiter. 🚀",
+        website: "github.com",
+      },
+      {
         username: "itcareerhub",
         email: "hub@itcareer.com",
         password: hashedPassword,
@@ -154,6 +164,14 @@ const seedDatabase = async () => {
     const now = Date.now();
 
     const postsData = [
+      {
+        user: createdUsers.find((u) => u.username === "guest_user")._id,
+        url: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=600&h=600&q=80",
+        caption:
+          "Testing this cool app! The interface and UX are top-notch. 💻✨",
+        createdAt: new Date(now - 1 * 60 * 60 * 1000),
+        comments: [],
+      },
       {
         user: hub._id,
         url: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&h=600&q=80",

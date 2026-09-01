@@ -13,6 +13,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isGuestLoading, setIsGuestLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -34,9 +35,7 @@ const LoginPage = () => {
       });
 
       if (response.status === 200) {
-        console.log("Login successful!", response.data);
         localStorage.setItem("token", response.data.token);
-
         navigate("/dashboard");
       }
     } catch (err) {
@@ -47,6 +46,31 @@ const LoginPage = () => {
       setPassword("");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    setError("");
+    console.log("🚀 Starting guest login request...");
+    try {
+      setIsGuestLoading(true);
+
+      const response = await API.post("/api/auth/guest-login");
+      console.log("✅ Response received:", response);
+
+      if (response.status === 200) {
+        localStorage.setItem("token", response.data.token);
+        console.log("🔑 Token saved, navigating to dashboard...");
+        navigate("/dashboard");
+      }
+    } catch (err) {
+      console.error("❌ Guest login error:", err);
+      const serverMessage =
+        err.response?.data?.message ||
+        "Failed to log in as guest. Please try again.";
+      setError(serverMessage);
+    } finally {
+      setIsGuestLoading(false);
     }
   };
 
@@ -62,7 +86,9 @@ const LoginPage = () => {
 
       <div className={styles.authSection}>
         <div
-          className={`${styles.formBox} ${isLoading ? styles.loadingBox : ""}`}
+          className={`${styles.formBox} ${
+            isLoading || isGuestLoading ? styles.loadingBox : ""
+          }`}
         >
           <img src={logoImg} alt="ICHGRAM" className={styles.logoImage} />
 
@@ -72,19 +98,19 @@ const LoginPage = () => {
               placeholder="Username, or email"
               value={emailOrUsername}
               onChange={(e) => setEmailOrUsername(e.target.value)}
-              disabled={isLoading}
+              disabled={isLoading || isGuestLoading}
             />
             <Input
               type="password"
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              disabled={isLoading}
+              disabled={isLoading || isGuestLoading}
             />
 
             {error && <div className={styles.errorMessage}>{error}</div>}
 
-            <Button disabled={isLoading}>
+            <Button disabled={isLoading || isGuestLoading}>
               {isLoading ? (
                 <div className={styles.spinnerWrapper}>
                   <svg className={styles.spinner} viewBox="0 0 50 50">
@@ -102,6 +128,21 @@ const LoginPage = () => {
                 "Log in"
               )}
             </Button>
+
+            <div className={styles.dividerContainer}>
+              <div className={styles.dividerLine} />
+              <span className={styles.dividerText}>OR</span>
+              <div className={styles.dividerLine} />
+            </div>
+
+            <button
+              type="button"
+              className={styles.guestButton}
+              onClick={handleGuestLogin}
+              disabled={isLoading || isGuestLoading}
+            >
+              {isGuestLoading ? "Connecting..." : "Log in as Guest 🚀"}
+            </button>
           </form>
         </div>
 
