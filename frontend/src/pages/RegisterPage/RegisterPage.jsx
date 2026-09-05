@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import API from "../../api/axios.js";
 import Input from "../../components/Input/Input.jsx";
 import Button from "../../components/Button/Button.jsx";
+import LoadingHints from "../../components/LoadingHints/LoadingHints.jsx";
 import styles from "./RegisterPage.module.css";
 import logoImg from "../../assets/logo.png";
 
@@ -11,10 +12,29 @@ const RegisterPage = () => {
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPasswords, setShowPasswords] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+
+
+  const handlePasswordChange = (e) => {
+    const val = e.target.value;
+    setPassword(val);
+    if (!val && !confirmPassword) {
+      setShowPasswords(false);
+    }
+  };
+
+
+  const handleConfirmPasswordChange = (e) => {
+    const val = e.target.value;
+    setConfirmPassword(val);
+    if (!val && !password) {
+      setShowPasswords(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,7 +44,8 @@ const RegisterPage = () => {
       !email.trim() ||
       !fullName.trim() ||
       !username.trim() ||
-      !password.trim()
+      !password.trim() ||
+      !confirmPassword.trim()
     ) {
       setError("All fields are required.");
       return;
@@ -32,6 +53,11 @@ const RegisterPage = () => {
 
     if (password.length < 6) {
       setError("Password must be at least 6 characters long.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
       return;
     }
 
@@ -45,7 +71,12 @@ const RegisterPage = () => {
       });
 
       if (response.status === 201 || response.status === 200) {
-        navigate("/login");
+        if (response.data?.token) {
+          localStorage.setItem("token", response.data.token);
+          navigate("/dashboard");
+        } else {
+          navigate("/login");
+        }
       }
     } catch (err) {
       const serverMessage =
@@ -53,10 +84,20 @@ const RegisterPage = () => {
         "Something went wrong. Please try again.";
       setError(serverMessage);
       setPassword("");
+      setConfirmPassword("");
+      setShowPasswords(false);
     } finally {
       setIsLoading(false);
     }
   };
+
+  const hasPasswordInput = password.length > 0 || confirmPassword.length > 0;
+
+  const passwordType =
+    showPasswords && password.length > 0 ? "text" : "password";
+
+  const confirmPasswordType =
+    showPasswords && confirmPassword.length > 0 ? "text" : "password";
 
   return (
     <div className={styles.container}>
@@ -74,6 +115,7 @@ const RegisterPage = () => {
               onChange={(e) => setEmail(e.target.value)}
               disabled={isLoading}
             />
+
             {error.toLowerCase().includes("email") && (
               <div className={styles.errorMessage}>{error}</div>
             )}
@@ -93,17 +135,47 @@ const RegisterPage = () => {
               onChange={(e) => setUsername(e.target.value)}
               disabled={isLoading}
             />
+
             {error.toLowerCase().includes("username") && (
               <div className={styles.errorMessage}>{error}</div>
             )}
 
+
             <Input
-              type="password"
+              type={passwordType}
               placeholder="Password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={handlePasswordChange}
               disabled={isLoading}
+              className={`${styles.passwordInput} ${
+                showPasswords && password.length > 0 ? styles.reveal : ""
+              }`}
             />
+
+
+            <Input
+              type={confirmPasswordType}
+              placeholder="Confirm Password"
+              value={confirmPassword}
+              onChange={handleConfirmPasswordChange}
+              disabled={isLoading}
+              className={`${styles.passwordInput} ${
+                showPasswords && confirmPassword.length > 0 ? styles.reveal : ""
+              }`}
+            />
+
+            {hasPasswordInput && (
+              <div className={styles.showPasswordsWrapper}>
+                <button
+                  type="button"
+                  className={styles.togglePasswordsBtn}
+                  onClick={() => setShowPasswords((prev) => !prev)}
+                  tabIndex={-1}
+                >
+                  {showPasswords ? "Hide passwords" : "Show passwords"}
+                </button>
+              </div>
+            )}
 
             {error &&
               !error.toLowerCase().includes("email") &&
@@ -135,6 +207,8 @@ const RegisterPage = () => {
               )}
             </Button>
           </form>
+
+          <LoadingHints active={isLoading} />
         </div>
 
         <div className={styles.redirectBox}>

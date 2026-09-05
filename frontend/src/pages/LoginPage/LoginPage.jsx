@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import API from "../../api/axios.js";
 import Input from "../../components/Input/Input.jsx";
 import Button from "../../components/Button/Button.jsx";
+import LoadingHints from "../../components/LoadingHints/LoadingHints.jsx";
 import styles from "./LoginPage.module.css";
 
 import phonesImg from "../../assets/phones.png";
@@ -11,11 +12,22 @@ import logoImg from "../../assets/logo.png";
 const LoginPage = () => {
   const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isGuestLoading, setIsGuestLoading] = useState(false);
 
   const navigate = useNavigate();
+
+  const handleEmailOrUsernameChange = (e) => {
+    setEmailOrUsername(e.target.value);
+    if (error) setError("");
+  };
+
+  const handlePasswordChange = (e) => {
+    setPassword(e.target.value);
+    if (error) setError("");
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -93,16 +105,29 @@ const LoginPage = () => {
               type="text"
               placeholder="Username, or email"
               value={emailOrUsername}
-              onChange={(e) => setEmailOrUsername(e.target.value)}
+              onChange={handleEmailOrUsernameChange}
               disabled={isLoading || isGuestLoading}
             />
-            <Input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isLoading || isGuestLoading}
-            />
+
+            <div className={styles.inputWrapper}>
+              <Input
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+                value={password}
+                onChange={handlePasswordChange}
+                disabled={isLoading || isGuestLoading}
+              />
+              {password && (
+                <button
+                  type="button"
+                  className={styles.togglePasswordBtn}
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  tabIndex={-1}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              )}
+            </div>
 
             {error && <div className={styles.errorMessage}>{error}</div>}
 
@@ -155,6 +180,8 @@ const LoginPage = () => {
               )}
             </button>
           </form>
+
+          <LoadingHints active={isLoading || isGuestLoading} />
         </div>
 
         <div className={styles.redirectBox}>

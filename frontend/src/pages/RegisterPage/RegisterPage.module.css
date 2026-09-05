@@ -4,7 +4,7 @@
   align-items: center;
   min-height: 100vh;
   width: 100%;
-  background-color: #ffffff;
+  background-color: #fafafa;
   padding: 2rem;
   font-family: "Roboto", sans-serif;
   box-sizing: border-box;
@@ -21,39 +21,70 @@
 .formBox {
   width: 100%;
   background-color: #ffffff;
-  border: 1px solid #dbdbdb;
-  border-radius: 1px;
-  padding: 1.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 1.8rem 1.5rem 1.5rem 1.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.8rem;
   box-sizing: border-box;
   position: relative;
-  bottom: 2.5rem;
-  transition: opacity 0.2s ease;
+  bottom: 1.5rem;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.03),
+    0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .loadingBox {
-  opacity: 0.85;
+  opacity: 0.88;
+  transform: scale(0.998);
 }
 
 .logoImage {
-  width: 75%;
+  width: 70%;
   height: auto;
   object-fit: contain;
-  margin-bottom: 1rem;
+  margin-bottom: 0.8rem;
 }
 
 .form {
-  width: 87%;
+  width: 90%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
 }
 
-.form button {
+.showPasswordsWrapper {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -0.2rem;
+  margin-bottom: 0.2rem;
+}
+
+.togglePasswordsBtn {
+  background: none;
+  border: none;
+  color: #0095f6;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.1rem 0.2rem;
+  user-select: none;
+  transition:
+    opacity 0.2s ease,
+    color 0.2s ease;
+}
+
+.togglePasswordsBtn:hover {
+  color: #00376b;
+  opacity: 0.85;
+}
+
+.form button:not(.togglePasswordsBtn) {
   transition:
     transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
     background-color 0.25s ease,
@@ -62,29 +93,30 @@
   margin-top: 0.4rem;
 }
 
-.form button:hover:not(:disabled) {
-  transform: scale(1.02);
+.form button:not(.togglePasswordsBtn):hover:not(:disabled) {
+  transform: scale(1.015);
 }
 
-.form button:active:not(:disabled) {
-  transform: scale(0.98);
+.form button:not(.togglePasswordsBtn):active:not(:disabled) {
+  transform: scale(0.985);
 }
 
 .redirectBox {
   width: 100%;
   background-color: #ffffff;
-  border: 1px solid #dbdbdb;
-  border-radius: 1px;
-  padding: 1.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 1.2rem;
   text-align: center;
   box-sizing: border-box;
   position: relative;
-  bottom: 2.5rem;
+  bottom: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
 }
 
 .redirectText {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   color: #262626;
 }
 
@@ -163,10 +195,12 @@
     stroke-dasharray: 1, 150;
     stroke-dashoffset: 0;
   }
+
   50% {
     stroke-dasharray: 90, 150;
     stroke-dashoffset: -35;
   }
+
   100% {
     stroke-dasharray: 90, 150;
     stroke-dashoffset: -124;

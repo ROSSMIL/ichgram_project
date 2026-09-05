@@ -6,15 +6,19 @@ const Input = ({
   value,
   onChange,
   required = false,
+  className = "",
+  ...props
 }) => {
   return (
     <input
+      key={type}
       type={type}
       placeholder={placeholder}
       value={value}
       onChange={onChange}
-      className={styles.input}
+      className={`${styles.input} ${styles.morphing} ${className}`}
       required={required}
+      {...props}
     />
   );
 };

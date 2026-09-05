@@ -1,0 +1,127 @@
+.hintCard {
+  margin-top: 1.2rem;
+  width: 100%;
+  background-color: #fafafa;
+  border: 1px solid #efefef;
+  border-radius: 10px;
+  padding: 0.8rem 0.9rem 0.9rem 0.9rem;
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+.contentWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  will-change: transform, opacity;
+}
+
+.icon {
+  font-size: 0.85rem;
+  display: inline-block;
+  animation: pulseIcon 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.hintText {
+  font-size: 0.75rem;
+  color: #262626;
+  text-align: left;
+  line-height: 1.35;
+  margin: 0;
+  font-weight: 400;
+}
+
+.tag {
+  font-weight: 700;
+  font-size: 0.68rem;
+  color: #0095f6;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  margin-right: 0.2rem;
+}
+
+.fadeIn {
+  animation: hintSlideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.fadeOut {
+  animation: hintSlideOut 0.5s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+}
+
+@keyframes hintSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hintSlideOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes pulseIcon {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+.progressBarContainer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #f0f0f0;
+  overflow: hidden;
+}
+
+.pulseGlowBar {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 149, 246, 0) 0%,
+    rgba(0, 149, 246, 0.8) 50%,
+    rgba(0, 149, 246, 0) 100%
+  );
+  animation: continuousWave 2.5s ease-in-out infinite;
+}
+
+@keyframes continuousWave {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (max-width: 480px) {
+  .hintText {
+    font-size: 0.7rem;
+  }
+  .tag {
+    font-size: 0.65rem;
+  }
+}
