@@ -60,3 +60,52 @@ textarea::placeholder {
   animation: placeholderFadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   color: inherit;
 }
+
+:root {
+  --bg-main: #fafafa;
+  --bg-card: #ffffff;
+  --text-primary: #262626;
+  --text-secondary: #8e8e8e;
+  --border-color: rgba(0, 0, 0, 0.08);
+  --divider-line: #efefef;
+
+  --btn-guest-bg: #121212;
+  --btn-guest-text: #ffffff;
+  --btn-guest-hover: #262626;
+
+  --link-color: #0095f6;
+  --link-hover: #00376b;
+
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+[data-theme="dark"] {
+  --bg-main: #0a0a0a;
+  --bg-card: #121212;
+  --hint-bg: #080808;
+  --text-primary: #f5f5f5;
+  --text-secondary: #a8a8a8;
+  --border-color: rgba(255, 255, 255, 0.15);
+  --divider-line: #262626;
+
+  --btn-guest-bg: #ffffff;
+  --btn-guest-text: #121212;
+  --btn-guest-hover: #e0e0e0;
+
+  --link-color: #47aeff;
+  --link-hover: #70c1ff;
+
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] img[src*="logo"] {
+  filter: invert(1) brightness(2);
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  transition:
+    background-color 0.4s ease,
+    color 0.4s ease;
+}

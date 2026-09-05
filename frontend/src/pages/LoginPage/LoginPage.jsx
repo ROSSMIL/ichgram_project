@@ -4,6 +4,7 @@ import API from "../../api/axios.js";
 import Input from "../../components/Input/Input.jsx";
 import Button from "../../components/Button/Button.jsx";
 import LoadingHints from "../../components/LoadingHints/LoadingHints.jsx";
+import ThemeToggle from "../../components/ThemeToggle/ThemeToggle.jsx";
 import styles from "./LoginPage.module.css";
 
 import phonesImg from "../../assets/phones.png";
@@ -84,6 +85,8 @@ const LoginPage = () => {
 
   return (
     <div className={styles.container}>
+      <ThemeToggle />
+
       <div className={styles.imageSection}>
         <img
           src={phonesImg}

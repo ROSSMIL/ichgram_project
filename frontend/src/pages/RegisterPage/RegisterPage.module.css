@@ -4,10 +4,11 @@
   align-items: center;
   min-height: 100vh;
   width: 100%;
-  background-color: #fafafa;
+  background-color: var(--bg-main);
   padding: 2rem;
   font-family: "Roboto", sans-serif;
   box-sizing: border-box;
+  transition: background-color 0.4s ease;
 }
 
 .authSection {
@@ -20,8 +21,8 @@
 
 .formBox {
   width: 100%;
-  background-color: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 1.8rem 1.5rem 1.5rem 1.5rem;
   display: flex;
@@ -31,10 +32,11 @@
   box-sizing: border-box;
   position: relative;
   bottom: 1.5rem;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.03),
-    0 1px 2px rgba(0, 0, 0, 0.02);
+  transition:
+    background-color 0.4s ease,
+    border-color 0.4s ease,
+    box-shadow 0.4s ease;
+  box-shadow: var(--shadow-card);
 }
 
 .loadingBox {
@@ -61,14 +63,14 @@
   width: 100%;
   display: flex;
   justify-content: flex-end;
-  margin-top: -0.2rem;
-  margin-bottom: 0.2rem;
+  margin-top: -0.1rem;
+  margin-bottom: 0.1rem;
 }
 
 .togglePasswordsBtn {
   background: none;
   border: none;
-  color: #0095f6;
+  color: var(--link-color);
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
@@ -80,7 +82,7 @@
 }
 
 .togglePasswordsBtn:hover {
-  color: #00376b;
+  color: var(--link-hover);
   opacity: 0.85;
 }
 
@@ -103,25 +105,30 @@
 
 .redirectBox {
   width: 100%;
-  background-color: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 1.2rem;
   text-align: center;
   box-sizing: border-box;
   position: relative;
   bottom: 1.5rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+  box-shadow: var(--shadow-card);
+  transition:
+    background-color 0.4s ease,
+    border-color 0.4s ease,
+    box-shadow 0.4s ease;
 }
 
 .redirectText {
   margin: 0;
   font-size: 0.88rem;
-  color: #262626;
+  color: var(--text-primary);
+  transition: color 0.4s ease;
 }
 
 .link {
-  color: #0095f6;
+  color: var(--link-color);
   text-decoration: none;
   font-weight: 600;
   position: relative;
@@ -136,14 +143,14 @@
   left: 50%;
   width: 0;
   height: 1.5px;
-  background-color: #00376b;
+  background-color: var(--link-hover);
   transition:
     width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
     left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .link:hover {
-  color: #00376b;
+  color: var(--link-hover);
 }
 
 .link:hover::after {
@@ -204,5 +211,60 @@
   100% {
     stroke-dasharray: 90, 150;
     stroke-dashoffset: -124;
+  }
+}
+
+.passwordRulesContainer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.2rem;
+  margin-bottom: 0.2rem;
+  animation: fadeInRules 0.25s ease-out forwards;
+}
+
+.rulesList {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.2rem;
+}
+
+.ruleItem {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  transition:
+    color 0.25s ease,
+    transform 0.25s ease;
+}
+
+.ruleIcon {
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.ruleSuccess {
+  color: #10b981;
+  font-weight: 500;
+  transform: translateX(1px);
+}
+
+.ruleSuccess .ruleIcon {
+  color: #10b981;
+}
+
+@keyframes fadeInRules {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

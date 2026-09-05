@@ -50,7 +50,7 @@ const LoadingHints = ({
   delay = 4000,
   hints = DEFAULT_HINTS,
   className = "",
-  testMode = false,
+  testMode = true,
 }) => {
   const shuffledHints = useMemo(() => shuffleArray(hints), [hints]);
 

@@ -4,11 +4,12 @@
   align-items: center;
   min-height: 100vh;
   width: 100%;
-  background-color: #fafafa;
+  background-color: var(--bg-main); /* Було #fafafa */
   padding: 2rem;
   font-family: "Roboto", sans-serif;
   box-sizing: border-box;
   gap: 2%;
+  transition: background-color 0.4s ease;
 }
 
 @keyframes pureFloat {
@@ -138,8 +139,8 @@
 
 .formBox {
   width: 100%;
-  background-color: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background-color: var(--bg-card); /* Було #ffffff */
+  border: 1px solid var(--border-color); /* Було rgba(0, 0, 0, 0.08) */
   border-radius: 12px;
   padding: 1.8rem 1.5rem 1.5rem 1.5rem;
   display: flex;
@@ -149,10 +150,11 @@
   box-sizing: border-box;
   position: relative;
   bottom: 2.5rem;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.03),
-    0 1px 2px rgba(0, 0, 0, 0.02);
+  transition:
+    background-color 0.4s ease,
+    border-color 0.4s ease,
+    box-shadow 0.4s ease;
+  box-shadow: var(--shadow-card);
 }
 
 .loadingBox {
@@ -191,13 +193,15 @@
   right: 0.6rem;
   background: none;
   border: none;
-  color: #262626;
+  color: var(--text-primary); /* Було #262626 */
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
   padding: 0.2rem 0.4rem;
   user-select: none;
-  transition: opacity 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    color 0.4s ease;
 }
 
 .togglePasswordBtn:hover {
@@ -214,39 +218,46 @@
 .dividerLine {
   flex: 1;
   height: 1px;
-  background-color: #efefef;
+  background-color: var(--divider-line); /* Було #efefef */
+  transition: background-color 0.4s ease;
 }
 
 .dividerText {
-  color: #8e8e8e;
+  color: var(--text-secondary); /* Було #8e8e8e */
   font-size: 0.72rem;
   font-weight: 600;
   margin: 0 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  transition: color 0.4s ease;
 }
 
 .redirectBox {
   width: 100%;
-  background-color: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background-color: var(--bg-card); /* Було #ffffff */
+  border: 1px solid var(--border-color); /* Було rgba(0, 0, 0, 0.08) */
   border-radius: 12px;
   padding: 1.2rem;
   text-align: center;
   box-sizing: border-box;
   position: relative;
   bottom: 2.5rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+  box-shadow: var(--shadow-card);
+  transition:
+    background-color 0.4s ease,
+    border-color 0.4s ease,
+    box-shadow 0.4s ease;
 }
 
 .redirectText {
   margin: 0;
   font-size: 0.88rem;
-  color: #262626;
+  color: var(--text-primary); /* Було #262626 */
+  transition: color 0.4s ease;
 }
 
 .link {
-  color: #0095f6;
+  color: var(--link-color); /* Було #0095f6 */
   text-decoration: none;
   font-weight: 600;
   position: relative;
@@ -261,14 +272,14 @@
   left: 50%;
   width: 0;
   height: 1.5px;
-  background-color: #00376b;
+  background-color: var(--link-hover); /* Було #00376b */
   transition:
     width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
     left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .link:hover {
-  color: #00376b;
+  color: var(--link-hover);
 }
 
 .link:hover::after {
@@ -328,8 +339,8 @@
 .guestButton {
   width: 100%;
   height: 36px;
-  background-color: #121212;
-  color: #ffffff;
+  background-color: var(--btn-guest-bg); /* Було #121212 */
+  color: var(--btn-guest-text); /* Було #ffffff */
   border: none;
   border-radius: 8px;
   font-size: 0.85rem;
@@ -339,14 +350,17 @@
   justify-content: center;
   align-items: center;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
 }
 
 .guestButton:hover:not(:disabled) {
-  background-color: #262626;
+  background-color: var(--btn-guest-hover); /* Було #262626 */
 }
 
 .guestButton:active:not(:disabled) {
-  background-color: #000000;
+  opacity: 0.8;
 }
 
 .guestButton:disabled {

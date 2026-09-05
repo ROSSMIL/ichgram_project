@@ -4,6 +4,7 @@ import API from "../../api/axios.js";
 import Input from "../../components/Input/Input.jsx";
 import Button from "../../components/Button/Button.jsx";
 import LoadingHints from "../../components/LoadingHints/LoadingHints.jsx";
+import ThemeToggle from "../../components/ThemeToggle/ThemeToggle.jsx";
 import styles from "./RegisterPage.module.css";
 import logoImg from "../../assets/logo.png";
 
@@ -19,6 +20,9 @@ const RegisterPage = () => {
   const navigate = useNavigate();
 
 
+  const isMinLength = password.length >= 6;
+  const isMatching = password.length > 0 && password === confirmPassword;
+
   const handlePasswordChange = (e) => {
     const val = e.target.value;
     setPassword(val);
@@ -26,7 +30,6 @@ const RegisterPage = () => {
       setShowPasswords(false);
     }
   };
-
 
   const handleConfirmPasswordChange = (e) => {
     const val = e.target.value;
@@ -101,6 +104,8 @@ const RegisterPage = () => {
 
   return (
     <div className={styles.container}>
+      <ThemeToggle />
+
       <div className={styles.authSection}>
         <div
           className={`${styles.formBox} ${isLoading ? styles.loadingBox : ""}`}
@@ -140,7 +145,6 @@ const RegisterPage = () => {
               <div className={styles.errorMessage}>{error}</div>
             )}
 
-
             <Input
               type={passwordType}
               placeholder="Password"
@@ -151,7 +155,6 @@ const RegisterPage = () => {
                 showPasswords && password.length > 0 ? styles.reveal : ""
               }`}
             />
-
 
             <Input
               type={confirmPasswordType}
@@ -164,6 +167,7 @@ const RegisterPage = () => {
               }`}
             />
 
+
             {hasPasswordInput && (
               <div className={styles.showPasswordsWrapper}>
                 <button
@@ -174,6 +178,35 @@ const RegisterPage = () => {
                 >
                   {showPasswords ? "Hide passwords" : "Show passwords"}
                 </button>
+              </div>
+            )}
+
+
+            {hasPasswordInput && (
+              <div className={styles.passwordRulesContainer}>
+                <div className={styles.rulesList}>
+                  <div
+                    className={`${styles.ruleItem} ${
+                      isMinLength ? styles.ruleSuccess : ""
+                    }`}
+                  >
+                    <span className={styles.ruleIcon}>
+                      {isMinLength ? "✓" : "○"}
+                    </span>
+                    <span>At least 6 characters</span>
+                  </div>
+
+                  <div
+                    className={`${styles.ruleItem} ${
+                      isMatching ? styles.ruleSuccess : ""
+                    }`}
+                  >
+                    <span className={styles.ruleIcon}>
+                      {isMatching ? "✓" : "○"}
+                    </span>
+                    <span>Passwords match</span>
+                  </div>
+                </div>
               </div>
             )}
 
