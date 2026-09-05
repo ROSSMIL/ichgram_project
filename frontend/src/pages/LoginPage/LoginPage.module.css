@@ -4,7 +4,7 @@
   align-items: center;
   min-height: 100vh;
   width: 100%;
-  background-color: var(--bg-main); /* Було #fafafa */
+  background-color: var(--bg-main);
   padding: 2rem;
   font-family: "Roboto", sans-serif;
   box-sizing: border-box;
@@ -139,8 +139,8 @@
 
 .formBox {
   width: 100%;
-  background-color: var(--bg-card); /* Було #ffffff */
-  border: 1px solid var(--border-color); /* Було rgba(0, 0, 0, 0.08) */
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 1.8rem 1.5rem 1.5rem 1.5rem;
   display: flex;
@@ -193,7 +193,7 @@
   right: 0.6rem;
   background: none;
   border: none;
-  color: var(--text-primary); /* Було #262626 */
+  color: var(--text-primary);
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
@@ -218,12 +218,12 @@
 .dividerLine {
   flex: 1;
   height: 1px;
-  background-color: var(--divider-line); /* Було #efefef */
+  background-color: var(--divider-line);
   transition: background-color 0.4s ease;
 }
 
 .dividerText {
-  color: var(--text-secondary); /* Було #8e8e8e */
+  color: var(--text-secondary);
   font-size: 0.72rem;
   font-weight: 600;
   margin: 0 0.8rem;
@@ -234,8 +234,8 @@
 
 .redirectBox {
   width: 100%;
-  background-color: var(--bg-card); /* Було #ffffff */
-  border: 1px solid var(--border-color); /* Було rgba(0, 0, 0, 0.08) */
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 1.2rem;
   text-align: center;
@@ -252,12 +252,12 @@
 .redirectText {
   margin: 0;
   font-size: 0.88rem;
-  color: var(--text-primary); /* Було #262626 */
+  color: var(--text-primary);
   transition: color 0.4s ease;
 }
 
 .link {
-  color: var(--link-color); /* Було #0095f6 */
+  color: var(--link-color);
   text-decoration: none;
   font-weight: 600;
   position: relative;
@@ -272,7 +272,7 @@
   left: 50%;
   width: 0;
   height: 1.5px;
-  background-color: var(--link-hover); /* Було #00376b */
+  background-color: var(--link-hover);
   transition:
     width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
     left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -339,8 +339,8 @@
 .guestButton {
   width: 100%;
   height: 36px;
-  background-color: var(--btn-guest-bg); /* Було #121212 */
-  color: var(--btn-guest-text); /* Було #ffffff */
+  background-color: var(--btn-guest-bg);
+  color: var(--btn-guest-text);
   border: none;
   border-radius: 8px;
   font-size: 0.85rem;
@@ -356,7 +356,7 @@
 }
 
 .guestButton:hover:not(:disabled) {
-  background-color: var(--btn-guest-hover); /* Було #262626 */
+  background-color: var(--btn-guest-hover);
 }
 
 .guestButton:active:not(:disabled) {
