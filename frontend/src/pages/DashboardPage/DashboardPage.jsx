@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import API from "../../api/axios";
 import PostModal from "../../components/PostModal/PostModal";
 import PostCard from "../../components/PostCard/PostCard";
+import FeedFilterPill from "../../components/FeedFilterPill/FeedFilterPill";
 import styles from "./DashboardPage.module.css";
 import logoImg from "../../assets/logo.png";
 
@@ -99,6 +100,8 @@ const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [currentUserFollowing, setCurrentUserFollowing] = useState([]);
   const [selectedPost, setSelectedPost] = useState(null);
+
+  const [activeFilter, setActiveFilter] = useState("all");
 
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [autoFocusComment, setAutoFocusComment] = useState(false);
@@ -307,8 +310,34 @@ const DashboardPage = () => {
     fetchFeedData(true);
   };
 
+  const filteredPosts = posts.filter((post) => {
+    const postAuthorId = post.user?._id || post.user?.id || post.user;
+    if (!postAuthorId) return true;
+
+    const authorIdStr = postAuthorId.toString();
+
+    const isFollowingOrMe =
+      authorIdStr === currentUserId?.toString() ||
+      currentUserFollowing.includes(authorIdStr);
+
+    if (activeFilter === "following") {
+      return isFollowingOrMe;
+    }
+
+    if (activeFilter === "discover") {
+      return !isFollowingOrMe;
+    }
+
+    return true;
+  });
+
   return (
     <div className={styles.container}>
+      <FeedFilterPill
+        activeFilter={activeFilter}
+        onFilterChange={setActiveFilter}
+      />
+
       <header className={styles.mobileHeader}>
         <img
           src={logoImg}
@@ -343,8 +372,8 @@ const DashboardPage = () => {
         </div>
       ) : (
         <div className={styles.feedList}>
-          {posts.length > 0 ? (
-            posts.map((post, index) => (
+          {filteredPosts.length > 0 ? (
+            filteredPosts.map((post, index) => (
               <PostCard
                 key={post._id}
                 post={post}
@@ -359,11 +388,19 @@ const DashboardPage = () => {
           ) : (
             <div className={styles.emptyFeed}>
               <h2>No posts to show</h2>
-              <p>Follow some creators or upload your first photo!</p>
+              <p>
+                {activeFilter === "following"
+                  ? "No posts from accounts you follow yet."
+                  : activeFilter === "discover"
+                    ? "No new creators to explore right now."
+                    : "Follow some creators or upload your first photo!"}
+              </p>
             </div>
           )}
 
-          {posts.length > 0 && <AllCaughtUpCard onScrollToTop={scrollToTop} />}
+          {filteredPosts.length > 0 && (
+            <AllCaughtUpCard onScrollToTop={scrollToTop} />
+          )}
         </div>
       )}
 

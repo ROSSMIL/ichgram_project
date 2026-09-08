@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, memo } from "react";
 import PropTypes from "prop-types";
 import API from "../../api/axios";
 import PostModal from "../../components/PostModal/PostModal";
+import FeedFilterPill from "../../components/FeedFilterPill/FeedFilterPill";
 import styles from "./ExplorePage.module.css";
 
 const shuffleArray = (array) => {
@@ -170,6 +171,8 @@ const ExplorePage = () => {
   const [currentUserFollowing, setCurrentUserFollowing] = useState([]);
   const [selectedPost, setSelectedPost] = useState(null);
   const [autoFocusComment, setAutoFocusComment] = useState(false);
+
+  const [activeFilter, setActiveFilter] = useState("all");
 
   const token = localStorage.getItem("token");
 
@@ -341,9 +344,33 @@ const ExplorePage = () => {
     setAutoFocusComment(false);
   }, []);
 
+  const filteredPosts = posts.filter((post) => {
+    const postAuthorId = post.user?._id || post.user?.id || post.user;
+    if (!postAuthorId) return true;
+
+    const authorIdStr = postAuthorId.toString();
+    const isFollowingOrMe =
+      authorIdStr === currentUserId?.toString() ||
+      currentUserFollowing.includes(authorIdStr);
+
+    if (activeFilter === "following") {
+      return isFollowingOrMe;
+    }
+
+    if (activeFilter === "discover") {
+      return !isFollowingOrMe;
+    }
+
+    return true;
+  });
+
   if (loading) {
     return (
       <div className={styles.exploreContainer}>
+        <FeedFilterPill
+          activeFilter={activeFilter}
+          onFilterChange={setActiveFilter}
+        />
         <div className={styles.postsGrid}>
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
             <div
@@ -358,9 +385,14 @@ const ExplorePage = () => {
 
   return (
     <div className={styles.exploreContainer}>
-      {posts.length > 0 ? (
+      <FeedFilterPill
+        activeFilter={activeFilter}
+        onFilterChange={setActiveFilter}
+      />
+
+      {filteredPosts.length > 0 ? (
         <div className={styles.postsGrid}>
-          {posts.map((post, idx) => (
+          {filteredPosts.map((post, idx) => (
             <ExploreItem
               key={post._id}
               post={post}
@@ -389,8 +421,9 @@ const ExplorePage = () => {
             </div>
             <h2 className={styles.noPostsTitle}>No posts discovered yet</h2>
             <p className={styles.noPostsSubtitle}>
-              Check back later! Fresh content from around the globe will appear
-              here.
+              {activeFilter === "following"
+                ? "You haven't followed anyone with posts yet."
+                : "Check back later! Fresh content from around the globe will appear here."}
             </p>
           </div>
         </div>

@@ -1,0 +1,100 @@
+.filterContainer {
+  position: fixed;
+  top: 16px;
+  left: 285px;
+  z-index: 99999;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(18, 18, 20, 0.78);
+  border: 1px solid var(--border-color);
+  padding: 4px;
+  border-radius: 22px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  box-sizing: border-box;
+  transition: border-color 0.25s ease;
+}
+
+.filterContainer:hover {
+  border-color: var(--text-secondary);
+}
+
+.glider {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  height: calc(100% - 8px);
+  background-color: var(--text-primary);
+  border-radius: 18px;
+  z-index: 1;
+  pointer-events: none;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+
+  will-change: transform, width, opacity;
+  transition:
+    transform 0.32s cubic-bezier(0.25, 1, 0.35, 1),
+    width 0.32s cubic-bezier(0.25, 1, 0.35, 1),
+    opacity 0.2s ease;
+}
+
+.filterTab {
+  position: relative;
+  z-index: 2;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 8px 18px;
+  border-radius: 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+
+  transition:
+    color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.filterTab:hover:not(.active) {
+  color: var(--text-primary);
+}
+
+.filterTab:active {
+  transform: scale(0.94);
+}
+
+.filterTab.active {
+  color: var(--bg-card);
+}
+
+@media (min-width: 1440px) {
+  .filterContainer {
+    left: 305px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .filterContainer {
+    top: 14px;
+    left: 100px;
+  }
+}
+
+@media (max-width: 768px) {
+  .filterContainer {
+    position: fixed;
+    top: 12px;
+    left: 0;
+    right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    width: fit-content;
+    background: rgba(18, 18, 20, 0.85);
+  }
+}
