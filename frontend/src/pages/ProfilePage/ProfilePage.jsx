@@ -1,10 +1,162 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, memo, useRef } from "react";
+import PropTypes from "prop-types";
 import { useNavigate, Link } from "react-router-dom";
 import { createPortal } from "react-dom";
 import API from "../../api/axios.js";
 import styles from "./ProfilePage.module.css";
 import PostModal from "../../components/PostModal/PostModal";
 import Avatar from "../../components/Avatar/Avatar";
+import AvatarViewModal from "../../components/AvatarViewModal/AvatarViewModal";
+
+const ProfilePostItem = memo(({ post, index, onSelectPost }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const itemRef = useRef(null);
+  const requestRef = useRef(null);
+
+  useEffect(() => {
+    const currentItem = itemRef.current;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          if (currentItem) observer.unobserve(currentItem);
+        }
+      },
+      {
+        threshold: 0.08,
+        rootMargin: "0px 0px -30px 0px",
+      },
+    );
+
+    if (currentItem) {
+      observer.observe(currentItem);
+    }
+
+    return () => {
+      if (currentItem) observer.unobserve(currentItem);
+    };
+  }, []);
+
+  const handleMouseMove = (e) => {
+    if (!itemRef.current || window.innerWidth <= 768) return;
+
+    const card = itemRef.current;
+    const rect = card.getBoundingClientRect();
+
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    const rotateX = ((y - centerY) / centerY) * -10;
+    const rotateY = ((x - centerX) / centerX) * 10;
+
+    const glossX = (x / rect.width) * 100;
+    const glossY = (y / rect.height) * 100;
+
+    if (requestRef.current) cancelAnimationFrame(requestRef.current);
+
+    requestRef.current = requestAnimationFrame(() => {
+      card.style.setProperty("--rotate-x", `${rotateX.toFixed(2)}deg`);
+      card.style.setProperty("--rotate-y", `${rotateY.toFixed(2)}deg`);
+      card.style.setProperty("--gloss-x", `${glossX.toFixed(1)}%`);
+      card.style.setProperty("--gloss-y", `${glossY.toFixed(1)}%`);
+      card.style.setProperty("--gloss-opacity", "1");
+    });
+  };
+
+  const handleMouseLeave = () => {
+    if (!itemRef.current || window.innerWidth <= 768) return;
+
+    if (requestRef.current) cancelAnimationFrame(requestRef.current);
+
+    const card = itemRef.current;
+    card.style.setProperty("--rotate-x", "0deg");
+    card.style.setProperty("--rotate-y", "0deg");
+    card.style.setProperty("--gloss-opacity", "0");
+  };
+
+  const imageUrl = post.url
+    ? post.url.startsWith("http")
+      ? post.url
+      : `${API.defaults.baseURL}/${post.url.replace(/^\//, "")}`
+    : `https://picsum.photos/seed/${post._id}/500/500`;
+
+  return (
+    <div
+      ref={itemRef}
+      className={`${styles.gridItem} ${isVisible ? styles.itemVisible : ""}`}
+      style={{
+        "--post-bg": `url(${imageUrl})`,
+        "--i": index % 12,
+      }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      onClick={() => onSelectPost(post)}
+    >
+      <div className={styles.floatWrapper}>
+        <img
+          src={imageUrl}
+          alt="Post"
+          className={`${styles.postImage} ${isLoaded ? styles.imageLoaded : ""}`}
+          loading="lazy"
+          onLoad={() => setIsLoaded(true)}
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src =
+              "https://placehold.co/500x500/e2e8f0/64748b?text=No+Image";
+            setIsLoaded(true);
+          }}
+        />
+
+        <div className={styles.glossOverlay} />
+
+        <div className={styles.statsBadge}>
+          <div className={styles.badgeStat}>
+            <svg
+              className={styles.badgeIcon}
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+            </svg>
+            <span>
+              {post.likesCount !== undefined
+                ? post.likesCount
+                : post.likes?.length || 0}
+            </span>
+          </div>
+          <div className={styles.badgeStat}>
+            <svg
+              className={styles.badgeIcon}
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z" />
+            </svg>
+            <span>{post.comments?.length || 0}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+ProfilePostItem.displayName = "ProfilePostItem";
+
+ProfilePostItem.propTypes = {
+  post: PropTypes.shape({
+    _id: PropTypes.string.isRequired,
+    url: PropTypes.string,
+    likesCount: PropTypes.number,
+    likes: PropTypes.array,
+    comments: PropTypes.array,
+  }).isRequired,
+  index: PropTypes.number.isRequired,
+  onSelectPost: PropTypes.func.isRequired,
+};
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -25,26 +177,62 @@ const ProfilePage = () => {
   const [isClosingSettings, setIsClosingSettings] = useState(false);
   const [isClosingUsersModal, setIsClosingUsersModal] = useState(false);
 
-  const handleLogout = () => {
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+
+  const handleLogout = useCallback(() => {
     localStorage.removeItem("token");
     navigate("/login");
-  };
+  }, [navigate]);
 
-  const handlePostUpdate = (updatedPost) => {
+  const handleAvatarUpload = useCallback(async (file) => {
+    if (!file) return;
+
+    const dataToSend = new FormData();
+    dataToSend.append("avatar", file);
+
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await API.put("/api/users/edit", dataToSend, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUser((prevUser) => data.user || { ...prevUser, avatar: data.avatar });
+      window.dispatchEvent(new Event("profileUpdated"));
+    } catch (err) {
+      console.error("Error uploading avatar:", err);
+    }
+  }, []);
+
+  const handleAvatarRemove = useCallback(async () => {
+    const dataToSend = new FormData();
+    dataToSend.append("deleteAvatar", "true");
+
+    try {
+      const token = localStorage.getItem("token");
+      await API.put("/api/users/edit", dataToSend, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUser((prevUser) => (prevUser ? { ...prevUser, avatar: "" } : null));
+      window.dispatchEvent(new Event("profileUpdated"));
+    } catch (err) {
+      console.error("Error deleting avatar:", err);
+    }
+  }, []);
+
+  const handlePostUpdate = useCallback((updatedPost) => {
     setPosts((prevPosts) =>
       prevPosts.map((post) =>
         post._id === updatedPost._id ? updatedPost : post,
       ),
     );
     setSelectedPost(updatedPost);
-  };
+  }, []);
 
-  const handlePostDelete = (deletedPostId) => {
+  const handlePostDelete = useCallback((deletedPostId) => {
     setPosts((prevPosts) =>
       prevPosts.filter((post) => post._id !== deletedPostId),
     );
     setSelectedPost(null);
-  };
+  }, []);
 
   useEffect(() => {
     const handleGlobalPostCreated = (event) => {
@@ -72,25 +260,29 @@ const ProfilePage = () => {
     };
   }, [user]);
 
-  const handleFollowToggle = async (targetUserId) => {
+  const handleFollowToggle = useCallback(async (targetUserId) => {
     try {
-      const isCurrentlyFollowing = user?.following?.some(
-        (f) => (typeof f === "string" ? f : f._id) === targetUserId,
-      );
-
-      const nextState = !isCurrentlyFollowing;
-
-      await API.post(`/api/users/${targetUserId}/follow`);
-
-      setModalUsersList((prevList) =>
-        prevList.map((u) =>
-          u._id === targetUserId ? { ...u, isFollowing: nextState } : u,
-        ),
-      );
-
       setUser((prevUser) => {
         if (!prevUser) return prevUser;
         const currentFollowing = prevUser.following || [];
+        const isCurrentlyFollowing = currentFollowing.some(
+          (f) => (typeof f === "string" ? f : f._id) === targetUserId,
+        );
+        const nextState = !isCurrentlyFollowing;
+
+        API.post(`/api/users/${targetUserId}/follow`).catch((err) => {
+          console.error("Error toggling follow status:", err);
+        });
+
+        setModalUsersList((prevList) =>
+          prevList.map((u) =>
+            u._id === targetUserId ? { ...u, isFollowing: nextState } : u,
+          ),
+        );
+
+        setFollowingCount((prev) =>
+          Math.max(0, nextState ? prev + 1 : prev - 1),
+        );
 
         let updatedFollowing;
         if (nextState) {
@@ -103,63 +295,72 @@ const ProfilePage = () => {
 
         return { ...prevUser, following: updatedFollowing };
       });
-
-      setFollowingCount((prev) => {
-        const newCount = nextState ? prev + 1 : prev - 1;
-        return newCount < 0 ? 0 : newCount;
-      });
     } catch (error) {
       console.error("Error toggling follow status:", error);
     }
-  };
+  }, []);
 
-  const closeSettings = () => {
+  const closeSettings = useCallback(() => {
     setIsClosingSettings(true);
     setTimeout(() => {
       setIsSettingsOpen(false);
       setIsClosingSettings(false);
     }, 150);
-  };
+  }, []);
 
-  const closeUsersModal = () => {
+  const closeUsersModal = useCallback(() => {
     setIsClosingUsersModal(true);
     setTimeout(() => {
       setActiveModal(null);
       setModalUsersList([]);
       setIsClosingUsersModal(false);
     }, 150);
-  };
+  }, []);
 
-  const openUsersModal = async (type) => {
+  const openUsersModal = useCallback(async (type) => {
     setActiveModal(type);
     setLoadingModalList(true);
     try {
-      const { data } = await API.get(`/api/users/${user._id}/${type}`);
+      setUser((currentUser) => {
+        if (currentUser) {
+          API.get(`/api/users/${currentUser._id}/${type}`)
+            .then(({ data }) => {
+              const userFollowingIds = (currentUser.following || []).map((f) =>
+                typeof f === "string" ? f : f._id || f.id,
+              );
 
-      const userFollowingIds = (user.following || []).map((f) =>
-        typeof f === "string" ? f : f._id || f.id,
-      );
+              const formattedData = data.map((u) => ({
+                ...u,
+                isFollowing:
+                  type === "following"
+                    ? true
+                    : userFollowingIds.includes(u._id),
+              }));
 
-      const formattedData = data.map((u) => ({
-        ...u,
-        isFollowing:
-          type === "following" ? true : userFollowingIds.includes(u._id),
-      }));
+              setModalUsersList(formattedData);
 
-      setModalUsersList(formattedData);
-
-      if (type === "followers") {
-        setFollowersCount(formattedData.length);
-      } else if (type === "following") {
-        setFollowingCount(formattedData.length);
-      }
+              if (type === "followers") {
+                setFollowersCount(formattedData.length);
+              } else if (type === "following") {
+                setFollowingCount(formattedData.length);
+              }
+            })
+            .catch((error) => {
+              console.error(`Error fetching ${type}:`, error);
+              setModalUsersList([]);
+            })
+            .finally(() => {
+              setLoadingModalList(false);
+            });
+        }
+        return currentUser;
+      });
     } catch (error) {
       console.error(`Error fetching ${type}:`, error);
       setModalUsersList([]);
-    } finally {
       setLoadingModalList(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const fetchProfileAndPosts = async () => {
@@ -212,6 +413,7 @@ const ProfilePage = () => {
         if (isSettingsOpen && !isClosingSettings) closeSettings();
         if (activeModal && !isClosingUsersModal) closeUsersModal();
         if (selectedPost) setSelectedPost(null);
+        if (isAvatarModalOpen) setIsAvatarModalOpen(false);
       }
     };
 
@@ -225,6 +427,9 @@ const ProfilePage = () => {
     activeModal,
     isClosingUsersModal,
     selectedPost,
+    isAvatarModalOpen,
+    closeSettings,
+    closeUsersModal,
   ]);
 
   if (loading) {
@@ -292,11 +497,12 @@ const ProfilePage = () => {
     <div className={styles.profileContainer}>
       <header className={styles.header}>
         <div className={styles.headerTopMobile}>
-          <div className={styles.avatarContainer}>
-            <div className={styles.avatarGradient}>
-              <div className={styles.whiteBorderWrapper}>
-                <Avatar user={user} size={150} />
-              </div>
+          <div
+            className={styles.avatarContainer}
+            onClick={() => setIsAvatarModalOpen(true)}
+          >
+            <div className={styles.avatarFrame}>
+              <Avatar user={user} size={150} />
             </div>
           </div>
 
@@ -368,8 +574,8 @@ const ProfilePage = () => {
             >
               <svg
                 aria-label="Options"
-                color="rgb(0, 0, 0)"
-                fill="rgb(0, 0, 0)"
+                color="currentColor"
+                fill="currentColor"
                 height="24"
                 viewBox="0 0 24 24"
                 width="24"
@@ -381,10 +587,10 @@ const ProfilePage = () => {
                   r="10.5"
                   stroke="currentColor"
                   strokeWidth="2"
-                ></circle>
-                <circle cx="7.001" cy="12.001" r="1.5"></circle>
-                <circle cx="12.001" cy="12.001" r="1.5"></circle>
-                <circle cx="17.001" cy="12.001" r="1.5"></circle>
+                />
+                <circle cx="7.001" cy="12.001" r="1.5" />
+                <circle cx="12.001" cy="12.001" r="1.5" />
+                <circle cx="17.001" cy="12.001" r="1.5" />
               </svg>
             </button>
           </div>
@@ -467,40 +673,13 @@ const ProfilePage = () => {
         }
       >
         {posts.length > 0 ? (
-          posts.map((post) => (
-            <div
+          posts.map((post, index) => (
+            <ProfilePostItem
               key={post._id}
-              className={styles.gridItem}
-              onClick={() => setSelectedPost(post)}
-            >
-              <img src={post.url} alt="Post" className={styles.postImage} />
-              <div className={styles.gridItemOverlay}>
-                <div className={styles.overlayStat}>
-                  <svg
-                    className={styles.overlayIcon}
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                  </svg>
-                  <span>
-                    {post.likesCount !== undefined
-                      ? post.likesCount
-                      : post.likes?.length || 0}
-                  </span>
-                </div>
-                <div className={styles.overlayStat}>
-                  <svg
-                    className={styles.overlayIcon}
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z" />
-                  </svg>
-                  <span>{post.comments?.length || 0}</span>
-                </div>
-              </div>
-            </div>
+              post={post}
+              index={index}
+              onSelectPost={setSelectedPost}
+            />
           ))
         ) : (
           <div className={styles.noPostsContainer}>
@@ -656,6 +835,17 @@ const ProfilePage = () => {
           </div>,
           document.body,
         )}
+
+      {isAvatarModalOpen && (
+        <AvatarViewModal
+          user={user}
+          isOwnProfile={true}
+          hasCustomAvatar={!!user?.avatar}
+          onClose={() => setIsAvatarModalOpen(false)}
+          onUploadSave={handleAvatarUpload}
+          onRemovePhoto={handleAvatarRemove}
+        />
+      )}
     </div>
   );
 };

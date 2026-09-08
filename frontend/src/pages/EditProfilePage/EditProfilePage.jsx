@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../../api/axios";
 import styles from "./EditProfilePage.module.css";
 import Avatar from "../../components/Avatar/Avatar";
+import AvatarViewModal from "../../components/AvatarViewModal/AvatarViewModal";
 
 const EditProfilePage = () => {
   const navigate = useNavigate();
@@ -17,14 +18,11 @@ const EditProfilePage = () => {
   const [message, setMessage] = useState(null);
 
   const [dbAvatar, setDbAvatar] = useState("");
-
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
 
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [shouldDeleteAvatar, setShouldDeleteAvatar] = useState(false);
-
-  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -55,30 +53,18 @@ const EditProfilePage = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setAvatarFile(file);
-
-      const previewUrl = URL.createObjectURL(file);
-      setAvatarPreview(previewUrl);
-
-      setShouldDeleteAvatar(false);
-    }
-    setIsPhotoModalOpen(false);
+  const handleModalUpload = (file) => {
+    setAvatarFile(file);
+    const previewUrl = URL.createObjectURL(file);
+    setAvatarPreview(previewUrl);
+    setShouldDeleteAvatar(false);
   };
 
-  const handleUploadClick = () => {
-    fileInputRef.current.click();
-    setIsPhotoModalOpen(false);
-  };
-
-  const handleRemovePhoto = () => {
+  const handleModalRemove = () => {
     setAvatarFile(null);
     setAvatarPreview(null);
     setDbAvatar("");
     setShouldDeleteAvatar(true);
-    setIsPhotoModalOpen(false);
   };
 
   const handleSave = async (e) => {
@@ -132,6 +118,7 @@ const EditProfilePage = () => {
     }
     return "";
   };
+
   const avatarUser = {
     username: formData.username,
     avatar: getAvatarUrl(),
@@ -151,8 +138,8 @@ const EditProfilePage = () => {
           >
             <svg
               aria-label="Back"
-              color="rgb(38, 38, 38)"
-              fill="rgb(38, 38, 38)"
+              color="currentColor"
+              fill="currentColor"
               height="24"
               role="img"
               viewBox="0 0 24 24"
@@ -185,7 +172,11 @@ const EditProfilePage = () => {
 
         <div className={styles.profileBanner}>
           <div className={styles.bannerLeft}>
-            <div className={styles.avatarWrapper}>
+            <div
+              className={styles.avatarWrapper}
+              onClick={() => setIsPhotoModalOpen(true)}
+              style={{ cursor: "pointer" }}
+            >
               <Avatar user={avatarUser} size={48} />
             </div>
 
@@ -206,14 +197,6 @@ const EditProfilePage = () => {
           >
             Change photo
           </button>
-
-          <input
-            type="file"
-            ref={fileInputRef}
-            style={{ display: "none" }}
-            accept="image/*"
-            onChange={handleFileChange}
-          />
         </div>
 
         <form onSubmit={handleSave} className={styles.editForm}>
@@ -277,42 +260,14 @@ const EditProfilePage = () => {
       </main>
 
       {isPhotoModalOpen && (
-        <div
-          className={styles.modalOverlay}
-          onClick={() => setIsPhotoModalOpen(false)}
-        >
-          <div
-            className={styles.modalContent}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className={styles.modalHeader}>
-              <h3>Change profile photo</h3>
-            </div>
-
-            <button
-              onClick={handleUploadClick}
-              className={`${styles.modalAction} ${styles.primary}`}
-            >
-              Upload photo
-            </button>
-
-            {hasCustomAvatar && (
-              <button
-                onClick={handleRemovePhoto}
-                className={`${styles.modalAction} ${styles.danger}`}
-              >
-                Remove current photo
-              </button>
-            )}
-
-            <button
-              onClick={() => setIsPhotoModalOpen(false)}
-              className={styles.modalAction}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
+        <AvatarViewModal
+          user={avatarUser}
+          isOwnProfile={true}
+          hasCustomAvatar={hasCustomAvatar}
+          onClose={() => setIsPhotoModalOpen(false)}
+          onUploadSave={handleModalUpload}
+          onRemovePhoto={handleModalRemove}
+        />
       )}
     </div>
   );

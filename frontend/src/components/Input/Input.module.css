@@ -1,42 +1,51 @@
 .input {
   width: 100%;
-  height: 38px;
-  padding: 0 0.8rem;
-  background-color: var(--input-bg, var(--bg-main));
+  height: 42px;
+  padding: 0 1rem;
+
+  background-color: var(--bg-main);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  font-size: 0.82rem;
+  border-radius: 14px;
+  font-size: 0.86rem;
+  font-weight: 400;
   box-sizing: border-box;
   outline: none;
   color: var(--text-primary);
+  font-family: inherit;
+  will-change: border-color, box-shadow, background-color;
   transition:
     background-color 0.25s ease,
     border-color 0.25s ease,
-    color 0.25s ease,
     box-shadow 0.25s ease;
 }
 
 .input::placeholder {
   color: var(--text-secondary);
-  font-size: 0.8rem;
+  font-size: 0.84rem;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
 }
 
 .input:hover:not(:disabled):not(:focus) {
   border-color: var(--text-secondary);
-  opacity: 0.9;
+  background-color: var(--bg-main);
 }
 
 .input:focus {
-  background-color: var(--bg-card);
-  border-color: var(--link-color);
-  box-shadow: 0 0 0 3px rgba(0, 149, 246, 0.25);
+  background-color: var(--bg-main);
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+.input:focus::placeholder {
+  opacity: 0.35;
 }
 
 .input:disabled {
   background-color: var(--border-color);
   color: var(--text-secondary);
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 .morphing {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import API from "../../api/axios.js";
 import Input from "../../components/Input/Input.jsx";
 import Button from "../../components/Button/Button.jsx";
@@ -187,12 +187,19 @@ const LoginPage = () => {
           <LoadingHints active={isLoading || isGuestLoading} />
         </div>
 
-        <div className={styles.redirectBox}>
+        <div
+          className={styles.redirectBox}
+          onClick={() => navigate("/register")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              navigate("/register");
+            }
+          }}
+        >
           <p className={styles.redirectText}>
-            Don't have an account?{" "}
-            <Link to="/register" className={styles.link}>
-              Sign up
-            </Link>
+            Don't have an account? <span className={styles.link}>Sign up</span>
           </p>
         </div>
       </div>

@@ -1,0 +1,217 @@
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.65);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+  animation: fadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.modalOverlay.fadeOut {
+  animation: fadeOut 0.15s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+.modalContent {
+  position: relative;
+  background-color: var(--bg-card);
+  width: 100%;
+  max-width: 260px;
+  border-radius: 16px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-color);
+  box-sizing: border-box;
+  animation: scaleUp 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.modalContent.scaleDown {
+  animation: scaleDown 0.15s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+.userInfoHeader {
+  padding: 8px 10px 4px 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.username {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.fullName {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  transition: color 0.2s ease;
+}
+
+.dangerText {
+  color: #ed4956;
+  font-weight: 600;
+}
+
+.menuDivider {
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 4px 6px;
+}
+
+.avatarPreviewArea {
+  padding: 16px 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.largeAvatarWrapper {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-card);
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.largeAvatarWrapper.previewActive {
+  border-color: var(--link-color);
+  box-shadow: 0 0 16px rgba(0, 149, 246, 0.3);
+}
+
+.largeAvatarWrapper.deleteActive {
+  border-color: #ed4956;
+  box-shadow: 0 0 16px rgba(237, 73, 86, 0.3);
+}
+
+.actionsContainer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.svgIcon {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.menuLink {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: none;
+  border: none;
+  width: 100%;
+  box-sizing: border-box;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 10px;
+  font-family: inherit;
+  will-change: transform, background-color;
+  transition:
+    background-color 0.15s ease,
+    transform 0.12s ease,
+    opacity 0.12s ease;
+}
+
+.menuLink:hover:not(:disabled) {
+  background-color: var(--bg-hover, var(--border-color));
+}
+
+.menuLink:active:not(:disabled) {
+  transform: scale(0.98);
+  opacity: 0.85;
+}
+
+.menuLink:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.menuIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+}
+
+.primary {
+  color: var(--link-color);
+  font-weight: 600;
+}
+
+.primary .menuIcon {
+  color: var(--link-color);
+}
+
+.danger {
+  color: #ed4956;
+  font-weight: 600;
+}
+
+.danger .menuIcon {
+  color: #ed4956;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes scaleUp {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes scaleDown {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+}

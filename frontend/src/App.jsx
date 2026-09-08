@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
+  useLocation,
 } from "react-router-dom";
 import LoginPage from "./pages/LoginPage/LoginPage";
 import RegisterPage from "./pages/RegisterPage/RegisterPage";
@@ -15,12 +16,26 @@ import ExplorePage from "./pages/ExplorePage/ExplorePage";
 import PostPage from "./pages/PostPage/PostPage";
 import CreatePostModal from "./components/CreatePostModal/CreatePostModal";
 import Sidebar from "./components/Sidebar/Sidebar";
+import ProfileDropdown from "./components/ProfileDropdown/ProfileDropdown";
 import Footer from "./components/Footer/Footer";
 import SearchDrawer from "./components/SearchDrawer/SearchDrawer";
 import ComingSoonPage from "./pages/ComingSoonPage/ComingSoonPage";
 import NotFoundPage from "./pages/NotFoundPage/NotFoundPage";
 import useAutoLogout from "./hooks/useAutoLogout";
 import "./App.css";
+
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+};
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
@@ -47,6 +62,8 @@ const ProtectedRoute = ({ children }) => {
         isSearchOpen={isSearchOpen}
         openCreateModal={openCreateModal}
       />
+
+      <ProfileDropdown />
 
       <main className="app-content">{children}</main>
 
@@ -79,6 +96,7 @@ const PublicOnlyRoute = ({ children }) => {
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
 

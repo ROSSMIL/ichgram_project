@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import styles from "./Footer.module.css";
 
@@ -14,7 +15,7 @@ const Footer = ({ onSearchToggle, isSearchOpen, openCreateModal }) => {
         if (isAnyModalOpen || isMobile) {
           document.documentElement.style.setProperty("--footer-height", "0px");
         } else {
-          const height = footerRef.current.offsetHeight;
+          const height = footerRef.current.offsetHeight + 48;
           document.documentElement.style.setProperty(
             "--footer-height",
             `${height}px`,
@@ -24,7 +25,6 @@ const Footer = ({ onSearchToggle, isSearchOpen, openCreateModal }) => {
     };
 
     updateFooterHeight();
-
     window.addEventListener("resize", updateFooterHeight);
 
     const observer = new MutationObserver(updateFooterHeight);
@@ -42,7 +42,9 @@ const Footer = ({ onSearchToggle, isSearchOpen, openCreateModal }) => {
         <Link to="/dashboard">Home</Link>
         <button
           type="button"
-          className={`${styles.searchButton} ${isSearchOpen ? styles.active : ""}`}
+          className={`${styles.searchButton} ${
+            isSearchOpen ? styles.active : ""
+          }`}
           onClick={onSearchToggle}
         >
           Search
@@ -61,9 +63,18 @@ const Footer = ({ onSearchToggle, isSearchOpen, openCreateModal }) => {
           Create
         </Link>
       </div>
+
+      <div className={styles.divider} />
+
       <div className={styles.footerCopyright}>© 2026 ICHgram</div>
     </footer>
   );
+};
+
+Footer.propTypes = {
+  onSearchToggle: PropTypes.func.isRequired,
+  isSearchOpen: PropTypes.bool.isRequired,
+  openCreateModal: PropTypes.func.isRequired,
 };
 
 export default Footer;

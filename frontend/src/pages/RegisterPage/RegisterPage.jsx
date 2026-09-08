@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import API from "../../api/axios.js";
 import Input from "../../components/Input/Input.jsx";
 import Button from "../../components/Button/Button.jsx";
 import LoadingHints from "../../components/LoadingHints/LoadingHints.jsx";
 import ThemeToggle from "../../components/ThemeToggle/ThemeToggle.jsx";
 import styles from "./RegisterPage.module.css";
+
+import phonesImg from "../../assets/phones.png";
 import logoImg from "../../assets/logo.png";
 
 const RegisterPage = () => {
@@ -17,8 +19,8 @@ const RegisterPage = () => {
   const [showPasswords, setShowPasswords] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
 
+  const navigate = useNavigate();
 
   const isMinLength = password.length >= 6;
   const isMatching = password.length > 0 && password === confirmPassword;
@@ -29,6 +31,7 @@ const RegisterPage = () => {
     if (!val && !confirmPassword) {
       setShowPasswords(false);
     }
+    if (error) setError("");
   };
 
   const handleConfirmPasswordChange = (e) => {
@@ -37,6 +40,7 @@ const RegisterPage = () => {
     if (!val && !password) {
       setShowPasswords(false);
     }
+    if (error) setError("");
   };
 
   const handleSubmit = async (e) => {
@@ -106,6 +110,14 @@ const RegisterPage = () => {
     <div className={styles.container}>
       <ThemeToggle />
 
+      <div className={styles.imageSection}>
+        <img
+          src={phonesImg}
+          alt="Ichgram Phones"
+          className={styles.phonesImage}
+        />
+      </div>
+
       <div className={styles.authSection}>
         <div
           className={`${styles.formBox} ${isLoading ? styles.loadingBox : ""}`}
@@ -117,7 +129,10 @@ const RegisterPage = () => {
               type="email"
               placeholder="Email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (error) setError("");
+              }}
               disabled={isLoading}
             />
 
@@ -129,7 +144,10 @@ const RegisterPage = () => {
               type="text"
               placeholder="Full Name"
               value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              onChange={(e) => {
+                setFullName(e.target.value);
+                if (error) setError("");
+              }}
               disabled={isLoading}
             />
 
@@ -137,7 +155,10 @@ const RegisterPage = () => {
               type="text"
               placeholder="Username"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                if (error) setError("");
+              }}
               disabled={isLoading}
             />
 
@@ -145,28 +166,25 @@ const RegisterPage = () => {
               <div className={styles.errorMessage}>{error}</div>
             )}
 
-            <Input
-              type={passwordType}
-              placeholder="Password"
-              value={password}
-              onChange={handlePasswordChange}
-              disabled={isLoading}
-              className={`${styles.passwordInput} ${
-                showPasswords && password.length > 0 ? styles.reveal : ""
-              }`}
-            />
+            <div className={styles.inputWrapper}>
+              <Input
+                type={passwordType}
+                placeholder="Password"
+                value={password}
+                onChange={handlePasswordChange}
+                disabled={isLoading}
+              />
+            </div>
 
-            <Input
-              type={confirmPasswordType}
-              placeholder="Confirm Password"
-              value={confirmPassword}
-              onChange={handleConfirmPasswordChange}
-              disabled={isLoading}
-              className={`${styles.passwordInput} ${
-                showPasswords && confirmPassword.length > 0 ? styles.reveal : ""
-              }`}
-            />
-
+            <div className={styles.inputWrapper}>
+              <Input
+                type={confirmPasswordType}
+                placeholder="Confirm Password"
+                value={confirmPassword}
+                onChange={handleConfirmPasswordChange}
+                disabled={isLoading}
+              />
+            </div>
 
             {hasPasswordInput && (
               <div className={styles.showPasswordsWrapper}>
@@ -180,7 +198,6 @@ const RegisterPage = () => {
                 </button>
               </div>
             )}
-
 
             {hasPasswordInput && (
               <div className={styles.passwordRulesContainer}>
@@ -244,12 +261,19 @@ const RegisterPage = () => {
           <LoadingHints active={isLoading} />
         </div>
 
-        <div className={styles.redirectBox}>
+        <div
+          className={styles.redirectBox}
+          onClick={() => navigate("/login")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              navigate("/login");
+            }
+          }}
+        >
           <p className={styles.redirectText}>
-            Have an account?{" "}
-            <Link to="/login" className={styles.link}>
-              Log in
-            </Link>
+            Have an account? <span className={styles.link}>Log in</span>
           </p>
         </div>
       </div>

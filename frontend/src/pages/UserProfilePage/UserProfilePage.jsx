@@ -1,10 +1,163 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, memo, useRef } from "react";
+import PropTypes from "prop-types";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { createPortal } from "react-dom";
-import API from "../../api/axios";
+import API from "../../api/axios.js";
 import styles from "./UserProfilePage.module.css";
 import PostModal from "../../components/PostModal/PostModal";
 import Avatar from "../../components/Avatar/Avatar";
+import AvatarViewModal from "../../components/AvatarViewModal/AvatarViewModal";
+import PageHeader from "../../components/PageHeader/PageHeader";
+
+const ProfilePostItem = memo(({ post, index, onSelectPost }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const itemRef = useRef(null);
+  const requestRef = useRef(null);
+
+  useEffect(() => {
+    const currentItem = itemRef.current;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          if (currentItem) observer.unobserve(currentItem);
+        }
+      },
+      {
+        threshold: 0.08,
+        rootMargin: "0px 0px -30px 0px",
+      },
+    );
+
+    if (currentItem) {
+      observer.observe(currentItem);
+    }
+
+    return () => {
+      if (currentItem) observer.unobserve(currentItem);
+    };
+  }, []);
+
+  const handleMouseMove = (e) => {
+    if (!itemRef.current || window.innerWidth <= 768) return;
+
+    const card = itemRef.current;
+    const rect = card.getBoundingClientRect();
+
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    const rotateX = ((y - centerY) / centerY) * -10;
+    const rotateY = ((x - centerX) / centerX) * 10;
+
+    const glossX = (x / rect.width) * 100;
+    const glossY = (y / rect.height) * 100;
+
+    if (requestRef.current) cancelAnimationFrame(requestRef.current);
+
+    requestRef.current = requestAnimationFrame(() => {
+      card.style.setProperty("--rotate-x", `${rotateX.toFixed(2)}deg`);
+      card.style.setProperty("--rotate-y", `${rotateY.toFixed(2)}deg`);
+      card.style.setProperty("--gloss-x", `${glossX.toFixed(1)}%`);
+      card.style.setProperty("--gloss-y", `${glossY.toFixed(1)}%`);
+      card.style.setProperty("--gloss-opacity", "1");
+    });
+  };
+
+  const handleMouseLeave = () => {
+    if (!itemRef.current || window.innerWidth <= 768) return;
+
+    if (requestRef.current) cancelAnimationFrame(requestRef.current);
+
+    const card = itemRef.current;
+    card.style.setProperty("--rotate-x", "0deg");
+    card.style.setProperty("--rotate-y", "0deg");
+    card.style.setProperty("--gloss-opacity", "0");
+  };
+
+  const imageUrl = post.url
+    ? post.url.startsWith("http")
+      ? post.url
+      : `${API.defaults.baseURL}/${post.url.replace(/^\//, "")}`
+    : `https://picsum.photos/seed/${post._id}/500/500`;
+
+  return (
+    <div
+      ref={itemRef}
+      className={`${styles.gridItem} ${isVisible ? styles.itemVisible : ""}`}
+      style={{
+        "--post-bg": `url(${imageUrl})`,
+        "--i": index % 12,
+      }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      onClick={() => onSelectPost(post)}
+    >
+      <div className={styles.floatWrapper}>
+        <img
+          src={imageUrl}
+          alt="Post"
+          className={`${styles.postImage} ${isLoaded ? styles.imageLoaded : ""}`}
+          loading="lazy"
+          onLoad={() => setIsLoaded(true)}
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src =
+              "https://placehold.co/500x500/e2e8f0/64748b?text=No+Image";
+            setIsLoaded(true);
+          }}
+        />
+
+        <div className={styles.glossOverlay} />
+
+        <div className={styles.statsBadge}>
+          <div className={styles.badgeStat}>
+            <svg
+              className={styles.badgeIcon}
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+            </svg>
+            <span>
+              {post.likesCount !== undefined
+                ? post.likesCount
+                : post.likes?.length || 0}
+            </span>
+          </div>
+          <div className={styles.badgeStat}>
+            <svg
+              className={styles.badgeIcon}
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z" />
+            </svg>
+            <span>{post.comments?.length || 0}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+ProfilePostItem.displayName = "ProfilePostItem";
+
+ProfilePostItem.propTypes = {
+  post: PropTypes.shape({
+    _id: PropTypes.string.isRequired,
+    url: PropTypes.string,
+    likesCount: PropTypes.number,
+    likes: PropTypes.array,
+    comments: PropTypes.array,
+  }).isRequired,
+  index: PropTypes.number.isRequired,
+  onSelectPost: PropTypes.func.isRequired,
+};
 
 const UserProfilePage = () => {
   const navigate = useNavigate();
@@ -26,6 +179,7 @@ const UserProfilePage = () => {
   const [loadingModalList, setLoadingModalList] = useState(false);
 
   const [isClosingUsersModal, setIsClosingUsersModal] = useState(false);
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchUserProfileAndPosts = async () => {
@@ -72,7 +226,7 @@ const UserProfilePage = () => {
     }
   }, [username, navigate]);
 
-  const handleFollowToggle = async () => {
+  const handleFollowToggle = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -108,99 +262,107 @@ const UserProfilePage = () => {
     } catch (error) {
       console.error("Error toggling follow:", error);
     }
-  };
+  }, [user]);
 
-  const handleModalFollowToggle = async (targetUserId) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await API.post(
-        `/api/users/${targetUserId}/follow`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+  const handleModalFollowToggle = useCallback(
+    async (targetUserId) => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await API.post(
+          `/api/users/${targetUserId}/follow`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
 
-      const nextState = response.data.isFollowing;
+        const nextState = response.data.isFollowing;
 
-      setModalUsersList((prevList) =>
-        prevList.map((u) =>
-          u._id === targetUserId ? { ...u, isFollowing: nextState } : u,
-        ),
-      );
+        setModalUsersList((prevList) =>
+          prevList.map((u) =>
+            u._id === targetUserId ? { ...u, isFollowing: nextState } : u,
+          ),
+        );
 
-      setCurrentUser((prevMy) => {
-        if (!prevMy) return prevMy;
-        const currentFollowing = prevMy.following || [];
-        let updatedFollowing;
+        setCurrentUser((prevMy) => {
+          if (!prevMy) return prevMy;
+          const currentFollowing = prevMy.following || [];
+          let updatedFollowing;
 
-        if (nextState) {
-          updatedFollowing = [...currentFollowing, targetUserId];
-        } else {
-          updatedFollowing = currentFollowing.filter(
-            (id) => (typeof id === "string" ? id : id._id) !== targetUserId,
+          if (nextState) {
+            updatedFollowing = [...currentFollowing, targetUserId];
+          } else {
+            updatedFollowing = currentFollowing.filter(
+              (id) => (typeof id === "string" ? id : id._id) !== targetUserId,
+            );
+          }
+
+          return { ...prevMy, following: updatedFollowing };
+        });
+
+        if (user && user._id === targetUserId) {
+          setIsFollowing(nextState);
+          setFollowersCount((prev) =>
+            nextState ? prev + 1 : Math.max(0, prev - 1),
           );
         }
-
-        return { ...prevMy, following: updatedFollowing };
-      });
-
-      if (user && user._id === targetUserId) {
-        setIsFollowing(nextState);
-        setFollowersCount((prev) =>
-          nextState ? prev + 1 : Math.max(0, prev - 1),
-        );
+      } catch (error) {
+        console.error("Error toggling modal follow status:", error);
       }
-    } catch (error) {
-      console.error("Error toggling modal follow status:", error);
-    }
-  };
+    },
+    [user],
+  );
 
-  const openUsersModal = async (type) => {
-    setActiveModal(type);
-    setLoadingModalList(true);
-    try {
-      const token = localStorage.getItem("token");
-      const { data } = await API.get(`/api/users/${user._id}/${type}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const myFollowingIds = (currentUser?.following || []).map((f) =>
-        typeof f === "string" ? f : f._id || f.id,
-      );
-
-      const formattedData = data.map((u) => ({
-        ...u,
-        isFollowing: myFollowingIds.includes(u._id),
-      }));
-
-      setModalUsersList(formattedData);
-
-      if (type === "followers") {
-        setFollowersCount(formattedData.length);
-      } else if (type === "following") {
-        setFollowingCount(formattedData.length);
-      }
-    } catch (error) {
-      console.error(`Error fetching ${type}:`, error);
-      setModalUsersList([]);
-    } finally {
-      setLoadingModalList(false);
-    }
-  };
-
-  const closeUsersModal = () => {
+  const closeUsersModal = useCallback(() => {
     setIsClosingUsersModal(true);
     setTimeout(() => {
       setActiveModal(null);
       setModalUsersList([]);
       setIsClosingUsersModal(false);
     }, 150);
-  };
+  }, []);
+
+  const openUsersModal = useCallback(
+    async (type) => {
+      if (!user) return;
+      setActiveModal(type);
+      setLoadingModalList(true);
+      try {
+        const token = localStorage.getItem("token");
+        const { data } = await API.get(`/api/users/${user._id}/${type}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const myFollowingIds = (currentUser?.following || []).map((f) =>
+          typeof f === "string" ? f : f._id || f.id,
+        );
+
+        const formattedData = data.map((u) => ({
+          ...u,
+          isFollowing: myFollowingIds.includes(u._id),
+        }));
+
+        setModalUsersList(formattedData);
+
+        if (type === "followers") {
+          setFollowersCount(formattedData.length);
+        } else if (type === "following") {
+          setFollowingCount(formattedData.length);
+        }
+      } catch (error) {
+        console.error(`Error fetching ${type}:`, error);
+        setModalUsersList([]);
+      } finally {
+        setLoadingModalList(false);
+      }
+    },
+    [user, currentUser],
+  );
 
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
         if (activeModal && !isClosingUsersModal) closeUsersModal();
         if (selectedPost) setSelectedPost(null);
+        if (isAvatarModalOpen) setIsAvatarModalOpen(false);
       }
     };
 
@@ -208,7 +370,13 @@ const UserProfilePage = () => {
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [activeModal, isClosingUsersModal, selectedPost]);
+  }, [
+    activeModal,
+    isClosingUsersModal,
+    selectedPost,
+    isAvatarModalOpen,
+    closeUsersModal,
+  ]);
 
   if (loading) {
     return (
@@ -272,50 +440,15 @@ const UserProfilePage = () => {
 
   return (
     <div className={styles.profileContainer}>
-      <button
-        type="button"
-        className={styles.backBtn}
-        onClick={() => navigate(-1)}
-        aria-label="Back"
-      >
-        <svg
-          aria-label="Back"
-          color="rgb(38, 38, 38)"
-          fill="rgb(38, 38, 38)"
-          height="24"
-          role="img"
-          viewBox="0 0 24 24"
-          width="24"
-        >
-          <line
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            x1="2.909"
-            x2="21.413"
-            y1="12"
-            y2="12"
-          ></line>
-          <polyline
-            fill="none"
-            points="11.692 3.22 2.909 12 11.692 20.78"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-          ></polyline>
-        </svg>
-      </button>
-
+      <PageHeader />
       <header className={styles.header}>
         <div className={styles.headerTopMobile}>
-          <div className={styles.avatarContainer}>
-            <div className={styles.avatarGradient}>
-              <div className={styles.whiteBorderWrapper}>
-                <Avatar user={user} size={150} />
-              </div>
+          <div
+            className={styles.avatarContainer}
+            onClick={() => setIsAvatarModalOpen(true)}
+          >
+            <div className={styles.avatarFrame}>
+              <Avatar user={user} size={150} />
             </div>
           </div>
 
@@ -440,50 +573,13 @@ const UserProfilePage = () => {
         }
       >
         {posts.length > 0 ? (
-          posts.map((post) => (
-            <div
+          posts.map((post, index) => (
+            <ProfilePostItem
               key={post._id}
-              className={styles.gridItem}
-              onClick={() => setSelectedPost(post)}
-            >
-              <img
-                src={
-                  post.url
-                    ? post.url.startsWith("http")
-                      ? post.url
-                      : `${API.defaults.baseURL}/${post.url.replace(/^\//, "")}`
-                    : `https://picsum.photos/seed/${post._id}/500/500`
-                }
-                alt="Post"
-                className={styles.postImage}
-              />
-              <div className={styles.gridItemOverlay}>
-                <div className={styles.overlayStat}>
-                  <svg
-                    className={styles.overlayIcon}
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                  </svg>
-                  <span>
-                    {post.likesCount !== undefined
-                      ? post.likesCount
-                      : post.likes?.length || 0}
-                  </span>
-                </div>
-                <div className={styles.overlayStat}>
-                  <svg
-                    className={styles.overlayIcon}
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z" />
-                  </svg>
-                  <span>{post.comments?.length || 0}</span>
-                </div>
-              </div>
-            </div>
+              post={post}
+              index={index}
+              onSelectPost={setSelectedPost}
+            />
           ))
         ) : (
           <div className={styles.noPostsContainer}>
@@ -614,6 +710,14 @@ const UserProfilePage = () => {
           </div>,
           document.body,
         )}
+
+      {isAvatarModalOpen && (
+        <AvatarViewModal
+          user={user}
+          isOwnProfile={false}
+          onClose={() => setIsAvatarModalOpen(false)}
+        />
+      )}
     </div>
   );
 };

@@ -1,78 +1,160 @@
 .postCard {
-  background-color: #fff;
-  border-bottom: 1px solid #efefef;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 12px;
   padding-bottom: 16px;
   width: 100%;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  box-sizing: border-box;
+
+  opacity: 0;
+  transform: translateY(24px) scale(0.98);
+  will-change: opacity, transform, box-shadow, border-color;
+  transition:
+    opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.3s ease,
+    border-color 0.3s ease,
+    background-color 0.4s ease;
+}
+
+.postCard:hover {
+  transform: translateY(-4px);
+  border-color: var(--text-secondary);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.22);
+}
+
+.postVisible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 4px;
+  padding: 4px 6px 10px 6px;
 }
 
 .userInfo {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0;
+}
+
+.authorBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 20px;
+  text-decoration: none;
+  background-color: transparent;
+  will-change: transform, background-color;
+  transition:
+    background-color 0.2s cubic-bezier(0.2, 0, 0, 1),
+    transform 0.18s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.authorBadge:hover {
+  background-color: var(--bg-hover, var(--border-color));
+  transform: translateY(-1px);
+}
+
+.authorBadge:active {
+  transform: translateY(0) scale(0.96);
+}
+
+.authorBadge > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.authorBadge:hover > div {
+  transform: scale(1.06);
+}
+
+.username {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+  text-decoration: none;
+  line-height: 1;
+}
+
+.captionUsername {
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+  display: inline-block;
+  transition:
+    color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.captionUsername:hover {
+  color: var(--text-secondary);
+  opacity: 0.85;
 }
 
 .userMeta {
   display: flex;
   align-items: center;
-  font-size: 14px;
+  font-size: 13px;
+  will-change: transform;
+  transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1);
 }
 
-.username {
-  font-weight: 600;
-  color: #262626;
-  text-decoration: none;
-}
-
-.username:hover {
-  color: #737373;
+.userInfo:has(.authorBadge:hover) .userMeta {
+  transform: translateX(4px);
 }
 
 .dot {
-  margin: 0 6px;
-  color: #737373;
+  margin: 0 4px;
+  color: var(--text-secondary);
   font-size: 10px;
 }
 
 .time {
-  color: #737373;
+  color: var(--text-secondary);
 }
 
 .followBtn {
   background: none;
   border: none;
-  padding: 0;
+  padding: 2px 8px;
+  border-radius: 8px;
   margin: 0;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition:
-    opacity 0.15s ease,
-    color 0.15s ease;
-  color: #0095f6;
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+  color: var(--link-color);
 }
 
 .followBtn:hover {
-  color: #00376b;
+  color: var(--link-hover);
+  background-color: var(--bg-hover, var(--border-color));
 }
 
 .followBtn.following {
-  color: #262626;
+  color: var(--text-primary);
 }
 
 .followBtn.following:hover {
-  color: #8e8e8e;
+  color: #ed4956;
 }
 
 .followBtn:active {
-  opacity: 0.6;
+  transform: scale(0.95);
 }
 
 .followBtn:disabled {
@@ -83,11 +165,12 @@
 .imageContainer {
   position: relative;
   width: 100%;
-  border-radius: 4px;
+  border-radius: 16px;
   overflow: hidden;
   cursor: pointer;
-  background-color: #fafafa;
+  background-color: var(--bg-main);
   user-select: none;
+  border: 1px solid var(--border-color);
 }
 
 .postImg {
@@ -96,43 +179,46 @@
   display: block;
   object-fit: cover;
   max-height: 580px;
+  border-radius: 15px;
 }
 
 .interactionArea {
-  padding: 12px 4px 0 4px;
+  padding: 12px 6px 0 6px;
 }
 
 .actionsRow {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   margin-bottom: 8px;
 }
 
 .actionBtn {
   background: none;
   border: none;
-  padding: 0;
+  padding: 6px;
+  border-radius: 50%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition:
-    transform 0.1s ease,
+    transform 0.15s ease,
+    background-color 0.15s ease,
     opacity 0.2s ease;
-  color: #262626;
+  color: var(--text-primary);
 }
 
 .actionBtn svg {
-  color: #262626;
-  stroke: #262626;
+  color: var(--text-primary);
+  stroke: var(--text-primary);
 }
 
 .actionBtn:hover {
-  opacity: 0.7;
+  background-color: var(--bg-hover, var(--border-color));
 }
 
 .actionBtn:active {
-  transform: scale(0.9);
+  transform: scale(0.88);
 }
 
 .likedHeart {
@@ -140,89 +226,43 @@
   stroke: #ff3040 !important;
 }
 
-.unlikedHeart {
-  fill: none;
-  stroke: #262626;
-  stroke-width: 2;
+.popActive {
+  animation: heartPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
-.unlikedHeart:hover {
-  stroke: #8e8e8e;
+.unlikedHeart {
+  fill: none;
+  stroke: var(--text-primary);
+  stroke-width: 2;
+  transition: transform 0.2s ease;
 }
 
 .likesCount {
   font-size: 14px;
   font-weight: 600;
-  color: #262626;
-  margin-bottom: 8px;
-}
-
-.caption {
-  font-size: 14px;
-  line-height: 1.4;
-  margin-bottom: 8px;
-}
-
-.captionUsername {
-  font-weight: 600;
-  color: #262626;
-  text-decoration: none;
-}
-
-.captionText {
-  color: #262626;
-}
-
-.commentsPreview {
-  font-size: 14px;
-}
-
-.viewCommentsBtn {
-  background: none;
-  border: none;
-  padding: 0;
-  color: #737373;
-  cursor: pointer;
-  font-size: 14px;
+  color: var(--text-primary);
   margin-bottom: 6px;
-  display: block;
-}
-
-.commentLine {
-  margin-bottom: 4px;
-  line-height: 1.4;
-}
-
-.commentUser {
-  font-weight: 600;
-  color: #262626;
-}
-
-.commentText {
-  color: #262626;
+  padding-left: 2px;
 }
 
 .captionSection {
-  margin-top: 8px;
+  margin-top: 6px;
+  padding-left: 2px;
   font-size: 14px;
   line-height: 1.4;
-  color: #000000;
-}
-
-.captionUsername {
-  font-weight: 600;
-  margin-right: 8px;
+  color: var(--text-primary);
 }
 
 .captionText {
   white-space: pre-line;
   word-break: break-word;
+  color: var(--text-primary);
 }
 
 .moreButton {
   background: none;
   border: none;
-  color: #737373;
+  color: var(--text-secondary);
   font-size: 14px;
   cursor: pointer;
   padding: 0;
@@ -232,27 +272,45 @@
 }
 
 .moreButton:hover {
-  color: #000000;
+  color: var(--text-primary);
 }
 
-.heartOverlay {
+.bigHeartOverlay {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   pointer-events: none;
   z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.animatedHeart {
-  width: 110px;
-  height: 110px;
-  fill: #fff;
-  filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.3));
-  animation: heartPop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+.bigHeartIcon {
+  width: 130px;
+  height: 130px;
+  fill: #ffffff;
+  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.4));
+  animation: heartBlowUp 0.8s ease-out forwards;
 }
 
 @keyframes heartPop {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.35);
+  }
+  60% {
+    transform: scale(0.85);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes heartBlowUp {
   0% {
     transform: scale(0);
     opacity: 0;
@@ -263,14 +321,13 @@
   }
   30% {
     transform: scale(1);
-    opacity: 0.9;
+    opacity: 1;
   }
   80% {
     transform: scale(1);
-    opacity: 0.9;
+    opacity: 1;
   }
   100% {
-    transform: scale(0);
-    opacity: 0;
+    transform: scale(1.4);
   }
 }

@@ -1,11 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-
 import { Link } from "react-router-dom";
-
 import API from "../../api/axios";
-
 import Avatar from "../Avatar/Avatar";
-
 import styles from "./PostCard.module.css";
 
 const formatTimeAgo = (dateInput) => {
@@ -41,52 +37,65 @@ const formatTimeAgo = (dateInput) => {
 
 const PostCard = ({
   post,
-
+  index = 0,
   currentUserId,
-
   currentUsername,
-
   onOpenModal,
-
   onFollowToggle,
-
   currentUserFollowing,
-
   onPostUpdate,
 }) => {
   const [isCaptionExpanded, setIsCaptionExpanded] = useState(false);
-
   const [isLiking, setIsLiking] = useState(false);
-
   const [isFollowLoading, setIsFollowLoading] = useState(false);
 
-  const [showHeartAnim, setShowHeartAnim] = useState(false);
+  const [showBigHeart, setShowBigHeart] = useState(false);
+  const [animateHeart, setAnimateHeart] = useState(false);
 
+  const [isVisible, setIsVisible] = useState(false);
+
+  const cardRef = useRef(null);
   const clickTimerRef = useRef(null);
-
   const [prevPostId, setPrevPostId] = useState(post._id);
-
   const [localLike, setLocalLike] = useState(null);
 
   if (post._id !== prevPostId) {
     setPrevPostId(post._id);
-
     setLocalLike(null);
   }
 
+  useEffect(() => {
+    const currentCard = cardRef.current;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          if (currentCard) observer.unobserve(currentCard);
+        }
+      },
+      {
+        threshold: 0.12,
+        rootMargin: "0px 0px -40px 0px",
+      },
+    );
+
+    if (currentCard) {
+      observer.observe(currentCard);
+    }
+
+    return () => {
+      if (currentCard) observer.unobserve(currentCard);
+    };
+  }, []);
+
   const captionText = post.caption || "";
-
   const CAPTION_LIMIT = 70;
-
   const isLongCaption = captionText.length > CAPTION_LIMIT;
-
   const authorId = post?.user?._id || post?.user?.id || post?.user;
-
   const authorUsername = post?.user?.username || "user";
-
   const authorUser = post.user || {
     username: authorUsername,
-
     avatar: post.user?.avatar,
   };
 
@@ -94,7 +103,6 @@ const PostCard = ({
     post && currentUserId && post.likes
       ? post.likes.some((like) => {
           const id = typeof like === "string" ? like : like._id || like.id;
-
           return id === currentUserId;
         })
       : false;
@@ -125,7 +133,6 @@ const PostCard = ({
     } else if (post.user && post.user.followers) {
       isFollowing = post.user.followers.some((fId) => {
         const id = typeof fId === "string" ? fId : fId._id || fId.id;
-
         return id === currentUserId;
       });
     } else {
@@ -138,25 +145,31 @@ const PostCard = ({
     authorId &&
     authorId.toString() === currentUserId.toString();
 
+  const triggerHapticFeedback = () => {
+    if ("vibrate" in navigator) {
+      navigator.vibrate(40);
+    }
+  };
+
   const toggleLikeApiCall = async () => {
     if (isLiking) return;
 
     setIsLiking(true);
-
     const previousLocalLike = localLike;
-
     const newLocalLike = isLiked ? "unliked" : "liked";
 
     setLocalLike(newLocalLike);
 
+    if (newLocalLike === "liked") {
+      setAnimateHeart(true);
+      setTimeout(() => setAnimateHeart(false), 450);
+    }
+
     try {
       const token = localStorage.getItem("token");
-
       const response = await API.put(
         `/api/posts/${post._id}/like`,
-
         {},
-
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
@@ -165,7 +178,6 @@ const PostCard = ({
       }
     } catch (error) {
       console.error("Error toggling like:", error);
-
       setLocalLike(previousLocalLike);
     } finally {
       setIsLiking(false);
@@ -174,19 +186,17 @@ const PostCard = ({
 
   const handleLikeToggle = (e) => {
     e.stopPropagation();
-
     toggleLikeApiCall();
   };
 
   const handleImageClick = () => {
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current);
-
       clickTimerRef.current = null;
 
-      setShowHeartAnim(true);
-
-      setTimeout(() => setShowHeartAnim(false), 800);
+      triggerHapticFeedback();
+      setShowBigHeart(true);
+      setTimeout(() => setShowBigHeart(false), 800);
 
       if (!isLiked) {
         toggleLikeApiCall();
@@ -194,7 +204,6 @@ const PostCard = ({
     } else {
       clickTimerRef.current = setTimeout(() => {
         onOpenModal(post, false);
-
         clickTimerRef.current = null;
       }, 250);
     }
@@ -208,7 +217,6 @@ const PostCard = ({
 
   const handleFollowClick = async (e) => {
     e.stopPropagation();
-
     if (!onFollowToggle || !authorId || isFollowLoading) return;
 
     setIsFollowLoading(true);
@@ -224,7 +232,6 @@ const PostCard = ({
 
   const handleCommentClick = (e) => {
     e.stopPropagation();
-
     if (typeof onOpenModal === "function") {
       onOpenModal(post, true);
     }
@@ -237,48 +244,47 @@ const PostCard = ({
     ) {
       return "/profile";
     }
-
     return `/user/${username}`;
   };
 
   const handleCaptionClick = (e) => {
     e.stopPropagation();
-
     if (isLongCaption && isCaptionExpanded) {
       setIsCaptionExpanded(false);
     }
   };
 
+  const colDelay = (index % 2) * 90;
+
   return (
-    <article className={styles.postCard}>
+    <article
+      ref={cardRef}
+      className={`${styles.postCard} ${isVisible ? styles.postVisible : ""}`}
+      style={{
+        transitionDelay: isVisible ? `${colDelay}ms` : "0ms",
+      }}
+    >
       <header className={styles.header} onClick={(e) => e.stopPropagation()}>
         <div className={styles.userInfo}>
-          <div>
-            <Link to={getProfileLink(authorUsername)}>
-              <Avatar user={authorUser} size={32} />
-            </Link>
-          </div>
+          <Link
+            to={getProfileLink(authorUsername)}
+            className={styles.authorBadge}
+          >
+            <Avatar user={authorUser} size={32} />
+            <span className={styles.username}>{authorUsername}</span>
+          </Link>
 
           <div className={styles.userMeta}>
-            <div>
-              <Link
-                to={getProfileLink(authorUsername)}
-                className={styles.username}
-              >
-                {authorUsername}
-              </Link>
-            </div>
-
             <span className={styles.dot}>•</span>
-
             <span className={styles.time}>{formatTimeAgo(post.createdAt)}</span>
 
             {!isAuthor && (
               <>
                 <span className={styles.dot}>•</span>
-
                 <button
-                  className={`${styles.followBtn} ${isFollowing ? styles.following : styles.follow}`}
+                  className={`${styles.followBtn} ${
+                    isFollowing ? styles.following : styles.follow
+                  }`}
                   onClick={handleFollowClick}
                   disabled={isFollowLoading}
                 >
@@ -290,17 +296,13 @@ const PostCard = ({
         </div>
       </header>
 
-      <div
-        className={styles.imageContainer}
-        onClick={handleImageClick}
-        style={{ cursor: "pointer", position: "relative" }}
-      >
+      <div className={styles.imageContainer} onClick={handleImageClick}>
         <img src={post.url} alt="Post content" className={styles.postImg} />
 
-        {showHeartAnim && (
-          <div className={styles.heartOverlay}>
-            <svg viewBox="0 0 24 24" className={styles.animatedHeart}>
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+        {showBigHeart && (
+          <div className={styles.bigHeartOverlay}>
+            <svg viewBox="0 0 24 24" className={styles.bigHeartIcon}>
+              <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>
             </svg>
           </div>
         )}
@@ -314,10 +316,10 @@ const PostCard = ({
           <button className={styles.actionBtn} onClick={handleLikeToggle}>
             <svg
               aria-label="Like"
-              height="24"
+              height="22"
               viewBox="0 0 24 24"
-              width="24"
-              className={isLiked ? styles.likedHeart : styles.unlikedHeart}
+              width="22"
+              className={`${isLiked ? styles.likedHeart : styles.unlikedHeart} ${animateHeart ? styles.popActive : ""}`}
             >
               <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>
             </svg>
@@ -326,9 +328,9 @@ const PostCard = ({
           <button className={styles.actionBtn} onClick={handleCommentClick}>
             <svg
               aria-label="Comment"
-              height="24"
+              height="22"
               viewBox="0 0 24 24"
-              width="24"
+              width="22"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
@@ -369,7 +371,6 @@ const PostCard = ({
                   className={styles.moreButton}
                   onClick={(e) => {
                     e.stopPropagation();
-
                     setIsCaptionExpanded(true);
                   }}
                 >

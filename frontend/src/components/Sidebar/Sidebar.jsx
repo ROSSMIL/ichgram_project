@@ -74,7 +74,11 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
 
   return (
     <>
-      <div className={styles.sidebar}>
+      <div
+        className={`${styles.sidebar} ${
+          isSearchOpen ? styles.sidebarActive : ""
+        }`}
+      >
         <div
           className={styles.logoContainer}
           onClick={handleLogoClick}
@@ -84,7 +88,6 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
         </div>
 
         <nav className={styles.navMenu}>
-          {/* Home */}
           <NavLink
             to="/dashboard"
             data-nav="home"
@@ -124,7 +127,6 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
             )}
           </NavLink>
 
-          {/* Search */}
           <div
             data-nav="search"
             onClick={onSearchToggle}
@@ -138,8 +140,8 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
             <span className={styles.icon}>
               <svg
                 aria-label="Search"
-                color="rgb(0, 0, 0)"
-                fill="rgb(0, 0, 0)"
+                color="currentColor"
+                fill="currentColor"
                 height="24"
                 role="img"
                 viewBox="0 0 24 24"
@@ -169,7 +171,6 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
             <span className={styles.text}>Search</span>
           </div>
 
-          {/* Explore */}
           <NavLink
             to="/explore"
             data-nav="explore"
@@ -183,8 +184,8 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
                 <span className={styles.icon}>
                   <svg
                     aria-label="Explore"
-                    color="rgb(0, 0, 0)"
-                    fill="rgb(0, 0, 0)"
+                    color="currentColor"
+                    fill="currentColor"
                     height="24"
                     role="img"
                     viewBox="0 0 24 24"
@@ -215,7 +216,6 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
             )}
           </NavLink>
 
-          {/* Messages */}
           <NavLink
             to="/messages"
             data-nav="messages"
@@ -228,8 +228,8 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
                 <span className={styles.icon}>
                   <svg
                     aria-label="Direct"
-                    color="rgb(0, 0, 0)"
-                    fill="rgb(0, 0, 0)"
+                    color="currentColor"
+                    fill="currentColor"
                     height="24"
                     role="img"
                     viewBox="0 0 24 24"
@@ -259,7 +259,6 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
             )}
           </NavLink>
 
-          {/* Notifications */}
           <NavLink
             to="/notifications"
             data-nav="notifications"
@@ -272,8 +271,8 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
                 <span className={styles.icon}>
                   <svg
                     aria-label="Notifications"
-                    color="rgb(0, 0, 0)"
-                    fill="rgb(0, 0, 0)"
+                    color="currentColor"
+                    fill="currentColor"
                     height="24"
                     role="img"
                     viewBox="0 0 24 24"
@@ -293,7 +292,6 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
             )}
           </NavLink>
 
-          {/* Create */}
           <div
             data-nav="create"
             onClick={() => setIsCreateModalOpen(true)}
@@ -303,8 +301,8 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
             <span className={styles.icon}>
               <svg
                 aria-label="New post"
-                color="rgb(0, 0, 0)"
-                fill="rgb(0, 0, 0)"
+                color="currentColor"
+                fill="currentColor"
                 height="24"
                 role="img"
                 viewBox="0 0 24 24"
@@ -320,7 +318,7 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
                 />
                 <line
                   fill="none"
-                  stroke={isCreateModalOpen ? "#fff" : "currentColor"}
+                  stroke={isCreateModalOpen ? "var(--bg-card)" : "currentColor"}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth="2"
@@ -331,7 +329,7 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
                 />
                 <line
                   fill="none"
-                  stroke={isCreateModalOpen ? "#fff" : "currentColor"}
+                  stroke={isCreateModalOpen ? "var(--bg-card)" : "currentColor"}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth="2"
@@ -345,7 +343,6 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
             <span className={styles.text}>Create</span>
           </div>
 
-          {/* Profile */}
           <NavLink
             to="/profile"
             data-nav="profile"

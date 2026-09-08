@@ -277,7 +277,6 @@ const PostModal = ({
       console.error("Error toggling like:", error);
       setIsLiked(previousIsLiked);
       setLikesCount(previousLikesCount);
-      alert("Failed to update like status.");
     } finally {
       setIsLiking(false);
     }
@@ -345,7 +344,6 @@ const PostModal = ({
       setTimeout(scrollToBottom, 50);
     } catch (error) {
       console.error("Error adding comment:", error);
-      alert(error.response?.data?.message || "Failed to add comment.");
     } finally {
       setIsSubmitting(false);
     }
@@ -353,7 +351,6 @@ const PostModal = ({
 
   const handleFocusCommentInput = () => {
     if (commentInputRef.current) commentInputRef.current.focus();
-
     setTimeout(scrollToBottom, 300);
   };
 
@@ -414,7 +411,6 @@ const PostModal = ({
       window.location.reload();
     } catch (error) {
       console.error("Error deleting post:", error);
-      alert("Failed to delete post.");
     }
   };
 
@@ -440,7 +436,6 @@ const PostModal = ({
       handleCloseCommentMenu();
     } catch (error) {
       console.error("Error during comment deletion:", error);
-      alert(error.response?.data?.message || "Failed to delete comment.");
     }
   };
 
@@ -469,7 +464,19 @@ const PostModal = ({
         onClick={handleClose}
         aria-label="Close modal"
       >
-        &times;
+        <svg
+          viewBox="0 0 24 24"
+          width="20"
+          height="20"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
       </button>
 
       <div
@@ -477,15 +484,17 @@ const PostModal = ({
         className={`${styles.modalBox} ${isClosing ? styles.modalBoxLeaving : ""}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={styles.imageSection} onClick={handleImageClick}>
-          <img src={post.url} alt="Post content" className={styles.postImg} />
-          {showBigHeart && (
-            <div className={styles.bigHeartOverlay}>
-              <svg viewBox="0 0 24 24" className={styles.bigHeartIcon}>
-                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>
-              </svg>
-            </div>
-          )}
+        <div className={styles.imageSection}>
+          <div className={styles.imageContainer} onClick={handleImageClick}>
+            <img src={post.url} alt="Post content" className={styles.postImg} />
+            {showBigHeart && (
+              <div className={styles.bigHeartOverlay}>
+                <svg viewBox="0 0 24 24" className={styles.bigHeartIcon}>
+                  <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>
+                </svg>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className={styles.infoSection}>
@@ -522,30 +531,33 @@ const PostModal = ({
                 <Link
                   to={getProfileLink(authorUsername)}
                   onClick={onClose}
-                  className={styles.avatarLink}
+                  className={styles.authorBadge}
                 >
                   <Avatar user={authorUser} size={32} />
-                </Link>
-                <Link
-                  to={getProfileLink(authorUsername)}
-                  onClick={onClose}
-                  className={styles.usernameLink}
-                >
                   <span className={styles.username}>{authorUsername}</span>
                 </Link>
 
-                {!isAuthor && (
-                  <>
-                    <span className={styles.divider}>•</span>
-                    <button
-                      className={`${styles.followBtn} ${isFollowing ? styles.following : styles.follow}`}
-                      onClick={handleFollowToggleInModal}
-                      disabled={isFollowLoading}
-                    >
-                      {isFollowing ? "Following" : "Follow"}
-                    </button>
-                  </>
-                )}
+                <div className={styles.userMeta}>
+                  <span className={styles.dot}>•</span>
+                  <span className={styles.time}>
+                    {formatTimeAgo(post.createdAt)}
+                  </span>
+
+                  {!isAuthor && (
+                    <>
+                      <span className={styles.dot}>•</span>
+                      <button
+                        className={`${styles.followBtn} ${
+                          isFollowing ? styles.following : styles.follow
+                        }`}
+                        onClick={handleFollowToggleInModal}
+                        disabled={isFollowLoading}
+                      >
+                        {isFollowing ? "Following" : "Follow"}
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -667,34 +679,41 @@ const PostModal = ({
           </div>
 
           <div className={styles.actionsArea}>
-            <div className={styles.iconsRow}>
-              <button className={styles.iconBtn} onClick={handleLikeToggle}>
+            <div className={styles.actionsRow}>
+              <button className={styles.actionBtn} onClick={handleLikeToggle}>
                 <svg
                   aria-label="Like"
-                  height="24"
+                  height="22"
                   viewBox="0 0 24 24"
-                  width="24"
+                  width="22"
                   className={`${isLiked ? styles.likedHeart : styles.unlikedHeart} ${animateHeart ? styles.popActive : ""}`}
                 >
                   <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>
                 </svg>
               </button>
               <button
-                className={styles.iconBtn}
+                className={styles.actionBtn}
                 onClick={handleFocusCommentInput}
               >
                 <svg
                   aria-label="Comment"
-                  height="24"
+                  height="22"
                   viewBox="0 0 24 24"
-                  width="24"
+                  width="22"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                   className={styles.commentSvgIcon}
                 >
                   <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
                 </svg>
               </button>
             </div>
-            <div className={styles.likesCount}>{likesCount} likes</div>
+            <div className={styles.likesCount}>
+              {likesCount.toLocaleString()} likes
+            </div>
             <div className={styles.postDate}>
               {post.createdAt ? formatTimeAgo(post.createdAt) : "just now"}
             </div>
@@ -714,11 +733,11 @@ const PostModal = ({
                 >
                   <svg
                     aria-label="Emoji"
-                    color="rgb(115, 115, 115)"
-                    fill="rgb(115, 115, 115)"
-                    height="24"
+                    color="currentColor"
+                    fill="currentColor"
+                    height="22"
                     viewBox="0 0 24 24"
-                    width="24"
+                    width="22"
                   >
                     <path d="M15.83 10.96a1.75 1.75 0 1 1 1.75-1.76 1.75 1.75 0 0 1-1.75 1.76Zm-7.66 0a1.75 1.75 0 1 1 1.75-1.76 1.75 1.75 0 0 1-1.75 1.76Zm4.17 6.64a5.12 5.12 0 0 1-4.08-2.03.75.75 0 0 1 1.18-.93 3.6 3.6 0 0 0 5.8 0 .75.75 0 0 1 1.18.93 5.12 5.12 0 0 1-4.08 2.03ZM12 2.5a9.5 9.5 0 1 0 9.5 9.5 9.51 9.51 0 0 0-9.5-9.5Zm0 21a11.5 11.5 0 1 1 11.5-11.5 11.51 11.51 0 0 1-11.5 11.5Z"></path>
                   </svg>
@@ -729,7 +748,7 @@ const PostModal = ({
                     <EmojiPicker
                       onEmojiClick={handleEmojiClick}
                       autoFocusSearch={false}
-                      theme="light"
+                      theme="auto"
                       searchDisabled={true}
                       skinTonesDisabled={true}
                       previewConfig={{ showPreview: false }}

@@ -14,12 +14,33 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const [isClosing, setIsClosing] = useState(false);
+  const [currentTheme, setCurrentTheme] = useState("light");
 
   const fileInputRef = useRef(null);
   const emojiPickerRef = useRef(null);
   const captionInputRef = useRef(null);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const updateTheme = () => {
+      const theme =
+        document.documentElement.getAttribute("data-theme") || "light";
+      setCurrentTheme(theme);
+    };
+
+    updateTheme();
+
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+
+    return () => observer.disconnect();
+  }, [isOpen]);
 
   const handleClose = useCallback(() => {
     setIsClosing(true);
@@ -199,8 +220,8 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
           >
             <svg
               aria-label="Back"
-              color="rgb(38, 38, 38)"
-              fill="rgb(38, 38, 38)"
+              color="currentColor"
+              fill="currentColor"
               height="24"
               role="img"
               viewBox="0 0 24 24"
@@ -328,8 +349,8 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
                   >
                     <svg
                       aria-label="Emoji"
-                      color="rgb(115, 115, 115)"
-                      fill="rgb(115, 115, 115)"
+                      color="currentColor"
+                      fill="currentColor"
                       height="20"
                       role="img"
                       viewBox="0 0 24 24"
@@ -344,7 +365,7 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
                       <EmojiPicker
                         onEmojiClick={handleEmojiClick}
                         autoFocusSearch={false}
-                        theme="light"
+                        theme={currentTheme === "dark" ? "dark" : "light"}
                         searchDisabled={true}
                         skinTonesDisabled={true}
                         previewConfig={{ showPreview: false }}

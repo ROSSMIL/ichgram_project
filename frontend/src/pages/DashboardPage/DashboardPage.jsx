@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import PropTypes from "prop-types";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import API from "../../api/axios";
@@ -6,6 +7,91 @@ import PostModal from "../../components/PostModal/PostModal";
 import PostCard from "../../components/PostCard/PostCard";
 import styles from "./DashboardPage.module.css";
 import logoImg from "../../assets/logo.png";
+
+const AllCaughtUpCard = ({ onScrollToTop }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const cardRef = useRef(null);
+
+  useEffect(() => {
+    const currentCard = cardRef.current;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          if (currentCard) observer.unobserve(currentCard);
+        }
+      },
+      {
+        threshold: 0.15,
+        rootMargin: "0px 0px -20px 0px",
+      },
+    );
+
+    if (currentCard) {
+      observer.observe(currentCard);
+    }
+
+    return () => {
+      if (currentCard) observer.unobserve(currentCard);
+    };
+  }, []);
+
+  return (
+    <div
+      ref={cardRef}
+      className={`${styles.allCaughtUp} ${
+        isVisible ? styles.caughtUpVisible : ""
+      }`}
+    >
+      <div className={styles.caughtUpHeader}>
+        <div className={styles.sparkleIconWrapper}>
+          <svg
+            viewBox="0 0 24 24"
+            className={styles.sparkleIcon}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+            <path d="M5 3v4" />
+            <path d="M19 17v4" />
+            <path d="M3 5h4" />
+            <path d="M17 19h4" />
+          </svg>
+        </div>
+        <h3 className={styles.caughtUpTitle}>You’re All Caught Up</h3>
+      </div>
+
+      <p className={styles.caughtUpSubtitle}>
+        You&apos;ve explored all the recent moments from creators you follow.
+      </p>
+
+      <button className={styles.caughtUpScrollBtn} onClick={onScrollToTop}>
+        <span>Back to top</span>
+        <svg
+          viewBox="0 0 24 24"
+          width="16"
+          height="16"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={styles.arrowIcon}
+        >
+          <polyline points="18 15 12 9 6 15" />
+        </svg>
+      </button>
+    </div>
+  );
+};
+
+AllCaughtUpCard.propTypes = {
+  onScrollToTop: PropTypes.func.isRequired,
+};
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -15,7 +101,6 @@ const DashboardPage = () => {
   const [selectedPost, setSelectedPost] = useState(null);
 
   const [showScrollTop, setShowScrollTop] = useState(false);
-
   const [autoFocusComment, setAutoFocusComment] = useState(false);
 
   const token = localStorage.getItem("token");
@@ -222,18 +307,18 @@ const DashboardPage = () => {
     fetchFeedData(true);
   };
 
-  if (loading) {
-    return (
-      <div className={styles.container}>
-        <header className={styles.mobileHeader}>
-          <img
-            src={logoImg}
-            alt="ICHGRAM"
-            className={styles.mobileLogo}
-            onClick={handleLogoClick}
-          />
-        </header>
+  return (
+    <div className={styles.container}>
+      <header className={styles.mobileHeader}>
+        <img
+          src={logoImg}
+          alt="ICHGRAM"
+          className={styles.mobileLogo}
+          onClick={handleLogoClick}
+        />
+      </header>
 
+      {loading ? (
         <div className={styles.feedList}>
           {[1, 2, 3, 4].map((n) => (
             <div
@@ -256,61 +341,37 @@ const DashboardPage = () => {
             </div>
           ))}
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={styles.container}>
-      <header className={styles.mobileHeader}>
-        <img
-          src={logoImg}
-          alt="ICHGRAM"
-          className={styles.mobileLogo}
-          onClick={handleLogoClick}
-        />
-      </header>
-
-      <div className={styles.feedList}>
-        {posts.length > 0 ? (
-          posts.map((post) => (
-            <PostCard
-              key={post._id}
-              post={post}
-              currentUserId={currentUserId}
-              currentUserFollowing={currentUserFollowing}
-              onFollowToggle={handleFollowToggle}
-              onOpenModal={(p, focus) => handleOpenModal(p, focus)}
-              onPostUpdate={handlePostUpdate}
-            />
-          ))
-        ) : (
-          <div className={styles.emptyFeed}>
-            <h2>No posts to show</h2>
-            <p>Follow some creators or upload your first photo!</p>
-          </div>
-        )}
-
-        {posts.length > 0 && (
-          <div className={styles.allCaughtUp}>
-            <div className={styles.checkmarkCircle}>
-              <svg viewBox="0 0 24 24" className={styles.checkmarkIcon}>
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
+      ) : (
+        <div className={styles.feedList}>
+          {posts.length > 0 ? (
+            posts.map((post, index) => (
+              <PostCard
+                key={post._id}
+                post={post}
+                index={index}
+                currentUserId={currentUserId}
+                currentUserFollowing={currentUserFollowing}
+                onFollowToggle={handleFollowToggle}
+                onOpenModal={(p, focus) => handleOpenModal(p, focus)}
+                onPostUpdate={handlePostUpdate}
+              />
+            ))
+          ) : (
+            <div className={styles.emptyFeed}>
+              <h2>No posts to show</h2>
+              <p>Follow some creators or upload your first photo!</p>
             </div>
-            <h3 className={styles.caughtUpTitle}>
-              You've seen all the updates
-            </h3>
-            <p className={styles.caughtUpSubtitle}>
-              You have viewed all new publications
-            </p>
-          </div>
-        )}
-      </div>
+          )}
+
+          {posts.length > 0 && <AllCaughtUpCard onScrollToTop={scrollToTop} />}
+        </div>
+      )}
 
       {createPortal(
         <button
-          className={`${styles.scrollTopBtn} ${showScrollTop ? styles.showScrollBtn : ""}`}
+          className={`${styles.scrollTopBtn} ${
+            showScrollTop ? styles.showScrollBtn : ""
+          }`}
           onClick={scrollToTop}
           aria-label="Back to top"
         >
