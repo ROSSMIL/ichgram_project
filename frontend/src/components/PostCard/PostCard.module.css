@@ -227,7 +227,7 @@
 }
 
 .popActive {
-  animation: heartPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  animation: elasticPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
 .unlikedHeart {
@@ -275,59 +275,158 @@
   color: var(--text-primary);
 }
 
-.bigHeartOverlay {
+.heartPulseAura {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) rotate(var(--heart-rotate, 0deg));
   pointer-events: none;
   z-index: 10;
   display: flex;
   align-items: center;
   justify-content: center;
+  will-change: transform, opacity;
+  animation: auraFadeDissolve 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.bigHeartIcon {
-  width: 130px;
-  height: 130px;
-  fill: #ffffff;
-  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.4));
-  animation: heartBlowUp 0.8s ease-out forwards;
+.flyingHeartAura {
+  animation: flyToButtonAnimation 0.6s cubic-bezier(0.5, 0, 0.15, 1) forwards !important;
 }
 
-@keyframes heartPop {
+.glassHeartCircle {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: rgba(255, 48, 64, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  box-shadow:
+    0 12px 36px rgba(255, 48, 64, 0.42),
+    0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(180%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  will-change: transform, opacity, backdrop-filter;
+  animation: bubbleHoldAndPop 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.flyingHeartAura .glassHeartCircle {
+  animation: none !important;
+}
+
+.modernHeartIcon {
+  width: 42px;
+  height: 42px;
+  fill: #ff3040;
+  filter: drop-shadow(0 4px 14px rgba(255, 48, 64, 0.65));
+  will-change: transform, opacity;
+  animation: heartHoldAndFade 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.flyingHeartAura .modernHeartIcon {
+  animation: none !important;
+}
+
+@keyframes flyToButtonAnimation {
   0% {
-    transform: scale(1);
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0;
   }
-  30% {
-    transform: scale(1.35);
+  25% {
+    transform: translate(-50%, -50%) scale(1.15);
+    opacity: 1;
   }
-  60% {
-    transform: scale(0.85);
+  45% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
   }
   100% {
-    transform: scale(1);
+    transform: translate(calc(-50% + var(--fly-x)), calc(-50% + var(--fly-y)))
+      scale(0.22);
+    opacity: 0.2;
   }
 }
 
-@keyframes heartBlowUp {
+@keyframes bubbleHoldAndPop {
   0% {
-    transform: scale(0);
+    transform: scale(0.2);
+    opacity: 0;
+    border-color: rgba(255, 255, 255, 0.6);
+  }
+  20% {
+    transform: scale(1.12);
+    opacity: 1;
+    border-color: rgba(255, 255, 255, 0.45);
+  }
+  30% {
+    transform: scale(0.96);
+    opacity: 1;
+  }
+  60% {
+    transform: scale(1.02);
+    opacity: 1;
+    background: rgba(255, 48, 64, 0.2);
+    border-color: rgba(255, 255, 255, 0.35);
+  }
+  100% {
+    transform: scale(1.38);
+    opacity: 0;
+    border-color: rgba(255, 255, 255, 0);
+    box-shadow: 0 20px 50px rgba(255, 48, 64, 0);
+    -webkit-backdrop-filter: blur(0px);
+    backdrop-filter: blur(0px);
+  }
+}
+
+@keyframes heartHoldAndFade {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  20% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  30% {
+    transform: scale(0.96);
+    opacity: 1;
+  }
+  60% {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.22);
+    opacity: 0;
+    filter: drop-shadow(0 0 0 rgba(255, 48, 64, 0));
+  }
+}
+
+@keyframes auraFadeDissolve {
+  0% {
     opacity: 0;
   }
   15% {
-    transform: scale(1.2);
-    opacity: 0.9;
-  }
-  30% {
-    transform: scale(1);
     opacity: 1;
   }
-  80% {
-    transform: scale(1);
+  65% {
     opacity: 1;
   }
   100% {
-    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+@keyframes elasticPop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.38);
+  }
+  70% {
+    transform: scale(0.92);
+  }
+  100% {
+    transform: scale(1);
   }
 }

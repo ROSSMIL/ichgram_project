@@ -49,12 +49,13 @@ const PostCard = ({
   const [isLiking, setIsLiking] = useState(false);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
 
-  const [showBigHeart, setShowBigHeart] = useState(false);
   const [animateHeart, setAnimateHeart] = useState(false);
+  const [floatingHearts, setFloatingHearts] = useState([]);
 
   const [isVisible, setIsVisible] = useState(false);
 
   const cardRef = useRef(null);
+  const likeBtnRef = useRef(null);
   const clickTimerRef = useRef(null);
   const [prevPostId, setPrevPostId] = useState(post._id);
   const [localLike, setLocalLike] = useState(null);
@@ -147,7 +148,7 @@ const PostCard = ({
 
   const triggerHapticFeedback = () => {
     if ("vibrate" in navigator) {
-      navigator.vibrate(40);
+      navigator.vibrate(30);
     }
   };
 
@@ -162,7 +163,7 @@ const PostCard = ({
 
     if (newLocalLike === "liked") {
       setAnimateHeart(true);
-      setTimeout(() => setAnimateHeart(false), 450);
+      setTimeout(() => setAnimateHeart(false), 500);
     }
 
     try {
@@ -189,17 +190,63 @@ const PostCard = ({
     toggleLikeApiCall();
   };
 
-  const handleImageClick = () => {
+  const handleImageClick = (e) => {
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
 
-      triggerHapticFeedback();
-      setShowBigHeart(true);
-      setTimeout(() => setShowBigHeart(false), 800);
+      const imgRect = e.currentTarget.getBoundingClientRect();
+      const clickX = e.clientX - imgRect.left;
+      const clickY = e.clientY - imgRect.top;
 
-      if (!isLiked) {
-        toggleLikeApiCall();
+      const heartId = Date.now() + Math.random();
+      const isFirstLike = !isLiked;
+
+      let flyDeltaX = 0;
+      let flyDeltaY = 0;
+
+      if (isFirstLike && likeBtnRef.current) {
+        const btnRect = likeBtnRef.current.getBoundingClientRect();
+        const targetX = btnRect.left + btnRect.width / 2 - imgRect.left;
+        const targetY = btnRect.top + btnRect.height / 2 - imgRect.top;
+
+        flyDeltaX = targetX - clickX;
+        flyDeltaY = targetY - clickY;
+      }
+
+      const randomRotation = isFirstLike
+        ? 0
+        : Math.floor(Math.random() * 30) - 15;
+
+      const newHeart = {
+        id: heartId,
+        x: (clickX / imgRect.width) * 100,
+        y: (clickY / imgRect.height) * 100,
+        rotate: randomRotation,
+        isFlying: isFirstLike,
+        flyX: `${flyDeltaX}px`,
+        flyY: `${flyDeltaY}px`,
+      };
+
+      setFloatingHearts((prev) => [...prev, newHeart]);
+      triggerHapticFeedback();
+
+      if (isFirstLike) {
+        setTimeout(() => {
+          toggleLikeApiCall();
+        }, 550);
+
+        setTimeout(() => {
+          setFloatingHearts((prev) =>
+            prev.filter((item) => item.id !== heartId),
+          );
+        }, 650);
+      } else {
+        setTimeout(() => {
+          setFloatingHearts((prev) =>
+            prev.filter((item) => item.id !== heartId),
+          );
+        }, 1200);
       }
     } else {
       clickTimerRef.current = setTimeout(() => {
@@ -299,13 +346,27 @@ const PostCard = ({
       <div className={styles.imageContainer} onClick={handleImageClick}>
         <img src={post.url} alt="Post content" className={styles.postImg} />
 
-        {showBigHeart && (
-          <div className={styles.bigHeartOverlay}>
-            <svg viewBox="0 0 24 24" className={styles.bigHeartIcon}>
-              <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>
-            </svg>
+        {floatingHearts.map((heart) => (
+          <div
+            key={heart.id}
+            className={`${styles.heartPulseAura} ${
+              heart.isFlying ? styles.flyingHeartAura : ""
+            }`}
+            style={{
+              top: `${heart.y}%`,
+              left: `${heart.x}%`,
+              "--heart-rotate": `${heart.rotate}deg`,
+              "--fly-x": heart.flyX,
+              "--fly-y": heart.flyY,
+            }}
+          >
+            <div className={styles.glassHeartCircle}>
+              <svg viewBox="0 0 24 24" className={styles.modernHeartIcon}>
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+              </svg>
+            </div>
           </div>
-        )}
+        ))}
       </div>
 
       <div
@@ -313,15 +374,21 @@ const PostCard = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className={styles.actionsRow}>
-          <button className={styles.actionBtn} onClick={handleLikeToggle}>
+          <button
+            ref={likeBtnRef}
+            className={styles.actionBtn}
+            onClick={handleLikeToggle}
+          >
             <svg
               aria-label="Like"
               height="22"
               viewBox="0 0 24 24"
               width="22"
-              className={`${isLiked ? styles.likedHeart : styles.unlikedHeart} ${animateHeart ? styles.popActive : ""}`}
+              className={`${isLiked ? styles.likedHeart : styles.unlikedHeart} ${
+                animateHeart ? styles.popActive : ""
+              }`}
             >
-              <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path>
             </svg>
           </button>
 
