@@ -5,10 +5,10 @@ import Input from "../../components/Input/Input.jsx";
 import Button from "../../components/Button/Button.jsx";
 import LoadingHints from "../../components/LoadingHints/LoadingHints.jsx";
 import ThemeToggle from "../../components/ThemeToggle/ThemeToggle.jsx";
+import Logo from "../../components/Logo/Logo.jsx";
 import styles from "./LoginPage.module.css";
 
 import phonesImg from "../../assets/phones.png";
-import logoImg from "../../assets/logo.png";
 
 const LoginPage = () => {
   const [emailOrUsername, setEmailOrUsername] = useState("");
@@ -101,7 +101,7 @@ const LoginPage = () => {
             isLoading || isGuestLoading ? styles.loadingBox : ""
           }`}
         >
-          <img src={logoImg} alt="ICHGRAM" className={styles.logoImage} />
+          <Logo />
 
           <form onSubmit={handleSubmit} className={styles.form} noValidate>
             <Input
