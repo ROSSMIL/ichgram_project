@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import API from "../../api/axios";
 import styles from "./Sidebar.module.css";
-import logoImg from "../../assets/logo.png";
 import Avatar from "../Avatar/Avatar";
 import CreatePostModal from "../CreatePostModal/CreatePostModal";
+import Logo from "../Logo/Logo";
 
 const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
   const [currentUser, setCurrentUser] = useState(null);
@@ -79,12 +79,8 @@ const Sidebar = ({ onSearchToggle, isSearchOpen }) => {
           isSearchOpen ? styles.sidebarActive : ""
         }`}
       >
-        <div
-          className={styles.logoContainer}
-          onClick={handleLogoClick}
-          style={{ cursor: "pointer" }}
-        >
-          <img src={logoImg} alt="ICHGRAM" className={styles.logo} />
+        <div className={styles.logoContainer}>
+          <Logo onClick={handleLogoClick} size="small" />
         </div>
 
         <nav className={styles.navMenu}>

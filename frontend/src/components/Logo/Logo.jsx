@@ -1,10 +1,11 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import styles from "./Logo.module.css";
 
-const Logo = ({ className = "" }) => {
+const Logo = ({ className = "", onClick, size = "large" }) => {
   const brandName = "ICHGRAM";
   const logoRef = useRef(null);
   const glowRef = useRef(null);
+  const [isPressed, setIsPressed] = useState(false);
 
   const handleMouseMove = (e) => {
     if (!logoRef.current || !glowRef.current) return;
@@ -18,6 +19,7 @@ const Logo = ({ className = "" }) => {
   };
 
   const handleMouseLeave = () => {
+    setIsPressed(false);
     if (!glowRef.current || !logoRef.current) return;
     const rect = logoRef.current.getBoundingClientRect();
 
@@ -28,9 +30,21 @@ const Logo = ({ className = "" }) => {
   return (
     <div
       ref={logoRef}
-      className={`${styles.logoWrapper} ${className}`}
+      className={`${styles.logoWrapper} ${styles[size]} ${
+        onClick ? styles.clickable : ""
+      } ${isPressed ? styles.pressed : ""} ${className}`}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
+      onMouseDown={() => onClick && setIsPressed(true)}
+      onMouseUp={() => setIsPressed(false)}
+      onClick={onClick}
+      role={onClick ? "button" : "presentation"}
+      tabIndex={onClick ? 0 : -1}
+      onKeyDown={(e) => {
+        if (onClick && (e.key === "Enter" || e.key === " ")) {
+          onClick(e);
+        }
+      }}
     >
       <div ref={glowRef} className={styles.ambientGlow} />
 
