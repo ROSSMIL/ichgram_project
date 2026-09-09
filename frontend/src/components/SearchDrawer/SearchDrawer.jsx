@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import styles from "./SearchDrawer.module.css";
 import Avatar from "../Avatar/Avatar";
+import Input from "../Input/Input";
 import API from "../../api/axios";
 
 const getLoggedInUsername = () => {
@@ -239,15 +240,16 @@ const SearchDrawer = ({ isOpen, onClose }) => {
         <h2 className={styles.title}>Search</h2>
 
         <div className={styles.searchBarWrapper}>
-          <input
+          <Input
             type="text"
-            placeholder="Search"
-            className={styles.searchInput}
+            placeholder="Who are you looking for?"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            className={styles.customSearchInput}
           />
           {searchQuery && (
             <button
+              type="button"
               className={styles.clearButton}
               onClick={() => setSearchQuery("")}
             >
@@ -255,6 +257,8 @@ const SearchDrawer = ({ isOpen, onClose }) => {
             </button>
           )}
         </div>
+
+        <hr className={styles.divider} />
 
         <hr className={styles.divider} />
 

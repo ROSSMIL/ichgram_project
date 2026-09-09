@@ -11,6 +11,7 @@
   align-items: flex-start;
   justify-content: flex-start;
 
+
   z-index: 200;
 
   padding-left: calc(16px + 245px + 12px);
@@ -164,14 +165,19 @@
   background: none;
   border: none;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   padding: 4px;
   font-family: inherit;
+  z-index: 2;
+  transition: color 0.2s ease;
 }
 
 .clearButton:hover {
   color: var(--text-primary);
+}
+.customSearchInput {
+  padding-right: 2.5rem !important;
 }
 
 .divider {
@@ -298,6 +304,7 @@
   }
 }
 
+
 @media (max-width: 768px) {
   .overlay {
     padding-left: 0 !important;
@@ -306,7 +313,7 @@
     height: 100dvh !important;
     align-items: flex-end !important;
     justify-content: center !important;
-    z-index: 9999 !important;
+    z-index: 10000 !important; 
     touch-action: pan-y !important;
   }
 

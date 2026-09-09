@@ -2,7 +2,7 @@
   position: fixed;
   top: 16px;
   left: 285px;
-  z-index: 99999;
+  z-index: 100;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -39,6 +39,10 @@
     transform 0.32s cubic-bezier(0.25, 1, 0.35, 1),
     width 0.32s cubic-bezier(0.25, 1, 0.35, 1),
     opacity 0.2s ease;
+}
+
+.glider.noTransition {
+  transition: none !important;
 }
 
 .filterTab {
@@ -96,5 +100,6 @@
     margin-right: auto;
     width: fit-content;
     background: rgba(18, 18, 20, 0.85);
+    z-index: 100;
   }
 }
