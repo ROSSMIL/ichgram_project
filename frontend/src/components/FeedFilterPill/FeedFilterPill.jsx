@@ -38,9 +38,19 @@ const FeedFilterPill = ({ activeFilter, onFilterChange }) => {
 
     window.addEventListener("resize", updateGlider);
 
+    const observer = new MutationObserver(() => {
+      updateGlider();
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+
     return () => {
       cancelAnimationFrame(animationFrame);
       window.removeEventListener("resize", updateGlider);
+      observer.disconnect();
     };
   }, [updateGlider]);
 
