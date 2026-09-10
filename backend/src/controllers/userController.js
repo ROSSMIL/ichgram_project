@@ -2,6 +2,7 @@ import User from "../models/userModel.js";
 import { uploadToCloudinary } from "../middlewares/uploadMiddleware.js";
 import Post from "../models/postModel.js";
 import { resetGuestAccount } from "../config/seeder.js";
+import { SEEDED_USERNAMES, resetSeededAccount } from "../config/seeder.js";
 
 export const getProfile = async (req, res) => {
   try {
@@ -271,6 +272,16 @@ export const deleteProfile = async (req, res) => {
       });
     }
 
+    if (SEEDED_USERNAMES.includes(user.username.toLowerCase())) {
+      console.log(`=== SEEDED ACCOUNT RESET TRIGGERED: ${user.username} ===`);
+      await resetSeededAccount(user.username);
+
+      return res.status(200).json({
+        message: "Seed account reset to factory settings successfully",
+        isSeededReset: true,
+      });
+    }
+
     console.log(`=== DELETING REAL USER: ${user.username} ===`);
 
     await Post.deleteMany({ user: userId });
@@ -291,6 +302,7 @@ export const deleteProfile = async (req, res) => {
     res.status(200).json({
       message: "Profile deleted successfully",
       isGuestReset: false,
+      isSeededReset: false,
     });
   } catch (error) {
     console.error("Delete Profile Error:", error);

@@ -4,6 +4,36 @@ import Post from "../models/postModel.js";
 
 let isSeedingPerformed = false;
 
+export const SEEDED_USERNAMES = [
+  "itcareerhub",
+  "coach.tonia",
+  "fsssociety",
+  "pixel_architect",
+  "gamer_pro",
+  "nature_wild",
+  "foodie_travel",
+  "sound_wave",
+  "cyber_ninja",
+  "volley_king",
+];
+
+const GUEST_MUTUAL_TARGETS = ["pixel_architect", "cyber_ninja"];
+const GUEST_FOLLOWING_ONLY = ["itcareerhub", "coach.tonia"];
+const GUEST_FOLLOWER_ONLY = ["fsssociety", "gamer_pro", "foodie_travel"];
+
+const FIXED_FOLLOWS_MAP = {
+  itcareerhub: ["coach.tonia", "fsssociety", "pixel_architect", "cyber_ninja"],
+  "coach.tonia": ["itcareerhub", "nature_wild", "foodie_travel"],
+  fsssociety: ["itcareerhub", "sound_wave", "cyber_ninja", "pixel_architect"],
+  pixel_architect: ["fsssociety", "gamer_pro", "nature_wild"],
+  gamer_pro: ["sound_wave", "cyber_ninja", "volley_king"],
+  nature_wild: ["coach.tonia", "pixel_architect", "foodie_travel"],
+  foodie_travel: ["coach.tonia", "nature_wild", "sound_wave"],
+  sound_wave: ["fsssociety", "gamer_pro", "cyber_ninja"],
+  cyber_ninja: ["itcareerhub", "fsssociety", "pixel_architect", "gamer_pro"],
+  volley_king: ["coach.tonia", "gamer_pro", "cyber_ninja"],
+};
+
 const seedDatabase = async () => {
   if (isSeedingPerformed) return;
   isSeedingPerformed = true;
@@ -120,25 +150,49 @@ const seedDatabase = async () => {
 
     const createdUsers = await User.insertMany(usersData);
 
-    for (let i = 0; i < createdUsers.length; i++) {
-      const currentUser = createdUsers[i];
+    const guestUser = createdUsers.find((u) => u.username === "guest_user");
+    const otherUsers = createdUsers.filter((u) => u.username !== "guest_user");
 
-      const otherUsers = createdUsers.filter(
-        (u) => String(u._id) !== String(currentUser._id),
+    const mutualUsers = otherUsers.filter((u) =>
+      GUEST_MUTUAL_TARGETS.includes(u.username),
+    );
+    const onlyFollowingUsers = otherUsers.filter((u) =>
+      GUEST_FOLLOWING_ONLY.includes(u.username),
+    );
+    const onlyFollowerUsers = otherUsers.filter((u) =>
+      GUEST_FOLLOWER_ONLY.includes(u.username),
+    );
+
+    const mutualIds = mutualUsers.map((u) => u._id);
+    const onlyFollowingIds = onlyFollowingUsers.map((u) => u._id);
+    const onlyFollowerIds = onlyFollowerUsers.map((u) => u._id);
+
+    guestUser.following = [...mutualIds, ...onlyFollowingIds];
+    guestUser.followers = [...mutualIds, ...onlyFollowerIds];
+
+    for (const u of mutualUsers) {
+      u.followers.push(guestUser._id);
+      u.following.push(guestUser._id);
+    }
+    for (const u of onlyFollowingUsers) {
+      u.followers.push(guestUser._id);
+    }
+    for (const u of onlyFollowerUsers) {
+      u.following.push(guestUser._id);
+    }
+
+    for (const user of otherUsers) {
+      const targetUsernames = FIXED_FOLLOWS_MAP[user.username] || [];
+      const targetUsers = otherUsers.filter((u) =>
+        targetUsernames.includes(u.username),
       );
 
-      const followCount = Math.floor(Math.random() * 5) + 3;
-
-      const targetsToFollow = otherUsers
-        .sort(() => 0.5 - Math.random())
-        .slice(0, followCount);
-
-      for (const target of targetsToFollow) {
-        if (!currentUser.following.includes(target._id)) {
-          currentUser.following.push(target._id);
+      for (const target of targetUsers) {
+        if (!user.following.includes(target._id)) {
+          user.following.push(target._id);
         }
-        if (!target.followers.includes(currentUser._id)) {
-          target.followers.push(currentUser._id);
+        if (!target.followers.includes(user._id)) {
+          target.followers.push(user._id);
         }
       }
     }
@@ -164,7 +218,7 @@ const seedDatabase = async () => {
 
     const postsData = [
       {
-        user: createdUsers.find((u) => u.username === "guest_user")._id,
+        user: guestUser._id,
         url: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=600&h=600&q=80",
         caption: "Testing this cool app! The interface and UX are top-notch.",
         createdAt: new Date(now - 1 * 60 * 60 * 1000),
@@ -364,7 +418,9 @@ const seedDatabase = async () => {
       await user.save();
     }
 
-    console.log("Database auto-seeding completed successfully!");
+    console.log(
+      "Database auto-seeding completed with FULL content, fixed relations, and real comments!",
+    );
   } catch (error) {
     console.error("Seeding database failed:", error);
   }
@@ -391,26 +447,22 @@ export const resetGuestAccount = async () => {
     );
 
     const mutualUsers = await User.find({
-      username: { $in: ["pixel_architect", "cyber_ninja"] },
+      username: { $in: GUEST_MUTUAL_TARGETS },
     });
-    const mutualIds = mutualUsers.map((u) => u._id.toString());
+    const mutualIds = mutualUsers.map((u) => u._id);
 
     const onlyFollowingUsers = await User.find({
-      username: { $in: ["itcareerhub", "coach.tonia"] },
+      username: { $in: GUEST_FOLLOWING_ONLY },
     });
-    const onlyFollowingIds = onlyFollowingUsers.map((u) => u._id.toString());
+    const onlyFollowingIds = onlyFollowingUsers.map((u) => u._id);
 
     const onlyFollowerUsers = await User.find({
-      username: { $in: ["fsssociety", "gamer_pro", "foodie_travel"] },
+      username: { $in: GUEST_FOLLOWER_ONLY },
     });
-    const onlyFollowerIds = onlyFollowerUsers.map((u) => u._id.toString());
+    const onlyFollowerIds = onlyFollowerUsers.map((u) => u._id);
 
-    const finalFollowingIds = Array.from(
-      new Set([...mutualIds, ...onlyFollowingIds]),
-    );
-    const finalFollowerIds = Array.from(
-      new Set([...mutualIds, ...onlyFollowerIds]),
-    );
+    const finalFollowingIds = [...mutualIds, ...onlyFollowingIds];
+    const finalFollowerIds = [...mutualIds, ...onlyFollowerIds];
 
     await User.updateMany(
       { _id: { $in: finalFollowingIds } },
@@ -421,15 +473,6 @@ export const resetGuestAccount = async () => {
       { _id: { $in: finalFollowerIds } },
       { $addToSet: { following: guestId } },
     );
-
-    const allUsers = await User.find({});
-    for (const u of allUsers) {
-      u.followers = Array.from(new Set(u.followers.map((id) => id.toString())));
-      u.following = Array.from(new Set(u.following.map((id) => id.toString())));
-      u.followersCount = u.followers.length;
-      u.followingCount = u.following.length;
-      await u.save();
-    }
 
     guestUser.username = "guest_user";
     guestUser.fullName = "Guest Recruiter";
@@ -453,13 +496,40 @@ export const resetGuestAccount = async () => {
       createdAt: new Date(),
       comments: [],
     });
-
     await defaultPost.save();
 
-    console.log("=== GUEST RESET CLEAN & MUTUAL SUCCESSFUL ===");
+    console.log("=== GUEST RESET RESTORED PERFECTLY ===");
     return true;
   } catch (error) {
     console.error("Failed to reset guest account:", error);
+    throw error;
+  }
+};
+
+export const resetSeededAccount = async (targetUsername) => {
+  try {
+    const usernameLower = targetUsername.toLowerCase();
+    const user = await User.findOne({ username: usernameLower });
+    if (!user) return false;
+
+    const userId = user._id;
+
+    await Post.deleteMany({ user: userId });
+    await Post.updateMany({}, { $pull: { comments: { user: userId } } });
+    await Post.updateMany({ likes: userId }, { $pull: { likes: userId } });
+
+    await User.deleteMany({});
+    await Post.deleteMany({});
+
+    isSeedingPerformed = false;
+    await seedDatabase();
+
+    console.log(
+      `=== SEEDED USER [${targetUsername}] AND SYSTEM RESTORED FULLY ===`,
+    );
+    return true;
+  } catch (error) {
+    console.error(`Failed to reset account ${targetUsername}:`, error);
     throw error;
   }
 };

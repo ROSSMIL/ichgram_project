@@ -420,9 +420,33 @@
 }
 
 .modalIconBadge {
-  font-size: 38px;
-  margin-bottom: 12px;
-  line-height: 1;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  border: 1px solid;
+}
+
+.badgeGuest {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+}
+
+.badgeSeeded {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #10b981;
+}
+
+.badgeDanger {
+  background: rgba(237, 73, 86, 0.1);
+  border-color: rgba(237, 73, 86, 0.3);
+  color: #ed4956;
 }
 
 .modalTitle {
