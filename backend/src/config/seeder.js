@@ -370,4 +370,98 @@ const seedDatabase = async () => {
   }
 };
 
+export const resetGuestAccount = async () => {
+  try {
+    const guestUser = await User.findOne({ username: "guest_user" });
+    if (!guestUser) return false;
+
+    const guestId = guestUser._id;
+
+    await Post.deleteMany({ user: guestId });
+    await Post.updateMany({}, { $pull: { comments: { user: guestId } } });
+    await Post.updateMany({ likes: guestId }, { $pull: { likes: guestId } });
+
+    await User.updateMany(
+      { followers: guestId },
+      { $pull: { followers: guestId } },
+    );
+    await User.updateMany(
+      { following: guestId },
+      { $pull: { following: guestId } },
+    );
+
+    const mutualUsers = await User.find({
+      username: { $in: ["pixel_architect", "cyber_ninja"] },
+    });
+    const mutualIds = mutualUsers.map((u) => u._id.toString());
+
+    const onlyFollowingUsers = await User.find({
+      username: { $in: ["itcareerhub", "coach.tonia"] },
+    });
+    const onlyFollowingIds = onlyFollowingUsers.map((u) => u._id.toString());
+
+    const onlyFollowerUsers = await User.find({
+      username: { $in: ["fsssociety", "gamer_pro", "foodie_travel"] },
+    });
+    const onlyFollowerIds = onlyFollowerUsers.map((u) => u._id.toString());
+
+    const finalFollowingIds = Array.from(
+      new Set([...mutualIds, ...onlyFollowingIds]),
+    );
+    const finalFollowerIds = Array.from(
+      new Set([...mutualIds, ...onlyFollowerIds]),
+    );
+
+    await User.updateMany(
+      { _id: { $in: finalFollowingIds } },
+      { $addToSet: { followers: guestId } },
+    );
+
+    await User.updateMany(
+      { _id: { $in: finalFollowerIds } },
+      { $addToSet: { following: guestId } },
+    );
+
+    const allUsers = await User.find({});
+    for (const u of allUsers) {
+      u.followers = Array.from(new Set(u.followers.map((id) => id.toString())));
+      u.following = Array.from(new Set(u.following.map((id) => id.toString())));
+      u.followersCount = u.followers.length;
+      u.followingCount = u.following.length;
+      await u.save();
+    }
+
+    guestUser.username = "guest_user";
+    guestUser.fullName = "Guest Recruiter";
+    guestUser.avatar =
+      "https://api.dicebear.com/7.x/initials/svg?seed=Guest&backgroundColor=ffc107";
+    guestUser.bio =
+      "Welcome to my demo profile! I am exploring this app as a guest recruiter.";
+    guestUser.website = "github.com";
+    guestUser.following = finalFollowingIds;
+    guestUser.followers = finalFollowerIds;
+    guestUser.followingCount = finalFollowingIds.length;
+    guestUser.followersCount = finalFollowerIds.length;
+    guestUser.postsCount = 1;
+
+    await guestUser.save();
+
+    const defaultPost = new Post({
+      user: guestId,
+      url: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=600&h=600&q=80",
+      caption: "Testing this cool app! The interface and UX are top-notch.",
+      createdAt: new Date(),
+      comments: [],
+    });
+
+    await defaultPost.save();
+
+    console.log("=== GUEST RESET CLEAN & MUTUAL SUCCESSFUL ===");
+    return true;
+  } catch (error) {
+    console.error("Failed to reset guest account:", error);
+    throw error;
+  }
+};
+
 export default seedDatabase;

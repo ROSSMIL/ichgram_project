@@ -260,45 +260,46 @@ const ProfilePage = () => {
     };
   }, [user]);
 
-  const handleFollowToggle = useCallback(async (targetUserId) => {
-    try {
+  const handleFollowToggle = useCallback(
+    async (targetUserId) => {
+      const currentFollowing = user?.following || [];
+      const isCurrentlyFollowing = currentFollowing.some(
+        (f) => (typeof f === "string" ? f : f._id) === targetUserId,
+      );
+      const nextState = !isCurrentlyFollowing;
+
       setUser((prevUser) => {
         if (!prevUser) return prevUser;
-        const currentFollowing = prevUser.following || [];
-        const isCurrentlyFollowing = currentFollowing.some(
-          (f) => (typeof f === "string" ? f : f._id) === targetUserId,
-        );
-        const nextState = !isCurrentlyFollowing;
-
-        API.post(`/api/users/${targetUserId}/follow`).catch((err) => {
-          console.error("Error toggling follow status:", err);
-        });
-
-        setModalUsersList((prevList) =>
-          prevList.map((u) =>
-            u._id === targetUserId ? { ...u, isFollowing: nextState } : u,
-          ),
-        );
-
-        setFollowingCount((prev) =>
-          Math.max(0, nextState ? prev + 1 : prev - 1),
-        );
-
-        let updatedFollowing;
-        if (nextState) {
-          updatedFollowing = [...currentFollowing, targetUserId];
-        } else {
-          updatedFollowing = currentFollowing.filter(
-            (id) => (typeof id === "string" ? id : id._id) !== targetUserId,
-          );
-        }
+        const list = prevUser.following || [];
+        const updatedFollowing = nextState
+          ? [...list, targetUserId]
+          : list.filter(
+              (id) => (typeof id === "string" ? id : id._id) !== targetUserId,
+            );
 
         return { ...prevUser, following: updatedFollowing };
       });
-    } catch (error) {
-      console.error("Error toggling follow status:", error);
-    }
-  }, []);
+
+      setModalUsersList((prevList) =>
+        prevList.map((u) =>
+          u._id === targetUserId ? { ...u, isFollowing: nextState } : u,
+        ),
+      );
+
+      setFollowingCount((prev) => Math.max(0, nextState ? prev + 1 : prev - 1));
+
+      try {
+        await API.post(`/api/users/${targetUserId}/follow`);
+      } catch (err) {
+        console.error("Error toggling follow status:", err);
+
+        setFollowingCount((prev) =>
+          Math.max(0, nextState ? prev - 1 : prev + 1),
+        );
+      }
+    },
+    [user],
+  );
 
   const closeSettings = useCallback(() => {
     setIsClosingSettings(true);

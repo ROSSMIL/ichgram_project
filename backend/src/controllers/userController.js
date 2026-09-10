@@ -1,5 +1,7 @@
 import User from "../models/userModel.js";
 import { uploadToCloudinary } from "../middlewares/uploadMiddleware.js";
+import Post from "../models/postModel.js";
+import { resetGuestAccount } from "../config/seeder.js";
 
 export const getProfile = async (req, res) => {
   try {
@@ -160,24 +162,33 @@ export const toggleFollow = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (!targetUser.followers) targetUser.followers = [];
-    if (!currentUser.following) currentUser.following = [];
+    const cleanFollowers = Array.from(
+      new Set((targetUser.followers || []).map((id) => id.toString())),
+    );
+    const cleanFollowing = Array.from(
+      new Set((currentUser.following || []).map((id) => id.toString())),
+    );
 
-    const isAlreadyFollowing = targetUser.followers
-      .map((id) => id.toString())
-      .includes(currentUserId.toString());
+    const isAlreadyFollowing = cleanFollowers.includes(
+      currentUserId.toString(),
+    );
 
     if (isAlreadyFollowing) {
-      targetUser.followers = targetUser.followers.filter(
-        (id) => id.toString() !== currentUserId.toString(),
+      targetUser.followers = cleanFollowers.filter(
+        (id) => id !== currentUserId.toString(),
       );
-      currentUser.following = currentUser.following.filter(
-        (id) => id.toString() !== targetUserId.toString(),
+      currentUser.following = cleanFollowing.filter(
+        (id) => id !== targetUserId.toString(),
       );
     } else {
-      targetUser.followers.push(currentUserId);
-      currentUser.following.push(targetUserId);
+      cleanFollowers.push(currentUserId.toString());
+      cleanFollowing.push(targetUserId.toString());
+      targetUser.followers = cleanFollowers;
+      currentUser.following = cleanFollowing;
     }
+
+    targetUser.followersCount = targetUser.followers.length;
+    currentUser.followingCount = currentUser.following.length;
 
     await targetUser.save();
     await currentUser.save();
@@ -189,7 +200,7 @@ export const toggleFollow = async (req, res) => {
       isFollowing: !isAlreadyFollowing,
       following: currentUser.following,
       followersCount: targetUser.followers.length,
-      followingCount: targetUser.following.length,
+      followingCount: currentUser.following.length,
     });
   } catch (error) {
     console.error("Toggle Follow Error:", error);
@@ -232,5 +243,57 @@ export const getFollowing = async (req, res) => {
   } catch (error) {
     console.error("Get Following Error:", error);
     res.status(500).json({ message: "Server error while fetching followings" });
+  }
+};
+
+export const deleteProfile = async (req, res) => {
+  try {
+    const userId = req.user?.userId || req.user?.id || req.user?._id;
+
+    if (!userId) {
+      return res
+        .status(401)
+        .json({ message: "Unauthorized: No user ID found in token" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found in database" });
+    }
+
+    if (user.username === "guest_user") {
+      console.log("=== GUEST PROFILE RESET TRIGGERED ===");
+      await resetGuestAccount();
+
+      return res.status(200).json({
+        message: "Guest account reset to factory settings successfully",
+        isGuestReset: true,
+      });
+    }
+
+    console.log(`=== DELETING REAL USER: ${user.username} ===`);
+
+    await Post.deleteMany({ user: userId });
+    await Post.updateMany({}, { $pull: { comments: { user: userId } } });
+    await Post.updateMany({ likes: userId }, { $pull: { likes: userId } });
+
+    await User.updateMany(
+      { followers: userId },
+      { $pull: { followers: userId } },
+    );
+    await User.updateMany(
+      { following: userId },
+      { $pull: { following: userId } },
+    );
+
+    await User.findByIdAndDelete(userId);
+
+    res.status(200).json({
+      message: "Profile deleted successfully",
+      isGuestReset: false,
+    });
+  } catch (error) {
+    console.error("Delete Profile Error:", error);
+    res.status(500).json({ message: "Server error during profile deletion" });
   }
 };

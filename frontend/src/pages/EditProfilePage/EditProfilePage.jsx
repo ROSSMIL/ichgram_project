@@ -15,6 +15,7 @@ const EditProfilePage = () => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [message, setMessage] = useState(null);
 
   const [dbAvatar, setDbAvatar] = useState("");
@@ -23,6 +24,10 @@ const EditProfilePage = () => {
 
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [shouldDeleteAvatar, setShouldDeleteAvatar] = useState(false);
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  const isGuest = formData.username.toLowerCase() === "guest_user";
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -106,6 +111,34 @@ const EditProfilePage = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    setDeleteLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await API.delete("/api/users/profile", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      localStorage.removeItem("token");
+      window.dispatchEvent(new Event("profileUpdated"));
+
+      if (data.isGuestReset) {
+        console.log("Guest profile reset successfully!");
+      }
+
+      navigate("/login");
+    } catch (error) {
+      console.error("Delete account error:", error);
+      setMessage({
+        type: "error",
+        text: error.response?.data?.message || "Failed to delete account",
+      });
+      setIsDeleteModalOpen(false);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -249,13 +282,23 @@ const EditProfilePage = () => {
             </p>
           )}
 
-          <button
-            type="submit"
-            className={styles.saveButton}
-            disabled={loading}
-          >
-            {loading ? "Saving..." : "Save"}
-          </button>
+          <div className={styles.actionButtonsRow}>
+            <button
+              type="submit"
+              className={styles.saveButton}
+              disabled={loading}
+            >
+              {loading ? "Saving..." : "Save"}
+            </button>
+
+            <button
+              type="button"
+              className={styles.deleteAccountBtn}
+              onClick={() => setIsDeleteModalOpen(true)}
+            >
+              Delete account
+            </button>
+          </div>
         </form>
       </main>
 
@@ -268,6 +311,64 @@ const EditProfilePage = () => {
           onUploadSave={handleModalUpload}
           onRemovePhoto={handleModalRemove}
         />
+      )}
+
+      {isDeleteModalOpen && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setIsDeleteModalOpen(false)}
+        >
+          <div
+            className={styles.confirmModal}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalIconBadge}>{isGuest ? "🧙‍♂️" : "⚠️"}</div>
+
+            <h3 className={styles.modalTitle}>
+              {isGuest ? "Reset Guest Account?" : "Delete Account?"}
+            </h3>
+
+            <p className={styles.modalText}>
+              {isGuest ? (
+                <>
+                  Are you sure you want to delete the Guest account?
+                  <br />
+                  <span className={styles.easterEggText}>
+                    <strong>Fun fact:</strong> Guest accounts are immortal!
+                    Deleting this account will actually wipe all session data
+                    and reset it back to factory defaults.
+                  </span>
+                </>
+              ) : (
+                "Are you sure you want to delete your account? All your posts, comments, likes, and profile data will be permanently removed. This action cannot be undone."
+              )}
+            </p>
+
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.cancelModalBtn}
+                onClick={() => setIsDeleteModalOpen(false)}
+                disabled={deleteLoading}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className={styles.confirmDeleteBtn}
+                onClick={handleDeleteConfirm}
+                disabled={deleteLoading}
+              >
+                {deleteLoading
+                  ? "Processing..."
+                  : isGuest
+                    ? "Reset & Wipe"
+                    : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
