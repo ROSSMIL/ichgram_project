@@ -168,7 +168,7 @@ const SearchDrawer = ({ isOpen, onClose }) => {
       localStorage.removeItem(key);
       setRecentlyViewed([]);
       setIsClearing(false);
-    }, 220);
+    }, 280);
   };
 
   const getProfileLink = (targetUsername) => {
@@ -285,11 +285,12 @@ const SearchDrawer = ({ isOpen, onClose }) => {
                   </button>
                 </div>
                 <div className={styles.usersList}>
-                  {recentlyViewed.map((user) => (
+                  {recentlyViewed.map((user, idx) => (
                     <Link
                       key={`recent-${user._id}`}
                       to={getProfileLink(user.username)}
                       className={styles.userItem}
+                      style={{ "--stagger-index": idx }}
                       onClick={() => {
                         addToRecentlyViewed(user);
                         onClose();
@@ -325,11 +326,12 @@ const SearchDrawer = ({ isOpen, onClose }) => {
 
                   {!loading &&
                     !error &&
-                    users.map((user) => (
+                    users.map((user, idx) => (
                       <Link
                         key={`suggested-${user._id}`}
                         to={getProfileLink(user.username)}
                         className={styles.userItem}
+                        style={{ "--stagger-index": idx }}
                         onClick={() => {
                           addToRecentlyViewed(user);
                           onClose();
@@ -367,11 +369,12 @@ const SearchDrawer = ({ isOpen, onClose }) => {
                 )}
 
                 {!loading && !error && filteredUsers.length > 0
-                  ? filteredUsers.map((user) => (
+                  ? filteredUsers.map((user, idx) => (
                       <Link
                         key={`search-${user._id}`}
                         to={getProfileLink(user.username)}
                         className={styles.userItem}
+                        style={{ "--stagger-index": idx }}
                         onClick={() => {
                           addToRecentlyViewed(user);
                           onClose();

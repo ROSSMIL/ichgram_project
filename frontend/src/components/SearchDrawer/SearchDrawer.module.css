@@ -157,7 +157,6 @@
   padding-right: 2.5rem !important;
 }
 
-/* 🖤 ТЕМНИЙ ВЕЛИКИЙ КОНТЕЙНЕР (ЯК У МОДАЛЦІ СТВОРЕННЯ ПОСТА) */
 .resultsContainer {
   flex: 1;
   display: flex;
@@ -196,7 +195,6 @@
   gap: 8px;
 }
 
-/* 🔲 ЕЛЕМЕНТИ КОРИСТУВАЧІВ (КВАДРАТИКИ ВСЕРЕДИНІ ТЕМНОГО КОНТЕЙНЕРА) */
 .userItem {
   display: flex;
   align-items: center;
@@ -208,11 +206,15 @@
   color: inherit;
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
-  will-change: transform, background-color, border-color, box-shadow;
+  opacity: 0;
+  animation: itemPopIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: calc(var(--stagger-index, 0) * 0.035s);
+
+  will-change: transform, background-color, border-color, box-shadow, opacity;
   transition:
     background-color 0.2s ease,
     border-color 0.2s ease,
-    transform 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow 0.2s ease;
 }
 
@@ -284,6 +286,39 @@
 
 .clearRecentButton:hover {
   opacity: 0.8;
+}
+
+.animSectionWrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.sectionClearing .userItem {
+  animation: itemPopOut 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
+  animation-delay: calc(var(--stagger-index, 0) * 0.025s);
+}
+
+@keyframes itemPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes itemPopOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
 }
 
 @media (max-width: 1024px) {
@@ -423,38 +458,5 @@
   }
   100% {
     opacity: 0.4;
-  }
-}
-/* ✨ ПЛАВНА АНІМАЦІЯ ПРИ НАТИСКАННІ CLEAR ALL */
-.animSectionWrapper {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  animation: fadeInSuggestions 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.sectionClearing {
-  animation: fadeOutRecent 0.2s cubic-bezier(0.4, 0, 1, 1) forwards;
-}
-
-@keyframes fadeInSuggestions {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fadeOutRecent {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(-6px);
   }
 }
