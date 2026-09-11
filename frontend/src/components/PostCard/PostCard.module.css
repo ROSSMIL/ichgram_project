@@ -126,17 +126,17 @@
 .followBtn {
   background: none;
   border: none;
-  padding: 2px 8px;
-  border-radius: 8px;
+  padding: 4px 10px;
+  border-radius: 10px;
   margin: 0;
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease,
-    transform 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
   color: var(--link-color);
 }
 
@@ -147,6 +147,7 @@
 
 .followBtn.following {
   color: var(--text-primary);
+  background-color: var(--bg-hover, rgba(255, 255, 255, 0.08));
 }
 
 .followBtn.following:hover {
@@ -154,7 +155,7 @@
 }
 
 .followBtn:active {
-  transform: scale(0.95);
+  transform: scale(0.92);
 }
 
 .followBtn:disabled {

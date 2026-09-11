@@ -103,6 +103,8 @@ const DashboardPage = () => {
 
   const [activeFilter, setActiveFilter] = useState("all");
 
+  const [exploreHiddenUserIds, setExploreHiddenUserIds] = useState(new Set());
+
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [autoFocusComment, setAutoFocusComment] = useState(false);
 
@@ -160,6 +162,8 @@ const DashboardPage = () => {
             .filter(Boolean) || [];
 
         setCurrentUserFollowing(followingIds);
+
+        setExploreHiddenUserIds(new Set(followingIds));
       } catch (error) {
         console.error("Error loading feed data:", error);
       } finally {
@@ -212,6 +216,14 @@ const DashboardPage = () => {
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleFilterChange = (newFilter) => {
+    setActiveFilter(newFilter);
+
+    if (newFilter === "discover") {
+      setExploreHiddenUserIds(new Set(currentUserFollowing));
+    }
   };
 
   const handleFollowToggle = async (targetUserId) => {
@@ -315,17 +327,15 @@ const DashboardPage = () => {
     if (!postAuthorId) return true;
 
     const authorIdStr = postAuthorId.toString();
-
-    const isFollowingOrMe =
-      authorIdStr === currentUserId?.toString() ||
-      currentUserFollowing.includes(authorIdStr);
+    const isMe = authorIdStr === currentUserId?.toString();
 
     if (activeFilter === "following") {
-      return isFollowingOrMe;
+      return isMe || currentUserFollowing.includes(authorIdStr);
     }
 
     if (activeFilter === "discover") {
-      return !isFollowingOrMe;
+      if (isMe) return false;
+      return !exploreHiddenUserIds.has(authorIdStr);
     }
 
     return true;
@@ -335,7 +345,7 @@ const DashboardPage = () => {
     <div className={styles.container}>
       <FeedFilterPill
         activeFilter={activeFilter}
-        onFilterChange={setActiveFilter}
+        onFilterChange={handleFilterChange}
       />
 
       <header className={styles.mobileHeader}>
