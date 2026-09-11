@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import PropTypes from "prop-types";
 import { Link, useLocation } from "react-router-dom";
 import styles from "./SearchDrawer.module.css";
 import Avatar from "../Avatar/Avatar";
@@ -39,6 +40,7 @@ const SearchDrawer = ({ isOpen, onClose }) => {
   const [recentlyViewed, setRecentlyViewed] = useState([]);
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isClosing, setIsClosing] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   const [isExpanded, setIsExpanded] = useState(false);
   const touchStartY = useRef(0);
@@ -52,6 +54,7 @@ const SearchDrawer = ({ isOpen, onClose }) => {
     if (isOpen && !prevIsOpen) {
       setShouldRender(true);
       setIsClosing(false);
+      setIsClearing(false);
       setIsExpanded(false);
       setRecentlyViewed(getSavedRecentlyViewed());
     } else if (!isOpen && prevIsOpen) {
@@ -146,6 +149,7 @@ const SearchDrawer = ({ isOpen, onClose }) => {
       document.removeEventListener("gesturechange", preventGesture);
     };
   }, []);
+
   const addToRecentlyViewed = (user) => {
     setRecentlyViewed((prevList) => {
       const filtered = prevList.filter((item) => item._id !== user._id);
@@ -158,9 +162,13 @@ const SearchDrawer = ({ isOpen, onClose }) => {
   };
 
   const clearRecentlyViewed = () => {
-    const key = getStorageKey();
-    localStorage.removeItem(key);
-    setRecentlyViewed([]);
+    setIsClearing(true);
+    setTimeout(() => {
+      const key = getStorageKey();
+      localStorage.removeItem(key);
+      setRecentlyViewed([]);
+      setIsClearing(false);
+    }, 220);
   };
 
   const getProfileLink = (targetUsername) => {
@@ -258,19 +266,20 @@ const SearchDrawer = ({ isOpen, onClose }) => {
           )}
         </div>
 
-        <hr className={styles.divider} />
-
-        <hr className={styles.divider} />
-
         <div className={styles.resultsContainer}>
           {searchQuery.trim() === "" ? (
             recentlyViewed.length > 0 ? (
-              <>
+              <div
+                className={`${styles.animSectionWrapper} ${
+                  isClearing ? styles.sectionClearing : ""
+                }`}
+              >
                 <div className={styles.recentHeaderWrapper}>
                   <span className={styles.sectionTitle}>Recent</span>
                   <button
                     className={styles.clearRecentButton}
                     onClick={clearRecentlyViewed}
+                    disabled={isClearing}
                   >
                     Clear all
                   </button>
@@ -286,14 +295,21 @@ const SearchDrawer = ({ isOpen, onClose }) => {
                         onClose();
                       }}
                     >
-                      <Avatar user={user} size={44} />
-                      <span className={styles.username}>{user.username}</span>
+                      <Avatar user={user} size={42} />
+                      <div className={styles.userInfoText}>
+                        <span className={styles.username}>{user.username}</span>
+                        {user.fullName && (
+                          <span className={styles.userFullName}>
+                            {user.fullName}
+                          </span>
+                        )}
+                      </div>
                     </Link>
                   ))}
                 </div>
-              </>
+              </div>
             ) : (
-              <>
+              <div className={styles.animSectionWrapper}>
                 <span className={styles.sectionTitle}>Suggestions</span>
                 <div className={styles.usersList}>
                   {loading && renderSkeletons()}
@@ -319,15 +335,24 @@ const SearchDrawer = ({ isOpen, onClose }) => {
                           onClose();
                         }}
                       >
-                        <Avatar user={user} size={44} />
-                        <span className={styles.username}>{user.username}</span>
+                        <Avatar user={user} size={42} />
+                        <div className={styles.userInfoText}>
+                          <span className={styles.username}>
+                            {user.username}
+                          </span>
+                          {user.fullName && (
+                            <span className={styles.userFullName}>
+                              {user.fullName}
+                            </span>
+                          )}
+                        </div>
                       </Link>
                     ))}
                 </div>
-              </>
+              </div>
             )
           ) : (
-            <>
+            <div className={styles.animSectionWrapper}>
               <span className={styles.sectionTitle}>Search Results</span>
               <div className={styles.usersList}>
                 {loading && renderSkeletons()}
@@ -352,8 +377,17 @@ const SearchDrawer = ({ isOpen, onClose }) => {
                           onClose();
                         }}
                       >
-                        <Avatar user={user} size={44} />
-                        <span className={styles.username}>{user.username}</span>
+                        <Avatar user={user} size={42} />
+                        <div className={styles.userInfoText}>
+                          <span className={styles.username}>
+                            {user.username}
+                          </span>
+                          {user.fullName && (
+                            <span className={styles.userFullName}>
+                              {user.fullName}
+                            </span>
+                          )}
+                        </div>
                       </Link>
                     ))
                   : !loading &&
@@ -361,12 +395,17 @@ const SearchDrawer = ({ isOpen, onClose }) => {
                       <p className={styles.statusMessage}>No users found</p>
                     )}
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>
     </div>
   );
+};
+
+SearchDrawer.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
 };
 
 export default SearchDrawer;
