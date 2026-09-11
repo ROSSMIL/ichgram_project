@@ -2,7 +2,7 @@ import User from "../models/userModel.js";
 import { uploadToCloudinary } from "../middlewares/uploadMiddleware.js";
 import Post from "../models/postModel.js";
 import { resetGuestAccount } from "../config/seeder.js";
-import { SEEDED_USERNAMES, resetSeededAccount } from "../config/seeder.js";
+import { SEEDED_EMAILS, resetSeededAccount } from "../config/seeder.js";
 
 export const getProfile = async (req, res) => {
   try {
@@ -46,7 +46,15 @@ export const editProfile = async (req, res) => {
       return res.status(404).json({ message: "User not found in database" });
     }
 
+    const isSeededAccount = SEEDED_EMAILS.includes(user.email.toLowerCase());
+
     if (username && username.toLowerCase() !== user.username.toLowerCase()) {
+      if (isSeededAccount) {
+        return res.status(400).json({
+          message: "Username cannot be changed for demo accounts.",
+        });
+      }
+
       const existingUser = await User.findOne({
         username: username.toLowerCase(),
       });
@@ -77,7 +85,6 @@ export const editProfile = async (req, res) => {
     res.status(500).json({ message: "Server error during profile update" });
   }
 };
-
 export const getUserByUsername = async (req, res) => {
   try {
     const { username } = req.params;
@@ -262,7 +269,7 @@ export const deleteProfile = async (req, res) => {
       return res.status(404).json({ message: "User not found in database" });
     }
 
-    if (user.username === "guest_user") {
+    if (user.email === "guest@example.com") {
       console.log("=== GUEST PROFILE RESET TRIGGERED ===");
       await resetGuestAccount();
 
@@ -272,9 +279,9 @@ export const deleteProfile = async (req, res) => {
       });
     }
 
-    if (SEEDED_USERNAMES.includes(user.username.toLowerCase())) {
-      console.log(`=== SEEDED ACCOUNT RESET TRIGGERED: ${user.username} ===`);
-      await resetSeededAccount(user.username);
+    if (SEEDED_EMAILS.includes(user.email.toLowerCase())) {
+      console.log(`=== SEEDED ACCOUNT RESET TRIGGERED: ${user.email} ===`);
+      await resetSeededAccount(user.email);
 
       return res.status(200).json({
         message: "Seed account reset to factory settings successfully",

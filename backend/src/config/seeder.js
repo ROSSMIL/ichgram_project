@@ -4,17 +4,17 @@ import Post from "../models/postModel.js";
 
 let isSeedingPerformed = false;
 
-export const SEEDED_USERNAMES = [
-  "itcareerhub",
-  "coach.tonia",
-  "fsssociety",
-  "pixel_architect",
-  "gamer_pro",
-  "nature_wild",
-  "foodie_travel",
-  "sound_wave",
-  "cyber_ninja",
-  "volley_king",
+export const SEEDED_EMAILS = [
+  "hub@itcareer.com",
+  "tonia@example.com",
+  "society@example.com",
+  "pixel@example.com",
+  "gamer@example.com",
+  "nature@example.com",
+  "food@example.com",
+  "sound@example.com",
+  "ninja@example.com",
+  "volley@example.com",
 ];
 
 const GUEST_MUTUAL_TARGETS = ["pixel_architect", "cyber_ninja"];
@@ -428,7 +428,7 @@ const seedDatabase = async () => {
 
 export const resetGuestAccount = async () => {
   try {
-    const guestUser = await User.findOne({ username: "guest_user" });
+    const guestUser = await User.findOne({ email: "guest@example.com" });
     if (!guestUser) return false;
 
     const guestId = guestUser._id;
@@ -506,10 +506,10 @@ export const resetGuestAccount = async () => {
   }
 };
 
-export const resetSeededAccount = async (targetUsername) => {
+export const resetSeededAccount = async (targetEmail) => {
   try {
-    const usernameLower = targetUsername.toLowerCase();
-    const user = await User.findOne({ username: usernameLower });
+    const emailLower = targetEmail.toLowerCase();
+    const user = await User.findOne({ email: emailLower });
     if (!user) return false;
 
     const userId = user._id;
@@ -525,11 +525,11 @@ export const resetSeededAccount = async (targetUsername) => {
     await seedDatabase();
 
     console.log(
-      `=== SEEDED USER [${targetUsername}] AND SYSTEM RESTORED FULLY ===`,
+      `=== SEEDED USER [${targetEmail}] AND SYSTEM RESTORED FULLY ===`,
     );
     return true;
   } catch (error) {
-    console.error(`Failed to reset account ${targetUsername}:`, error);
+    console.error(`Failed to reset account ${targetEmail}:`, error);
     throw error;
   }
 };

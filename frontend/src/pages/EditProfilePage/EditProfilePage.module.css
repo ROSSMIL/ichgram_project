@@ -545,6 +545,115 @@
   }
 }
 
+.disabledInputWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.disabledInputWrapper:has(.input:disabled):hover .input {
+  border-color: #f59e0b;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.25);
+  cursor: not-allowed;
+}
+
+.disabledInputWrapper:has(.input:disabled):active .input {
+  animation: lockShake 0.25s ease-in-out;
+}
+
+@keyframes lockShake {
+  0% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-3px);
+  }
+  40% {
+    transform: translateX(3px);
+  }
+  60% {
+    transform: translateX(-2px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.lockIcon {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  transition:
+    color 0.3s ease,
+    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.disabledHint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  margin-bottom: 0;
+  line-height: 1.4;
+  position: relative;
+  transition: color 0.3s ease;
+}
+
+.disabledHint span {
+  display: inline-block;
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+.disabledInputWrapper:hover + .disabledHint span {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.disabledHint::after {
+  content: attr(data-hover);
+  position: absolute;
+  left: 20px;
+  top: 0;
+  color: #f59e0b;
+  font-weight: 600;
+  white-space: nowrap;
+
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition:
+    opacity 0.25s ease 0.05s,
+    transform 0.25s ease 0.05s;
+}
+
+.disabledInputWrapper:hover + .disabledHint {
+  color: #f59e0b;
+}
+
+.disabledInputWrapper:hover + .disabledHint .lockIcon {
+  color: #f59e0b;
+  transform: rotate(-12deg) scale(1.15);
+}
+
+.disabledInputWrapper:hover + .disabledHint::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.input:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  background-color: var(--bg-hover, rgba(255, 255, 255, 0.03));
+  border-style: dashed;
+}
+
 @media (max-width: 500px) {
   .actionButtonsRow {
     flex-direction: column;

@@ -5,17 +5,17 @@ import styles from "./EditProfilePage.module.css";
 import Avatar from "../../components/Avatar/Avatar";
 import AvatarViewModal from "../../components/AvatarViewModal/AvatarViewModal";
 
-const SEEDED_USERNAMES = [
-  "itcareerhub",
-  "coach.tonia",
-  "fsssociety",
-  "pixel_architect",
-  "gamer_pro",
-  "nature_wild",
-  "foodie_travel",
-  "sound_wave",
-  "cyber_ninja",
-  "volley_king",
+const SEEDED_EMAILS = [
+  "hub@itcareer.com",
+  "tonia@example.com",
+  "society@example.com",
+  "pixel@example.com",
+  "gamer@example.com",
+  "nature@example.com",
+  "food@example.com",
+  "sound@example.com",
+  "ninja@example.com",
+  "volley@example.com",
 ];
 
 const EditProfilePage = () => {
@@ -25,6 +25,7 @@ const EditProfilePage = () => {
     username: "",
     website: "",
     bio: "",
+    email: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -37,12 +38,11 @@ const EditProfilePage = () => {
 
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [shouldDeleteAvatar, setShouldDeleteAvatar] = useState(false);
-
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
-  const currentUsernameLower = (formData.username || "").toLowerCase();
-  const isGuest = currentUsernameLower === "guest_user";
-  const isSeeded = SEEDED_USERNAMES.includes(currentUsernameLower);
+  const isGuest = formData.email === "guest@example.com";
+
+  const isSeeded = SEEDED_EMAILS.includes((formData.email || "").toLowerCase());
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -58,6 +58,7 @@ const EditProfilePage = () => {
           username: data.username || "",
           website: data.website || "",
           bio: data.bio || "",
+          email: data.email || "",
         });
 
         setDbAvatar(data.avatar || "");
@@ -115,9 +116,7 @@ const EditProfilePage = () => {
       });
 
       setMessage({ type: "success", text: "Profile updated successfully!" });
-
       window.dispatchEvent(new Event("profileUpdated"));
-
       setTimeout(() => navigate("/profile"), 1200);
     } catch (error) {
       setMessage({
@@ -250,14 +249,41 @@ const EditProfilePage = () => {
         <form onSubmit={handleSave} className={styles.editForm}>
           <div className={styles.inputGroup}>
             <label className={styles.label}>Username</label>
-            <input
-              type="text"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              className={styles.input}
-              required
-            />
+            <div className={styles.disabledInputWrapper}>
+              <input
+                type="text"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                className={styles.input}
+                disabled={isSeeded}
+                required
+              />
+            </div>
+            {isSeeded && (
+              <p
+                className={styles.disabledHint}
+                data-hover="...no seriously, stop hovering, it won't unlock!"
+              >
+                <svg
+                  className={styles.lockIcon}
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+                <span>
+                  Demo usernames are locked to keep the universe stable.
+                </span>
+              </p>
+            )}
           </div>
 
           <div className={styles.inputGroup}>

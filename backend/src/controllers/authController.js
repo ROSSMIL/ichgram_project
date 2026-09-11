@@ -1,41 +1,67 @@
 import User from "../models/userModel.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import seedDatabase from "../config/seeder.js";
 
 export const register = async (req, res) => {
   try {
     const { email, fullName, username, password } = req.body;
 
+    // 1. Обов'язкові поля
     if (!email || !fullName || !username || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanUsername = username.trim().toLowerCase();
+    const cleanFullName = fullName.trim();
+
+    // 2. Валідація Email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(cleanEmail)) {
       return res
         .status(400)
         .json({ message: "Please provide a valid email address." });
     }
 
-    const existingEmail = await User.findOne({ email });
+    // 3. Валідація Username (тільки букви, цифри, крапки та підкреслення, від 3 до 25 символів)
+    const usernameRegex = /^[a-zA-Z0-9._]{3,25}$/;
+    if (!usernameRegex.test(cleanUsername)) {
+      return res.status(400).json({
+        message:
+          "Username can only contain letters, numbers, underscores, and dots (3-25 characters).",
+      });
+    }
+
+    // 4. Валідація пароля
+    if (password.length < 6) {
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 6 characters long." });
+    }
+
+    // 5. Перевірка унікальності Email
+    const existingEmail = await User.findOne({ email: cleanEmail });
     if (existingEmail) {
       return res.status(400).json({ message: "This email is already taken." });
     }
 
-    const existingUsername = await User.findOne({ username });
+    // 6. Перевірка унікальності Username
+    const existingUsername = await User.findOne({ username: cleanUsername });
     if (existingUsername) {
       return res
         .status(400)
         .json({ message: "This username is already taken." });
     }
 
+    // 7. Хешування та збереження
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const newUser = new User({
-      email,
-      fullName,
-      username,
+      email: cleanEmail,
+      fullName: cleanFullName,
+      username: cleanUsername,
       password: hashedPassword,
     });
     await newUser.save();
@@ -73,8 +99,10 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "All fields are required" });
     }
 
+    const cleanInput = emailOrUsername.trim().toLowerCase();
+
     const user = await User.findOne({
-      $or: [{ email: emailOrUsername }, { username: emailOrUsername }],
+      $or: [{ email: cleanInput }, { username: cleanInput }],
     });
 
     if (!user) {
@@ -111,28 +139,21 @@ export const login = async (req, res) => {
 
 export const guestLogin = async (req, res) => {
   try {
-    let guestUser = await User.findOne({ username: "guest_user" });
+    // 1. Завжди шукаємо за стабільним email (бо username могли змінити в профілі)
+    let guestUser = await User.findOne({ email: "guest@example.com" });
 
+    // 2. Якщо чомусь гостя немає взагалі в базі — засіваємо базу заново
     if (!guestUser) {
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash("guest123456", salt);
+      console.log("Guest account not found. Re-seeding database...");
+      await seedDatabase();
+      guestUser = await User.findOne({ email: "guest@example.com" });
+    }
 
-      guestUser = new User({
-        email: "guest@example.com",
-        fullName: "Guest Recruiter",
-        username: "guest_user",
-        password: hashedPassword,
-        avatar:
-          "https://api.dicebear.com/7.x/initials/svg?seed=Guest&backgroundColor=ffc107",
-        bio: "Welcome! Exploring as a guest recruiter. 🚀",
-        website: "github.com",
-        followers: [],
-        following: [],
-        followersCount: 0,
-        followingCount: 0,
-        postsCount: 0,
-      });
-      await guestUser.save();
+    // 3. Перевірка на випадок, якщо засівання не створило користувача
+    if (!guestUser) {
+      return res
+        .status(404)
+        .json({ message: "Guest account could not be initialized." });
     }
 
     const jwtSecret = process.env.JWT_SECRET;
