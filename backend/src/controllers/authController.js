@@ -7,7 +7,6 @@ export const register = async (req, res) => {
   try {
     const { email, fullName, username, password } = req.body;
 
-    // 1. Обов'язкові поля
     if (!email || !fullName || !username || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
@@ -16,7 +15,6 @@ export const register = async (req, res) => {
     const cleanUsername = username.trim().toLowerCase();
     const cleanFullName = fullName.trim();
 
-    // 2. Валідація Email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(cleanEmail)) {
       return res
@@ -24,7 +22,6 @@ export const register = async (req, res) => {
         .json({ message: "Please provide a valid email address." });
     }
 
-    // 3. Валідація Username (тільки букви, цифри, крапки та підкреслення, від 3 до 25 символів)
     const usernameRegex = /^[a-zA-Z0-9._]{3,25}$/;
     if (!usernameRegex.test(cleanUsername)) {
       return res.status(400).json({
@@ -33,20 +30,17 @@ export const register = async (req, res) => {
       });
     }
 
-    // 4. Валідація пароля
     if (password.length < 6) {
       return res
         .status(400)
         .json({ message: "Password must be at least 6 characters long." });
     }
 
-    // 5. Перевірка унікальності Email
     const existingEmail = await User.findOne({ email: cleanEmail });
     if (existingEmail) {
       return res.status(400).json({ message: "This email is already taken." });
     }
 
-    // 6. Перевірка унікальності Username
     const existingUsername = await User.findOne({ username: cleanUsername });
     if (existingUsername) {
       return res
@@ -54,7 +48,6 @@ export const register = async (req, res) => {
         .json({ message: "This username is already taken." });
     }
 
-    // 7. Хешування та збереження
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -105,13 +98,14 @@ export const login = async (req, res) => {
       $or: [{ email: cleanInput }, { username: cleanInput }],
     });
 
-    if (!user) {
-      return res.status(400).json({ message: "Invalid username or email" });
-    }
+    const isMatch = user
+      ? await bcrypt.compare(password, user.password)
+      : false;
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: "Invalid password" });
+    if (!user || !isMatch) {
+      return res
+        .status(400)
+        .json({ message: "Invalid username/email or password." });
     }
 
     const token = jwt.sign(
@@ -139,17 +133,14 @@ export const login = async (req, res) => {
 
 export const guestLogin = async (req, res) => {
   try {
-    // 1. Завжди шукаємо за стабільним email (бо username могли змінити в профілі)
     let guestUser = await User.findOne({ email: "guest@example.com" });
 
-    // 2. Якщо чомусь гостя немає взагалі в базі — засіваємо базу заново
     if (!guestUser) {
       console.log("Guest account not found. Re-seeding database...");
       await seedDatabase();
       guestUser = await User.findOne({ email: "guest@example.com" });
     }
 
-    // 3. Перевірка на випадок, якщо засівання не створило користувача
     if (!guestUser) {
       return res
         .status(404)
