@@ -5,6 +5,7 @@ import API from "../../api/axios";
 import EmojiPicker from "emoji-picker-react";
 import styles from "./CreatePostModal.module.css";
 import Avatar from "../Avatar/Avatar";
+import PostCard from "../PostCard/PostCard";
 
 const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
   const [image, setImage] = useState(null);
@@ -14,9 +15,10 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
+  const [viewMode, setViewMode] = useState("edit");
+
   const [isClosing, setIsClosing] = useState(false);
   const [currentTheme, setCurrentTheme] = useState("light");
-
   const [showConfirmDiscard, setShowConfirmDiscard] = useState(false);
 
   const fileInputRef = useRef(null);
@@ -24,7 +26,6 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
   const captionInputRef = useRef(null);
 
   const navigate = useNavigate();
-
   const hasAnyData = !!image || caption.trim().length > 0;
 
   useEffect(() => {
@@ -56,6 +57,7 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
       setError("");
       setIsDragOver(false);
       setShowEmojiPicker(false);
+      setViewMode("edit");
       setIsClosing(false);
       onClose();
     }, 150);
@@ -75,6 +77,7 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+    setViewMode("edit");
   };
 
   const handleClearCaption = () => {
@@ -84,6 +87,7 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
   const handleResetAll = () => {
     handleClearPhoto();
     handleClearCaption();
+    setViewMode("edit");
   };
 
   useEffect(() => {
@@ -241,13 +245,30 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
     }
   };
 
+  const previewPostData = {
+    _id: "preview_temp_id",
+    url: image,
+    caption: caption,
+    createdAt: new Date().toISOString(),
+    likes: [],
+    likesCount: 0,
+    user: currentUser || {
+      username: "username",
+      avatar: "",
+    },
+  };
+
+  const isPreview = viewMode === "preview" && image;
+
   return (
     <div
       className={`${styles.overlay} ${isClosing ? styles.fadeOut : ""}`}
       onClick={handleAttemptClose}
     >
       <div
-        className={`${styles.modal} ${isClosing ? styles.scaleDown : ""}`}
+        className={`${styles.modal} ${isPreview ? styles.previewModeModal : ""} ${
+          isClosing ? styles.scaleDown : ""
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         <input
@@ -279,12 +300,37 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
             </svg>
           </button>
 
-          <h3 className={styles.modalTitle}>Create new post</h3>
+          {image ? (
+            <div className={styles.modeTabs}>
+              <button
+                type="button"
+                className={`${styles.tabBtn} ${
+                  viewMode === "edit" ? styles.activeTab : ""
+                }`}
+                onClick={() => setViewMode("edit")}
+              >
+                Create
+              </button>
+              <button
+                type="button"
+                className={`${styles.tabBtn} ${
+                  viewMode === "preview" ? styles.activeTab : ""
+                }`}
+                onClick={() => setViewMode("preview")}
+              >
+                Preview
+              </button>
+            </div>
+          ) : (
+            <h3 className={styles.modalTitle}>Create new post</h3>
+          )}
 
           <div className={styles.headerRightActions}>
             <button
               type="button"
-              className={`${styles.resetAllBtn} ${hasAnyData ? styles.visible : ""}`}
+              className={`${styles.resetAllBtn} ${
+                hasAnyData ? styles.visible : ""
+              }`}
               onClick={handleResetAll}
               title="Clear photo & text"
               tabIndex={hasAnyData ? 0 : -1}
@@ -309,175 +355,200 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
           </div>
         </div>
 
-        <div className={styles.body}>
-          <div className={styles.leftColumn}>
-            {!image ? (
-              <div
-                className={`${styles.dropZone} ${isDragOver ? styles.dragOver : ""}`}
-                onDragOver={handleDragOver}
-                onDragLeave={stylesDragLeave}
-                onDrop={handleDrop}
-                onClick={triggerFileInput}
-              >
-                <div className={styles.iconCircle}>
-                  <svg
-                    className={styles.cloudIcon}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M12 16V9M12 9L9 12M12 9L15 12" />
-                    <path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25" />
-                  </svg>
-                </div>
-
-                <p className={styles.dropText}>Drag photos here</p>
-                <button
-                  type="button"
-                  className={styles.selectFileBtn}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    triggerFileInput();
-                  }}
+        <div className={styles.contentViewport}>
+          <div
+            className={`${styles.body} ${
+              isPreview ? styles.bodyHidden : styles.bodyVisible
+            }`}
+          >
+            <div className={styles.leftColumn}>
+              {!image ? (
+                <div
+                  className={`${styles.dropZone} ${
+                    isDragOver ? styles.dragOver : ""
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={stylesDragLeave}
+                  onDrop={handleDrop}
+                  onClick={triggerFileInput}
                 >
-                  Select from computer
-                </button>
-
-                {error && <span className={styles.errorText}>{error}</span>}
-              </div>
-            ) : (
-              <div className={styles.previewContainer}>
-                <img
-                  src={image}
-                  alt="Preview"
-                  className={styles.imagePreview}
-                />
-                <div className={styles.photoControlsOverlay}>
-                  <button
-                    type="button"
-                    className={styles.photoActionBtn}
-                    onClick={triggerFileInput}
-                    title="Choose another photo"
-                  >
+                  <div className={styles.iconCircle}>
                     <svg
-                      width="14"
-                      height="14"
+                      className={styles.cloudIcon}
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className={styles.changeIconAnimation}
-                    >
-                      <path d="M21.5 2v6h-6" />
-                      <path d="M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
-                    </svg>
-                    <span>Change</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className={`${styles.photoActionBtn} ${styles.danger}`}
-                    onClick={handleClearPhoto}
-                    title="Remove photo only"
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.2"
+                      strokeWidth="1.5"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     >
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      <path d="M12 16V9M12 9L9 12M12 9L15 12" />
+                      <path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25" />
                     </svg>
-                    <span>Remove</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className={styles.rightColumn}>
-            <div className={styles.userInfo} onClick={handleProfileClick}>
-              <div className={styles.avatarWrapper}>
-                <Avatar user={currentUser} size={32} />
-              </div>
-              <span className={styles.username}>
-                {currentUser?.username || "username"}
-              </span>
-            </div>
-
-            <div className={styles.captionSection}>
-              <textarea
-                ref={captionInputRef}
-                placeholder="Write a caption..."
-                value={caption}
-                onChange={(e) => setCaption(e.target.value)}
-                maxLength={2200}
-                className={styles.captionArea}
-              />
-
-              <div className={styles.captionControls}>
-                <div className={styles.leftCaptionControls}>
-                  <div className={styles.emojiWrapper} ref={emojiPickerRef}>
-                    <button
-                      type="button"
-                      className={styles.emojiBtn}
-                      onClick={() => setShowEmojiPicker((prev) => !prev)}
-                      aria-label="Add emoji"
-                    >
-                      <svg
-                        aria-label="Emoji"
-                        color="currentColor"
-                        fill="currentColor"
-                        height="20"
-                        role="img"
-                        viewBox="0 0 24 24"
-                        width="20"
-                      >
-                        <path d="M15.83 10.96a1.75 1.75 0 1 1 1.75-1.76 1.75 1.75 0 0 1-1.75 1.76Zm-7.66 0a1.75 1.75 0 1 1 1.75-1.76 1.75 1.75 0 0 1-1.75 1.76Zm10.45-.48a.75.75 0 0 0-.75.75 6.64 6.64 0 0 1-11.74 0 .75.75 0 0 0-1.34.66 8.14 8.14 0 0 0 14.43 0 .75.75 0 0 0-.6-1.41Zm-6.62 11.1a10.08 10.08 0 1 1 10.08-10.08A10.1 10.1 0 0 1 12 21.58Zm0-18.66a8.58 8.58 0 1 0 8.58 8.58A8.6 8.6 0 0 0 12 2.92Z" />
-                      </svg>
-                    </button>
-
-                    {showEmojiPicker && (
-                      <div className={styles.emojiContainer}>
-                        <EmojiPicker
-                          onEmojiClick={handleEmojiClick}
-                          autoFocusSearch={false}
-                          theme={currentTheme === "dark" ? "dark" : "light"}
-                          searchDisabled={true}
-                          skinTonesDisabled={true}
-                          previewConfig={{ showPreview: false }}
-                          height={280}
-                          width={300}
-                        />
-                      </div>
-                    )}
                   </div>
 
+                  <p className={styles.dropText}>Drag photos here</p>
                   <button
                     type="button"
-                    className={`${styles.clearTextBtn} ${caption.length > 0 ? styles.visible : ""}`}
-                    onClick={handleClearCaption}
-                    title="Clear text only"
-                    tabIndex={caption.length > 0 ? 0 : -1}
+                    className={styles.selectFileBtn}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      triggerFileInput();
+                    }}
                   >
-                    Clear text
+                    Select from computer
                   </button>
-                </div>
 
-                <span className={styles.charCount}>
-                  {caption.length.toLocaleString()}/2,200
+                  {error && <span className={styles.errorText}>{error}</span>}
+                </div>
+              ) : (
+                <div className={styles.previewContainer}>
+                  <img
+                    src={image}
+                    alt="Preview"
+                    className={styles.imagePreview}
+                  />
+                  <div className={styles.photoControlsOverlay}>
+                    <button
+                      type="button"
+                      className={styles.photoActionBtn}
+                      onClick={triggerFileInput}
+                      title="Choose another photo"
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className={styles.changeIconAnimation}
+                      >
+                        <path d="M21.5 2v6h-6" />
+                        <path d="M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+                      </svg>
+                      <span>Change</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`${styles.photoActionBtn} ${styles.danger}`}
+                      onClick={handleClearPhoto}
+                      title="Remove photo only"
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                      <span>Remove</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className={styles.rightColumn}>
+              <div className={styles.userInfo} onClick={handleProfileClick}>
+                <div className={styles.avatarWrapper}>
+                  <Avatar user={currentUser} size={32} />
+                </div>
+                <span className={styles.username}>
+                  {currentUser?.username || "username"}
                 </span>
               </div>
+
+              <div className={styles.captionSection}>
+                <textarea
+                  ref={captionInputRef}
+                  placeholder="Write a caption..."
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  maxLength={2200}
+                  className={styles.captionArea}
+                />
+
+                <div className={styles.captionControls}>
+                  <div className={styles.leftCaptionControls}>
+                    <div className={styles.emojiWrapper} ref={emojiPickerRef}>
+                      <button
+                        type="button"
+                        className={styles.emojiBtn}
+                        onClick={() => setShowEmojiPicker((prev) => !prev)}
+                        aria-label="Add emoji"
+                      >
+                        <svg
+                          aria-label="Emoji"
+                          color="currentColor"
+                          fill="currentColor"
+                          height="20"
+                          role="img"
+                          viewBox="0 0 24 24"
+                          width="20"
+                        >
+                          <path d="M15.83 10.96a1.75 1.75 0 1 1 1.75-1.76 1.75 1.75 0 0 1-1.75 1.76Zm-7.66 0a1.75 1.75 0 1 1 1.75-1.76 1.75 1.75 0 0 1-1.75 1.76Zm10.45-.48a.75.75 0 0 0-.75.75 6.64 6.64 0 0 1-11.74 0 .75.75 0 0 0-1.34.66 8.14 8.14 0 0 0 14.43 0 .75.75 0 0 0-.6-1.41Zm-6.62 11.1a10.08 10.08 0 1 1 10.08-10.08A10.1 10.1 0 0 1 12 21.58Zm0-18.66a8.58 8.58 0 1 0 8.58 8.58A8.6 8.6 0 0 0 12 2.92Z" />
+                        </svg>
+                      </button>
+
+                      {showEmojiPicker && (
+                        <div className={styles.emojiContainer}>
+                          <EmojiPicker
+                            onEmojiClick={handleEmojiClick}
+                            autoFocusSearch={false}
+                            theme={currentTheme === "dark" ? "dark" : "light"}
+                            searchDisabled={true}
+                            skinTonesDisabled={true}
+                            previewConfig={{ showPreview: false }}
+                            height={280}
+                            width={300}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      className={`${styles.clearTextBtn} ${
+                        caption.length > 0 ? styles.visible : ""
+                      }`}
+                      onClick={handleClearCaption}
+                      title="Clear text only"
+                      tabIndex={caption.length > 0 ? 0 : -1}
+                    >
+                      Clear text
+                    </button>
+                  </div>
+
+                  <span className={styles.charCount}>
+                    {caption.length.toLocaleString()}/2,200
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            className={`${styles.previewWrapper} ${
+              isPreview ? styles.previewVisible : styles.previewHidden
+            }`}
+          >
+            <div className={styles.previewCardContainer}>
+              <PostCard
+                post={previewPostData}
+                currentUserId={currentUser?._id || currentUser?.id}
+                currentUsername={currentUser?.username}
+                onOpenModal={() => {}}
+              />
             </div>
           </div>
         </div>
@@ -512,9 +583,11 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
               </svg>
             </div>
 
-            <h3 className={styles.confirmModalTitle}>Leave post creation?</h3>
+            <h3 className={styles.confirmModalTitle}>Discard post?</h3>
 
-            <p className={styles.confirmModalText}>Your post won't be saved.</p>
+            <p className={styles.confirmModalText}>
+              If you leave, your edits will be lost.
+            </p>
 
             <div className={styles.confirmActions}>
               <button
@@ -522,14 +595,14 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
                 className={styles.cancelModalBtn}
                 onClick={() => setShowConfirmDiscard(false)}
               >
-                Keep editing
+                Cancel
               </button>
               <button
                 type="button"
                 className={styles.confirmDiscardBtn}
                 onClick={forceClose}
               >
-                Leave
+                Discard
               </button>
             </div>
           </div>
