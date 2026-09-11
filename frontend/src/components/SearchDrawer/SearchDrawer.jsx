@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import PropTypes from "prop-types";
 import { Link, useLocation } from "react-router-dom";
 import styles from "./SearchDrawer.module.css";
@@ -38,12 +38,57 @@ const SearchDrawer = ({ isOpen, onClose }) => {
   const location = useLocation();
 
   const [recentlyViewed, setRecentlyViewed] = useState([]);
+  const [activeTab, setActiveTab] = useState("recent");
+  const [tabDirection, setTabDirection] = useState("right");
+
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isClosing, setIsClosing] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
 
   const [isExpanded, setIsExpanded] = useState(false);
   const touchStartY = useRef(0);
+
+  const tabsContainerRef = useRef(null);
+  const tabsRef = useRef({});
+  const [gliderStyle, setGliderStyle] = useState({
+    transform: "translateX(0px)",
+    width: "0px",
+    opacity: 0,
+  });
+
+  const updateGlider = useCallback(() => {
+    const activeTabEl = tabsRef.current[activeTab];
+    const container = tabsContainerRef.current;
+
+    if (activeTabEl && container) {
+      const activeRect = activeTabEl.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+
+      const leftOffset = activeRect.left - containerRect.left - 3;
+      const width = activeRect.width;
+
+      setGliderStyle({
+        transform: `translateX(${leftOffset}px)`,
+        width: `${width}px`,
+        opacity: 1,
+      });
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const animationFrame = requestAnimationFrame(() => {
+      updateGlider();
+    });
+
+    window.addEventListener("resize", updateGlider);
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      window.removeEventListener("resize", updateGlider);
+    };
+  }, [isOpen, updateGlider]);
 
   const prevIsOpenRef = useRef(isOpen);
 
@@ -56,7 +101,10 @@ const SearchDrawer = ({ isOpen, onClose }) => {
       setIsClosing(false);
       setIsClearing(false);
       setIsExpanded(false);
-      setRecentlyViewed(getSavedRecentlyViewed());
+
+      const saved = getSavedRecentlyViewed();
+      setRecentlyViewed(saved);
+      setActiveTab(saved.length > 0 ? "recent" : "suggestions");
     } else if (!isOpen && prevIsOpen) {
       setIsClosing(true);
       setSearchQuery("");
@@ -165,8 +213,16 @@ const SearchDrawer = ({ isOpen, onClose }) => {
       const key = getStorageKey();
       localStorage.removeItem(key);
       setRecentlyViewed([]);
+      setTabDirection("right");
+      setActiveTab("suggestions");
       setIsClearing(false);
-    }, 280);
+    }, 260);
+  };
+
+  const handleTabChange = (newTab) => {
+    if (newTab === activeTab) return;
+    setTabDirection(newTab === "suggestions" ? "right" : "left");
+    setActiveTab(newTab);
   };
 
   const getProfileLink = (targetUsername) => {
@@ -225,6 +281,12 @@ const SearchDrawer = ({ isOpen, onClose }) => {
     </>
   );
 
+  const isSearching = searchQuery.trim() !== "";
+  const isRecentActive =
+    !isSearching && activeTab === "recent" && recentlyViewed.length > 0;
+  const isSuggestionsActive =
+    !isSearching && (!isRecentActive || activeTab === "suggestions");
+
   return (
     <div
       className={`${styles.overlay} ${isClosing ? styles.overlayLeaving : ""}`}
@@ -243,7 +305,39 @@ const SearchDrawer = ({ isOpen, onClose }) => {
           onTouchEnd={handleTouchEnd}
         />
 
-        <h2 className={styles.title}>Search</h2>
+        <div className={styles.headerTop}>
+          <h2 className={styles.title}>Search</h2>
+
+          {!isSearching && (
+            <div ref={tabsContainerRef} className={styles.modeTabs}>
+              <div className={styles.glider} style={gliderStyle} />
+
+              <button
+                ref={(el) => (tabsRef.current["recent"] = el)}
+                type="button"
+                className={`${styles.tabBtn} ${
+                  activeTab === "recent" ? styles.activeTab : ""
+                } ${recentlyViewed.length === 0 ? styles.disabledTab : ""}`}
+                onClick={() => {
+                  if (recentlyViewed.length > 0) handleTabChange("recent");
+                }}
+                disabled={recentlyViewed.length === 0}
+              >
+                Recent
+              </button>
+              <button
+                ref={(el) => (tabsRef.current["suggestions"] = el)}
+                type="button"
+                className={`${styles.tabBtn} ${
+                  activeTab === "suggestions" ? styles.activeTab : ""
+                }`}
+                onClick={() => handleTabChange("suggestions")}
+              >
+                Suggestions
+              </button>
+            </div>
+          )}
+        </div>
 
         <div className={styles.searchBarWrapper}>
           <Input
@@ -265,23 +359,54 @@ const SearchDrawer = ({ isOpen, onClose }) => {
         </div>
 
         <div className={styles.resultsContainer}>
-          {searchQuery.trim() === "" ? (
-            recentlyViewed.length > 0 ? (
+          <div className={styles.staticHeaderWrapper}>
+            <span
+              className={`${styles.sectionTitle} ${
+                isSearching ? styles.titleVisible : styles.titleHidden
+              }`}
+            >
+              Search Results
+            </span>
+
+            <span
+              className={`${styles.sectionTitle} ${
+                isRecentActive ? styles.titleVisible : styles.titleHidden
+              }`}
+            >
+              Recently Viewed
+            </span>
+
+            <span
+              className={`${styles.sectionTitle} ${
+                isSuggestionsActive && !isSearching
+                  ? styles.titleVisible
+                  : styles.titleHidden
+              }`}
+            >
+              Suggestions for you
+            </span>
+
+            <button
+              className={`${styles.clearRecentButton} ${
+                isRecentActive ? styles.clearBtnVisible : styles.clearBtnHidden
+              }`}
+              onClick={clearRecentlyViewed}
+              disabled={isClearing || !isRecentActive}
+            >
+              Clear all
+            </button>
+          </div>
+
+          {!isSearching ? (
+            isRecentActive ? (
               <div
+                key="recent-list"
                 className={`${styles.animSectionWrapper} ${
-                  isClearing ? styles.sectionClearing : ""
-                }`}
+                  tabDirection === "left"
+                    ? styles.slideFromLeft
+                    : styles.slideFromRight
+                } ${isClearing ? styles.sectionClearing : ""}`}
               >
-                <div className={styles.recentHeaderWrapper}>
-                  <span className={styles.sectionTitle}>Recent</span>
-                  <button
-                    className={styles.clearRecentButton}
-                    onClick={clearRecentlyViewed}
-                    disabled={isClearing}
-                  >
-                    Clear all
-                  </button>
-                </div>
                 <div className={styles.usersList}>
                   {recentlyViewed.map((user, idx) => (
                     <Link
@@ -308,8 +433,14 @@ const SearchDrawer = ({ isOpen, onClose }) => {
                 </div>
               </div>
             ) : (
-              <div className={styles.animSectionWrapper}>
-                <span className={styles.sectionTitle}>Suggestions</span>
+              <div
+                key="suggestions-list"
+                className={`${styles.animSectionWrapper} ${
+                  tabDirection === "right"
+                    ? styles.slideFromRight
+                    : styles.slideFromLeft
+                }`}
+              >
                 <div className={styles.usersList}>
                   {loading && renderSkeletons()}
 
@@ -352,8 +483,9 @@ const SearchDrawer = ({ isOpen, onClose }) => {
               </div>
             )
           ) : (
-            <div className={styles.animSectionWrapper}>
-              <span className={styles.sectionTitle}>Search Results</span>
+            <div
+              className={`${styles.animSectionWrapper} ${styles.fadeInFast}`}
+            >
               <div className={styles.usersList}>
                 {loading && renderSkeletons()}
 

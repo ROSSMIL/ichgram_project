@@ -118,13 +118,88 @@
   }
 }
 
+.headerTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22px 24px 14px 24px;
+}
+
 .title {
   font-size: 22px;
   font-weight: 700;
-  padding: 24px 24px 14px 24px;
   margin: 0;
   color: var(--text-primary);
   letter-spacing: -0.3px;
+}
+
+.modeTabs {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background-color: var(--bg-hover, var(--border-color));
+  padding: 3px;
+  border-radius: 14px;
+  z-index: 5;
+  box-sizing: border-box;
+}
+
+.glider {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  height: calc(100% - 6px);
+  background-color: var(--bg-card);
+  border-radius: 11px;
+  z-index: 1;
+  pointer-events: none;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+
+  will-change: transform, width, opacity;
+  transition:
+    transform 0.32s cubic-bezier(0.25, 1, 0.35, 1),
+    width 0.32s cubic-bezier(0.25, 1, 0.35, 1),
+    opacity 0.2s ease,
+    background-color 0.3s ease;
+}
+
+.tabBtn {
+  position: relative;
+  z-index: 2;
+  background: transparent;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 11px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+
+  transition:
+    color 0.22s ease,
+    transform 0.15s ease,
+    opacity 0.2s ease;
+}
+
+.tabBtn:hover:not(:disabled) {
+  color: var(--text-primary);
+}
+
+.tabBtn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.tabBtn.activeTab {
+  color: var(--text-primary);
+}
+
+.tabBtn.disabledTab {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .searchBarWrapper {
@@ -167,8 +242,10 @@
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.05);
   overflow-y: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   transition: background-color 0.3s ease;
+  position: relative;
 }
 
 .resultsContainer::-webkit-scrollbar {
@@ -180,13 +257,79 @@
   border-radius: 10px;
 }
 
+/* 🌊 ШОВКОВИЙ СТАТИЧНИЙ ЗАГОЛОВОК З ПЛАВНИМ CROSS-FADE ПЕРЕХОДОМ */
+.staticHeaderWrapper {
+  position: relative;
+  width: 100%;
+  height: 18px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
 .sectionTitle {
+  position: absolute;
+  left: 0;
+  top: 0;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.5px;
-  margin-bottom: 12px;
   color: var(--text-secondary);
   text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+
+  will-change: opacity, transform;
+  transition:
+    opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.titleVisible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.titleHidden {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.clearRecentButton {
+  position: absolute;
+  right: 0;
+  top: -2px;
+  background: none;
+  border: none;
+  color: var(--link-color, #0095f6);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 0;
+  font-family: inherit;
+
+  will-change: opacity, transform;
+  transition:
+    opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.clearBtnVisible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.clearBtnHidden {
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+}
+
+.clearRecentButton:hover {
+  opacity: 0.8;
 }
 
 .usersList {
@@ -207,6 +350,7 @@
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
   opacity: 0;
+
   animation: itemPopIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   animation-delay: calc(var(--stagger-index, 0) * 0.035s);
 
@@ -261,42 +405,59 @@
   margin-top: 20px;
 }
 
-.recentHeaderWrapper {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.recentHeaderWrapper .sectionTitle {
-  margin-bottom: 0;
-}
-
-.clearRecentButton {
-  background: none;
-  border: none;
-  color: var(--link-color, #0095f6);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 4px 0;
-  font-family: inherit;
-  transition: opacity 0.2s ease;
-}
-
-.clearRecentButton:hover {
-  opacity: 0.8;
-}
-
 .animSectionWrapper {
   display: flex;
   flex-direction: column;
   width: 100%;
+  will-change: transform, opacity;
+}
+
+.slideFromRight {
+  animation: slideInRight 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.slideFromLeft {
+  animation: slideInLeft 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.fadeInFast {
+  animation: fadeInFast 0.2s ease-out forwards;
 }
 
 .sectionClearing .userItem {
   animation: itemPopOut 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
   animation-delay: calc(var(--stagger-index, 0) * 0.025s);
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(18px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-18px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes fadeInFast {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes itemPopIn {
@@ -386,9 +547,12 @@
     flex-shrink: 0;
   }
 
+  .headerTop {
+    padding: 10px 20px 6px 20px !important;
+  }
+
   .title {
     font-size: 20px !important;
-    padding: 8px 20px 8px 20px !important;
   }
 
   .searchBarWrapper {
