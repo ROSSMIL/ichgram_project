@@ -3,12 +3,16 @@ import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import API from "../../api/axios";
 import EmojiPicker from "emoji-picker-react";
+import Cropper from "react-easy-crop";
+import getCroppedImg from "../../utils/getCroppedImg";
 import styles from "./CreatePostModal.module.css";
 import Avatar from "../Avatar/Avatar";
 import PostCard from "../PostCard/PostCard";
 
 const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
-  const [image, setImage] = useState(null);
+  const [rawImage, setRawImage] = useState(null);
+  const [croppedImage, setCroppedImage] = useState(null);
+
   const [caption, setCaption] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -16,17 +20,22 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const [viewMode, setViewMode] = useState("edit");
-
   const [isClosing, setIsClosing] = useState(false);
   const [currentTheme, setCurrentTheme] = useState("light");
   const [showConfirmDiscard, setShowConfirmDiscard] = useState(false);
+
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [aspect, setAspect] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [isCroppingActive, setIsCroppingActive] = useState(false);
 
   const fileInputRef = useRef(null);
   const emojiPickerRef = useRef(null);
   const captionInputRef = useRef(null);
 
   const navigate = useNavigate();
-  const hasAnyData = !!image || caption.trim().length > 0;
+  const hasAnyData = !!rawImage || caption.trim().length > 0;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -52,12 +61,14 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
     setIsClosing(true);
     setShowConfirmDiscard(false);
     setTimeout(() => {
-      setImage(null);
+      setRawImage(null);
+      setCroppedImage(null);
       setCaption("");
       setError("");
       setIsDragOver(false);
       setShowEmojiPicker(false);
       setViewMode("edit");
+      setIsCroppingActive(false);
       setIsClosing(false);
       onClose();
     }, 150);
@@ -72,8 +83,10 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
   }, [hasAnyData, forceClose]);
 
   const handleClearPhoto = () => {
-    setImage(null);
+    setRawImage(null);
+    setCroppedImage(null);
     setError("");
+    setIsCroppingActive(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -126,7 +139,9 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
     };
   }, [isOpen, isClosing, showConfirmDiscard, handleAttemptClose]);
 
-  if (!isOpen) return null;
+  const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
 
   const handleEmojiClick = (emojiData) => {
     const emoji = emojiData.emoji;
@@ -179,7 +194,11 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
     setError("");
     const reader = new FileReader();
     reader.onloadend = () => {
-      setImage(reader.result);
+      setRawImage(reader.result);
+      setCroppedImage(reader.result);
+      setIsCroppingActive(true);
+      setZoom(1);
+      setCrop({ x: 0, y: 0 });
     };
     reader.readAsDataURL(file);
   };
@@ -212,9 +231,19 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
     }
   };
 
+  const applyCrop = async () => {
+    try {
+      const croppedResult = await getCroppedImg(rawImage, croppedAreaPixels);
+      setCroppedImage(croppedResult);
+      setIsCroppingActive(false);
+    } catch (e) {
+      console.error("Error cropping image:", e);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!image) return;
+    if (!croppedImage) return;
 
     setLoading(true);
     setError("");
@@ -223,7 +252,7 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
       const token = localStorage.getItem("token");
       const response = await API.post(
         "/api/posts",
-        { url: image, caption },
+        { url: croppedImage, caption },
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
@@ -247,7 +276,7 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
 
   const previewPostData = {
     _id: "preview_temp_id",
-    url: image,
+    url: croppedImage || rawImage,
     caption: caption,
     createdAt: new Date().toISOString(),
     likes: [],
@@ -258,7 +287,9 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
     },
   };
 
-  const isPreview = viewMode === "preview" && image;
+  const isPreview = viewMode === "preview" && !!croppedImage;
+
+  if (!isOpen) return null;
 
   return (
     <div
@@ -300,7 +331,7 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
             </svg>
           </button>
 
-          {image ? (
+          {croppedImage ? (
             <div className={styles.modeTabs}>
               <button
                 type="button"
@@ -341,7 +372,7 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
             <button
               className={styles.shareBtn}
               onClick={handleSubmit}
-              disabled={loading || !image}
+              disabled={loading || !croppedImage}
             >
               {loading ? (
                 <span className={styles.btnLoadingWrapper}>
@@ -362,7 +393,7 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
             }`}
           >
             <div className={styles.leftColumn}>
-              {!image ? (
+              {!rawImage ? (
                 <div
                   className={`${styles.dropZone} ${
                     isDragOver ? styles.dragOver : ""
@@ -401,14 +432,99 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
 
                   {error && <span className={styles.errorText}>{error}</span>}
                 </div>
+              ) : isCroppingActive ? (
+                <div className={styles.cropperWrapper}>
+                  <div className={styles.cropperContainer}>
+                    <Cropper
+                      image={rawImage}
+                      crop={crop}
+                      zoom={zoom}
+                      aspect={aspect}
+                      onCropChange={setCrop}
+                      onZoomChange={setZoom}
+                      onCropComplete={onCropComplete}
+                      restrictPosition={true}
+                      minZoom={1}
+                      maxZoom={3}
+                    />
+                  </div>
+
+                  <div className={styles.cropToolbar}>
+                    <div className={styles.aspectRatios}>
+                      <button
+                        type="button"
+                        className={`${styles.aspectBtn} ${aspect === 1 ? styles.activeAspect : ""}`}
+                        onClick={() => setAspect(1)}
+                      >
+                        1:1
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.aspectBtn} ${aspect === 4 / 5 ? styles.activeAspect : ""}`}
+                        onClick={() => setAspect(4 / 5)}
+                      >
+                        4:5
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.aspectBtn} ${aspect === 16 / 9 ? styles.activeAspect : ""}`}
+                        onClick={() => setAspect(16 / 9)}
+                      >
+                        16:9
+                      </button>
+                    </div>
+
+                    <div className={styles.zoomControl}>
+                      <input
+                        type="range"
+                        value={zoom}
+                        min={1}
+                        max={3}
+                        step={0.1}
+                        onChange={(e) => setZoom(Number(e.target.value))}
+                        className={styles.zoomSlider}
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      className={styles.applyCropBtn}
+                      onClick={applyCrop}
+                    >
+                      Save Crop
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <div className={styles.previewContainer}>
                   <img
-                    src={image}
+                    src={croppedImage}
                     alt="Preview"
                     className={styles.imagePreview}
                   />
                   <div className={styles.photoControlsOverlay}>
+                    <button
+                      type="button"
+                      className={styles.photoActionBtn}
+                      onClick={() => setIsCroppingActive(true)}
+                      title="Adjust Crop"
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M6 2v14a2 2 0 0 0 2 2h14" />
+                        <path d="M18 22V8a2 2 0 0 0-2-2H2" />
+                      </svg>
+                      <span>Crop</span>
+                    </button>
+
                     <button
                       type="button"
                       className={styles.photoActionBtn}

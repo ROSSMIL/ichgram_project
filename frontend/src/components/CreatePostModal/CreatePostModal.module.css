@@ -1,7 +1,3 @@
-/* ==========================================================================
-   MODAL OVERLAY & BASE CONTAINER
-   ========================================================================== */
-
 .overlay {
   position: fixed;
   top: 0;
@@ -45,8 +41,6 @@
     sans-serif;
   animation: modalScaleUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   will-change: width, max-width, height, transform, opacity;
-
-  /* Плавний ресайз модалки при переключенні у режим Preview */
   transition:
     width 0.45s cubic-bezier(0.16, 1, 0.3, 1),
     max-width 0.45s cubic-bezier(0.16, 1, 0.3, 1),
@@ -65,15 +59,10 @@
   animation: modalScaleDown 0.18s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
-/* Стан модалки в режимі прев'ю (вертикальний вигляд) */
 .previewModeModal {
   max-width: 500px;
   height: min(88vh, 680px);
 }
-
-/* ==========================================================================
-   HEADER & TABS
-   ========================================================================== */
 
 .header {
   display: flex;
@@ -130,7 +119,6 @@
   pointer-events: none;
 }
 
-/* Таби перемикання режимів */
 .modeTabs {
   position: absolute;
   left: 50%;
@@ -256,10 +244,6 @@
   }
 }
 
-/* ==========================================================================
-   VIEWPORT & TRANSITION ANIMATIONS (EDITOR <-> PREVIEW)
-   ========================================================================== */
-
 .contentViewport {
   position: relative;
   width: 100%;
@@ -267,7 +251,6 @@
   overflow: hidden;
 }
 
-/* 1. Редактор (Горизонтальний вигляд) */
 .body {
   display: flex;
   width: 100%;
@@ -298,7 +281,6 @@
   left: 0;
 }
 
-/* 2. Прев'ю (Вертикальний вигляд) */
 .previewWrapper {
   width: 100%;
   height: 100%;
@@ -336,10 +318,6 @@
   pointer-events: none;
   user-select: none;
 }
-
-/* ==========================================================================
-   EDITOR COLUMNS (LEFT & RIGHT)
-   ========================================================================== */
 
 .leftColumn {
   flex: 1.1;
@@ -662,10 +640,6 @@
     sans-serif !important;
 }
 
-/* ==========================================================================
-   DISCARD CONFIRMATION MODAL
-   ========================================================================== */
-
 .confirmOverlay {
   position: absolute;
   top: 0;
@@ -783,10 +757,6 @@
   transform: scale(0.96);
 }
 
-/* ==========================================================================
-   KEYFRAMES & RESPONSIVE
-   ========================================================================== */
-
 @keyframes modalFadeIn {
   from {
     opacity: 0;
@@ -884,4 +854,100 @@
     width: 280px !important;
     height: 240px !important;
   }
+}
+
+.cropperWrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background-color: #000000;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.cropperContainer {
+  position: relative;
+  width: 100%;
+  flex-grow: 1;
+}
+
+.cropToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background-color: rgba(0, 0, 0, 0.85);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  gap: 12px;
+  z-index: 10;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.aspectRatios {
+  display: flex;
+  gap: 4px;
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 2px;
+  border-radius: 8px;
+}
+
+.aspectBtn {
+  background: transparent;
+  border: none;
+  color: #a8a8a8;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.aspectBtn:hover {
+  color: #ffffff;
+}
+
+.aspectBtn.activeAspect {
+  background-color: var(--bg-card, #262626);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.zoomControl {
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+  max-width: 120px;
+}
+
+.zoomSlider {
+  width: 100%;
+  accent-color: var(--link-color, #0095f6);
+  cursor: pointer;
+}
+
+.applyCropBtn {
+  background-color: var(--link-color, #0095f6);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    transform 0.12s ease;
+}
+
+.applyCropBtn:hover {
+  background-color: var(--link-hover, #1877f2);
+  transform: translateY(-1px);
+}
+
+.applyCropBtn:active {
+  transform: scale(0.96);
 }
