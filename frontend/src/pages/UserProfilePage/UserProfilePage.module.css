@@ -20,12 +20,6 @@
   }
 }
 
-@media (min-width: 1440px) {
-  .backBtn {
-    left: 255px;
-  }
-}
-
 .header {
   display: flex;
   margin-bottom: 32px;
@@ -487,89 +481,110 @@
   width: 100vw;
   height: 100vh;
   background-color: rgba(0, 0, 0, 0.65);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  transform: translateZ(0);
-  will-change: opacity, backdrop-filter;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 999999;
-  animation: fadeIn 0.15s ease-out forwards;
+  padding: 16px;
+  box-sizing: border-box;
+  animation: modalFadeIn 0.2s ease-out forwards;
 }
 
 .modalOverlay.fadeOut {
-  animation: fadeOut 0.15s ease-in forwards;
+  animation: modalFadeOut 0.18s ease-in forwards;
 }
 
 .modalContent {
-  background-color: var(--bg-card);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   width: 100%;
-  max-width: 400px;
-  height: 400px;
-  border-radius: 16px;
+  max-width: 420px;
+  height: 440px;
+  max-height: 80vh;
+  border-radius: 24px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: var(--shadow-card);
-  border: 1px solid var(--border-color);
-  animation: scaleUp 0.15s cubic-bezier(0.1, 0.8, 0.25, 1) forwards;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.35);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  animation: modalScaleUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity, border-color, box-shadow;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.modalContent:hover {
+  border-color: var(--text-secondary);
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.42);
 }
 
 .modalContent.scaleDown {
-  animation: scaleDown 0.15s cubic-bezier(0.4, 0, 1, 1) forwards;
+  animation: modalScaleDown 0.18s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
 .modalHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border-color);
+  padding: 20px 20px 10px 20px;
+  border-bottom: none;
   position: relative;
+  background: transparent;
 }
 
 .modalHeader h3 {
   margin: 0;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   text-align: center;
   width: 100%;
   color: var(--text-primary);
+  letter-spacing: -0.2px;
 }
 
 .closeModalBtn {
   background: none;
   border: none;
-  font-size: 20px;
   cursor: pointer;
-  color: var(--text-primary);
-  padding: 8px;
-  line-height: 1;
+  color: var(--text-secondary);
+  padding: 6px;
   position: absolute;
-  right: 8px;
+  right: 14px;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  transition: background-color 0.15s;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.15s ease;
 }
 
 .closeModalBtn:hover {
-  background-color: var(--border-color);
+  background-color: var(--bg-hover, var(--border-color));
+  color: var(--text-primary);
+  transform: translateY(-50%) scale(1.08);
+}
+
+.closeModalBtn:active {
+  transform: translateY(-50%) scale(0.92);
 }
 
 .modalBody {
   flex-grow: 1;
   overflow-y: auto;
-  padding: 12px 8px;
+  padding: 8px 10px;
   -webkit-overflow-scrolling: touch;
 }
 
 .modalBody::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 .modalBody::-webkit-scrollbar-thumb {
@@ -579,10 +594,35 @@
 
 .modalLoading,
 .noUsersMessage {
-  text-align: center;
-  padding: 80px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 70px 20px;
   color: var(--text-secondary);
   font-size: 14px;
+  text-align: center;
+}
+
+.emptyUsersIcon {
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 2.5px solid var(--border-color);
+  border-top-color: var(--text-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .usersList {
@@ -598,9 +638,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-radius: 10px;
-  padding: 4px 8px;
-  transition: background-color 0.2s ease;
+  border-radius: 14px;
+  padding: 6px 10px;
+  transition: background-color 0.18s ease;
 }
 
 .userItem:hover {
@@ -612,8 +652,8 @@
   align-items: center;
   gap: 12px;
   text-decoration: none;
-  padding: 6px 4px;
-  border-radius: 6px;
+  padding: 2px 0;
+  border-radius: 10px;
   flex-grow: 1;
 }
 
@@ -628,16 +668,18 @@
 .userNames {
   display: flex;
   flex-direction: column;
+  gap: 2px;
 }
 
 .userUsername {
   color: var(--text-primary);
   font-weight: 600;
   font-size: 14px;
+  transition: color 0.15s ease;
 }
 
 .userItem:hover .userUsername {
-  color: var(--link-color);
+  color: var(--link-color, #0095f6);
 }
 
 .userFullName {
@@ -650,21 +692,23 @@
 }
 
 .actionBtnWrapperPlaceholder {
-  width: 95px;
+  width: 105px;
 }
 
 .listFollowBtn {
   border: none;
-  border-radius: 10px;
-  padding: 6px 16px;
-  font-size: 14px;
+  border-radius: 12px;
+  padding: 7px 16px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition:
-    background-color 0.15s,
-    color 0.15s;
-  min-width: 95px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 105px;
   text-align: center;
+  transition: all 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .listFollowBtn.follow {
@@ -674,18 +718,27 @@
 
 .listFollowBtn.follow:hover {
   background-color: var(--link-hover, #1877f2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 149, 246, 0.3);
 }
 
 .listFollowBtn.following {
-  background-color: var(--border-color);
+  background-color: var(--bg-hover, rgba(255, 255, 255, 0.08));
   color: var(--text-primary);
+  border: 1px solid var(--border-color);
 }
 
 .listFollowBtn.following:hover {
-  opacity: 0.8;
+  border-color: #ed4956;
+  color: #ed4956;
+  background-color: rgba(237, 73, 86, 0.1);
 }
 
-@keyframes fadeIn {
+.listFollowBtn:active {
+  transform: scale(0.94);
+}
+
+@keyframes modalFadeIn {
   from {
     opacity: 0;
   }
@@ -694,7 +747,7 @@
   }
 }
 
-@keyframes fadeOut {
+@keyframes modalFadeOut {
   from {
     opacity: 1;
   }
@@ -703,24 +756,24 @@
   }
 }
 
-@keyframes scaleUp {
+@keyframes modalScaleUp {
   from {
-    transform: scale(0.92);
+    transform: scale(0.94) translateY(8px);
     opacity: 0;
   }
   to {
-    transform: scale(1);
+    transform: scale(1) translateY(0);
     opacity: 1;
   }
 }
 
-@keyframes scaleDown {
+@keyframes modalScaleDown {
   from {
-    transform: scale(1);
+    transform: scale(1) translateY(0);
     opacity: 1;
   }
   to {
-    transform: scale(0.92);
+    transform: scale(0.94) translateY(8px);
     opacity: 0;
   }
 }
@@ -775,11 +828,6 @@
     padding-right: 20px;
   }
 
-  .backBtn {
-    left: 40px;
-    top: 24px;
-  }
-
   .header {
     padding: 24px;
     border-radius: 20px;
@@ -801,11 +849,6 @@
 @media (max-width: 768px) {
   .profileContainer {
     padding: 16px 12px 80px 12px;
-  }
-
-  .backBtn {
-    position: static;
-    margin-bottom: 12px;
   }
 
   .header {

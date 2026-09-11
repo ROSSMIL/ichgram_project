@@ -647,14 +647,30 @@ const UserProfilePage = () => {
                 <button
                   className={styles.closeModalBtn}
                   onClick={closeUsersModal}
+                  aria-label="Close modal"
                 >
-                  ✕
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
                 </button>
               </div>
 
               <div className={styles.modalBody}>
                 {loadingModalList ? (
-                  <div className={styles.modalLoading}>Loading users...</div>
+                  <div className={styles.modalLoading}>
+                    <div className={styles.spinner} />
+                    <span>Loading users...</span>
+                  </div>
                 ) : modalUsersList.length > 0 ? (
                   <ul className={styles.usersList}>
                     {modalUsersList.map((modalUser) => (
@@ -665,7 +681,7 @@ const UserProfilePage = () => {
                           onClick={closeUsersModal}
                         >
                           <div className={styles.avatarWrapper}>
-                            <Avatar user={modalUser} size={40} />
+                            <Avatar user={modalUser} size={42} />
                           </div>
                           <div className={styles.userNames}>
                             <span className={styles.userUsername}>
@@ -689,7 +705,25 @@ const UserProfilePage = () => {
                                 handleModalFollowToggle(modalUser._id)
                               }
                             >
-                              {modalUser.isFollowing ? "Following" : "Follow"}
+                              {modalUser.isFollowing ? (
+                                <>
+                                  <svg
+                                    width="12"
+                                    height="12"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="3"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                  <span>Following</span>
+                                </>
+                              ) : (
+                                "Follow"
+                              )}
                             </button>
                           </div>
                         ) : (
@@ -700,9 +734,27 @@ const UserProfilePage = () => {
                   </ul>
                 ) : (
                   <div className={styles.noUsersMessage}>
-                    {activeModal === "followers"
-                      ? "No followers yet."
-                      : "No followings yet."}
+                    <svg
+                      width="40"
+                      height="40"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className={styles.emptyUsersIcon}
+                    >
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                    <p>
+                      {activeModal === "followers"
+                        ? "No followers yet."
+                        : "No followings yet."}
+                    </p>
                   </div>
                 )}
               </div>
