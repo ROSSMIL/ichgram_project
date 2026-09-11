@@ -150,15 +150,13 @@ const SearchDrawer = ({ isOpen, onClose }) => {
     };
   }, []);
 
-  const addToRecentlyViewed = (user) => {
-    setRecentlyViewed((prevList) => {
-      const filtered = prevList.filter((item) => item._id !== user._id);
-      const updated = [user, ...filtered].slice(0, 5);
+  const saveToRecentlyViewedQuietly = (user) => {
+    const currentList = getSavedRecentlyViewed();
+    const filtered = currentList.filter((item) => item._id !== user._id);
+    const updated = [user, ...filtered].slice(0, 5);
 
-      const key = getStorageKey();
-      localStorage.setItem(key, JSON.stringify(updated));
-      return updated;
-    });
+    const key = getStorageKey();
+    localStorage.setItem(key, JSON.stringify(updated));
   };
 
   const clearRecentlyViewed = () => {
@@ -292,7 +290,7 @@ const SearchDrawer = ({ isOpen, onClose }) => {
                       className={styles.userItem}
                       style={{ "--stagger-index": idx }}
                       onClick={() => {
-                        addToRecentlyViewed(user);
+                        saveToRecentlyViewedQuietly(user);
                         onClose();
                       }}
                     >
@@ -333,7 +331,7 @@ const SearchDrawer = ({ isOpen, onClose }) => {
                         className={styles.userItem}
                         style={{ "--stagger-index": idx }}
                         onClick={() => {
-                          addToRecentlyViewed(user);
+                          saveToRecentlyViewedQuietly(user);
                           onClose();
                         }}
                       >
@@ -376,7 +374,7 @@ const SearchDrawer = ({ isOpen, onClose }) => {
                         className={styles.userItem}
                         style={{ "--stagger-index": idx }}
                         onClick={() => {
-                          addToRecentlyViewed(user);
+                          saveToRecentlyViewedQuietly(user);
                           onClose();
                         }}
                       >
