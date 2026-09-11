@@ -21,9 +21,11 @@ export const createPost = async (req, res) => {
     });
 
     const optimizedImageUrl = uploadResponse.secure_url;
+    const publicId = uploadResponse.public_id;
 
     const newPost = new Post({
       url: optimizedImageUrl,
+      cloudinaryId: publicId,
       caption: caption || "",
       user: userId,
     });
@@ -257,7 +259,16 @@ export const deletePost = async (req, res) => {
       });
     }
 
+    if (post.cloudinaryId) {
+      try {
+        await cloudinary.uploader.destroy(post.cloudinaryId);
+      } catch (cloudinaryErr) {
+        console.error("Failed to delete image from Cloudinary:", cloudinaryErr);
+      }
+    }
+
     await Post.findByIdAndDelete(postId);
+
     res.status(200).json({ message: "Post successfully deleted", postId });
   } catch (error) {
     console.error("Error deleting post:", error);
