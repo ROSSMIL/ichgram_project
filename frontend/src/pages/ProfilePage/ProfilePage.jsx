@@ -817,64 +817,74 @@ const ProfilePage = () => {
                     <span>Loading users...</span>
                   </div>
                 ) : modalUsersList.length > 0 ? (
-                  <ul className={styles.usersList}>
-                    {modalUsersList.map((modalUser) => (
-                      <li key={modalUser._id} className={styles.userItem}>
-                        <Link
-                          to={`/user/${modalUser.username}`}
-                          className={styles.userItemLeftLink}
-                          onClick={closeUsersModal}
+                  <div className={styles.modalListCard}>
+                    <ul className={styles.usersList}>
+                      {modalUsersList.map((modalUser, idx) => (
+                        <li
+                          key={modalUser._id}
+                          className={styles.userItem}
+                          style={{ "--stagger-index": idx }}
                         >
-                          <div className={styles.avatarWrapper}>
-                            <Avatar user={modalUser} size={42} />
-                          </div>
-                          <div className={styles.userNames}>
-                            <span className={styles.userUsername}>
-                              {modalUser.username}
-                            </span>
-                            <span className={styles.userFullName}>
-                              {modalUser.fullName || modalUser.username}
-                            </span>
-                          </div>
-                        </Link>
+                          <Link
+                            to={`/user/${modalUser.username}`}
+                            className={styles.userItemLeftLink}
+                            onClick={closeUsersModal}
+                          >
+                            <div className={styles.avatarWrapper}>
+                              <Avatar user={modalUser} size={42} />
+                            </div>
+                            <div className={styles.userNames}>
+                              <span className={styles.userUsername}>
+                                {modalUser.username}
+                              </span>
+                              <span className={styles.userFullName}>
+                                {modalUser.fullName || modalUser.username}
+                              </span>
+                            </div>
+                          </Link>
 
-                        {modalUser._id !== user._id ? (
-                          <div className={styles.actionBtnWrapper}>
-                            <button
-                              className={`${styles.listFollowBtn} ${
-                                modalUser.isFollowing
-                                  ? styles.following
-                                  : styles.follow
-                              }`}
-                              onClick={() => handleFollowToggle(modalUser._id)}
-                            >
-                              {modalUser.isFollowing ? (
-                                <>
-                                  <svg
-                                    width="12"
-                                    height="12"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="3"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  >
-                                    <polyline points="20 6 9 17 4 12" />
-                                  </svg>
-                                  <span>Following</span>
-                                </>
-                              ) : (
-                                "Follow"
-                              )}
-                            </button>
-                          </div>
-                        ) : (
-                          <div className={styles.actionBtnWrapperPlaceholder} />
-                        )}
-                      </li>
-                    ))}
-                  </ul>
+                          {modalUser._id !== user._id ? (
+                            <div className={styles.actionBtnWrapper}>
+                              <button
+                                className={`${styles.listFollowBtn} ${
+                                  modalUser.isFollowing
+                                    ? styles.following
+                                    : styles.follow
+                                }`}
+                                onClick={() =>
+                                  handleFollowToggle(modalUser._id)
+                                }
+                              >
+                                {modalUser.isFollowing ? (
+                                  <>
+                                    <svg
+                                      width="12"
+                                      height="12"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="3"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    >
+                                      <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                    <span>Following</span>
+                                  </>
+                                ) : (
+                                  "Follow"
+                                )}
+                              </button>
+                            </div>
+                          ) : (
+                            <div
+                              className={styles.actionBtnWrapperPlaceholder}
+                            />
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 ) : (
                   <div className={styles.noUsersMessage}>
                     <svg

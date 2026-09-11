@@ -6,18 +6,11 @@
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
   box-sizing: border-box;
+  position: relative;
+  color: var(--text-primary);
   transition:
     padding 0.3s ease,
     color 0.4s ease;
-  position: relative;
-  color: var(--text-primary);
-}
-
-@media (min-width: 1440px) {
-  .profileContainer {
-    max-width: 1480px;
-    padding-left: 305px;
-  }
 }
 
 .header {
@@ -32,7 +25,6 @@
   backdrop-filter: blur(12px);
   position: relative;
   box-sizing: border-box;
-
   will-change: transform, border-color, box-shadow;
   transition:
     background-color 0.4s ease,
@@ -51,11 +43,9 @@
   display: contents;
 }
 
-.mobileRightBlock {
-  display: none;
-}
-
-.mobileActionsRow {
+.mobileRightBlock,
+.mobileActionsRow,
+.mobileStats {
   display: none;
 }
 
@@ -68,8 +58,8 @@
   flex-shrink: 0;
   width: 150px;
   height: 150px;
-  transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1);
   cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .avatarContainer:hover {
@@ -165,10 +155,6 @@
   display: flex;
 }
 
-.mobileStats {
-  display: none;
-}
-
 .clickableStat {
   cursor: pointer;
   padding: 4px 8px;
@@ -197,6 +183,21 @@
   opacity: 0.95;
 }
 
+.moreButton {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 4px;
+  font-weight: 400;
+}
+
+.moreButton:hover {
+  color: var(--text-primary);
+}
+
 .bioLink {
   color: var(--link-color, #0095f6);
   text-decoration: none;
@@ -221,13 +222,6 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 24px;
   perspective: 1000px;
-}
-
-@media (min-width: 1440px) {
-  .postsGrid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 28px;
-  }
 }
 
 .gridItem {
@@ -289,18 +283,6 @@
 
 .gridItem:hover .floatWrapper {
   animation: minecraftFloat 6s ease-in-out infinite alternate;
-}
-
-@keyframes minecraftFloat {
-  0% {
-    transform: translate3d(0, 0px, 0px) rotateZ(0deg);
-  }
-  50% {
-    transform: translate3d(0, -4px, 4px) rotateZ(0.6deg);
-  }
-  100% {
-    transform: translate3d(0, -1px, 1px) rotateZ(-0.4deg);
-  }
 }
 
 .glossOverlay {
@@ -414,21 +396,6 @@
   display: block;
 }
 
-.moreButton {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 14px;
-  cursor: pointer;
-  padding: 0;
-  margin-left: 4px;
-  font-weight: 400;
-}
-
-.moreButton:hover {
-  color: var(--text-primary);
-}
-
 .emptyGridWrapper {
   display: flex;
   justify-content: center;
@@ -501,8 +468,9 @@
   border: 1px solid var(--border-color);
   width: 100%;
   max-width: 420px;
-  height: 440px;
-  max-height: 80vh;
+  height: 480px;
+  max-height: 82vh;
+  padding-bottom: 12px;
   border-radius: 24px;
   display: flex;
   flex-direction: column;
@@ -530,8 +498,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 20px 10px 20px;
-  border-bottom: none;
+  padding: 20px 24px 12px 24px;
   position: relative;
   background: transparent;
 }
@@ -578,51 +545,33 @@
 
 .modalBody {
   flex-grow: 1;
-  overflow-y: auto;
-  padding: 8px 10px;
-  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  padding: 0 16px 8px 16px;
+  overflow: hidden;
 }
 
-.modalBody::-webkit-scrollbar {
+.modalListCard {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-main, rgba(0, 0, 0, 0.28));
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 8px 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.modalListCard::-webkit-scrollbar {
   width: 5px;
 }
 
-.modalBody::-webkit-scrollbar-thumb {
+.modalListCard::-webkit-scrollbar-thumb {
   background: var(--border-color);
   border-radius: 10px;
-}
-
-.modalLoading,
-.noUsersMessage {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 70px 20px;
-  color: var(--text-secondary);
-  font-size: 14px;
-  text-align: center;
-}
-
-.emptyUsersIcon {
-  color: var(--text-secondary);
-  opacity: 0.6;
-}
-
-.spinner {
-  width: 24px;
-  height: 24px;
-  border: 2.5px solid var(--border-color);
-  border-top-color: var(--text-primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .usersList {
@@ -638,13 +587,28 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-radius: 14px;
-  padding: 6px 10px;
-  transition: background-color 0.18s ease;
+  background-color: transparent;
+  border: none;
+  border-radius: 12px;
+  padding: 8px 10px;
+  opacity: 0;
+
+  animation: modalItemPopIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: calc(var(--stagger-index, 0) * 0.035s);
+
+  will-change: transform, background-color, opacity;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .userItem:hover {
-  background-color: var(--bg-hover, var(--border-color));
+  background-color: var(--bg-hover, rgba(255, 255, 255, 0.06));
+  transform: translateY(-1px);
+}
+
+.userItem:active {
+  transform: scale(0.98);
 }
 
 .userItemLeftLink {
@@ -675,11 +639,6 @@
   color: var(--text-primary);
   font-weight: 600;
   font-size: 14px;
-  transition: color 0.15s ease;
-}
-
-.userItem:hover .userUsername {
-  color: var(--link-color, #0095f6);
 }
 
 .userFullName {
@@ -696,7 +655,7 @@
 }
 
 .listFollowBtn {
-  border: none;
+  border: 1px solid transparent;
   border-radius: 12px;
   padding: 7px 16px;
   font-size: 13px;
@@ -708,12 +667,20 @@
   gap: 6px;
   min-width: 105px;
   text-align: center;
-  transition: all 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  will-change: background-color, border-color, color, box-shadow, transform;
+  transition:
+    background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .listFollowBtn.follow {
   background-color: var(--link-color, #0095f6);
   color: #ffffff;
+  border-color: transparent;
 }
 
 .listFollowBtn.follow:hover {
@@ -725,17 +692,97 @@
 .listFollowBtn.following {
   background-color: var(--bg-hover, rgba(255, 255, 255, 0.08));
   color: var(--text-primary);
-  border: 1px solid var(--border-color);
+  border-color: var(--border-color);
 }
 
 .listFollowBtn.following:hover {
-  border-color: #ed4956;
-  color: #ed4956;
-  background-color: rgba(237, 73, 86, 0.1);
+  background-color: rgba(237, 73, 86, 0.12);
+  border-color: rgba(237, 73, 86, 0.4);
+  color: #ff4d5e;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(237, 73, 86, 0.15);
 }
 
 .listFollowBtn:active {
-  transform: scale(0.94);
+  transform: scale(0.95) translateY(0);
+  box-shadow: none;
+}
+
+.modalLoading,
+.noUsersMessage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 70px 20px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  text-align: center;
+}
+
+.emptyUsersIcon {
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 2.5px solid var(--border-color);
+  border-top-color: var(--text-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.skeletonAvatarCircle {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background-color: var(--border-color);
+}
+
+.skeletonTextLine {
+  height: 14px;
+  border-radius: 4px;
+  background-color: var(--border-color);
+}
+
+.skeletonTitleLine {
+  width: 140px;
+  height: 20px;
+  border-radius: 4px;
+  background-color: var(--border-color);
+}
+
+.skeletonGridItem {
+  position: relative;
+  width: 100%;
+  padding-top: 100%;
+  background-color: var(--border-color);
+  border-radius: 20px;
+}
+
+.skeletonPulse {
+  animation: profilePulse 1.2s infinite ease-in-out;
+}
+
+@keyframes minecraftFloat {
+  0% {
+    transform: translate3d(0, 0px, 0px) rotateZ(0deg);
+  }
+  50% {
+    transform: translate3d(0, -4px, 4px) rotateZ(0.6deg);
+  }
+  100% {
+    transform: translate3d(0, -1px, 1px) rotateZ(-0.4deg);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes modalFadeIn {
@@ -778,36 +825,15 @@
   }
 }
 
-.skeletonAvatarCircle {
-  width: 150px;
-  height: 150px;
-  border-radius: 50%;
-  background-color: var(--border-color);
-}
-
-.skeletonTextLine {
-  height: 14px;
-  border-radius: 4px;
-  background-color: var(--border-color);
-}
-
-.skeletonTitleLine {
-  width: 140px;
-  height: 20px;
-  border-radius: 4px;
-  background-color: var(--border-color);
-}
-
-.skeletonGridItem {
-  position: relative;
-  width: 100%;
-  padding-top: 100%;
-  background-color: var(--border-color);
-  border-radius: 20px;
-}
-
-.skeletonPulse {
-  animation: profilePulse 1.2s infinite ease-in-out;
+@keyframes modalItemPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 @keyframes profilePulse {
@@ -819,6 +845,18 @@
   }
   100% {
     opacity: 0.5;
+  }
+}
+
+@media (min-width: 1440px) {
+  .profileContainer {
+    max-width: 1480px;
+    padding-left: 305px;
+  }
+
+  .postsGrid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 28px;
   }
 }
 
@@ -895,10 +933,7 @@
     color: var(--text-primary);
   }
 
-  .userInfo .usernameRow {
-    display: none;
-  }
-
+  .userInfo .usernameRow,
   .desktopStats {
     display: none;
   }
@@ -972,16 +1007,13 @@
   }
 
   .gridItem::before,
-  .glossOverlay {
+  .glossOverlay,
+  .statsBadge {
     display: none;
   }
 
   .postImage {
     border-radius: 14px;
-  }
-
-  .statsBadge {
-    display: none;
   }
 }
 
