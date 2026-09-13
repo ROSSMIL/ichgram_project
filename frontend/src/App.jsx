@@ -22,6 +22,7 @@ import SearchDrawer from "./components/SearchDrawer/SearchDrawer";
 import ComingSoonPage from "./pages/ComingSoonPage/ComingSoonPage";
 import NotFoundPage from "./pages/NotFoundPage/NotFoundPage";
 import useAutoLogout from "./hooks/useAutoLogout";
+import MessagesPage from "./pages/MessagesPage/MessagesPage";
 import "./App.css";
 
 const ScrollToTop = () => {
@@ -175,7 +176,7 @@ function App() {
           path="/messages"
           element={
             <ProtectedRoute>
-              <ComingSoonPage title="Messages" />
+              <MessagesPage />
             </ProtectedRoute>
           }
         />

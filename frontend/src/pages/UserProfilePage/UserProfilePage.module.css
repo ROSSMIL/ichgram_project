@@ -99,7 +99,7 @@
 .usernameRow {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   margin-bottom: 18px;
 }
 
@@ -141,6 +141,30 @@
 
 .followButton.followingActive:hover {
   opacity: 0.8;
+}
+
+.messageButton {
+  background-color: var(--bg-hover, var(--border-color));
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.12s ease;
+}
+
+.messageButton:hover {
+  background-color: var(--border-color);
+  border-color: var(--text-secondary);
+}
+
+.messageButton:active {
+  transform: scale(0.96);
 }
 
 .statsRow {
@@ -970,7 +994,7 @@
   }
 
   .mobileFollowButton {
-    width: 100%;
+    flex: 1;
     background-color: var(--link-color, #0095f6);
     color: #ffffff;
     border: none;
@@ -988,6 +1012,22 @@
   }
 
   .mobileFollowButton:active {
+    opacity: 0.7;
+  }
+
+  .mobileMessageButton {
+    flex: 1;
+    background-color: var(--bg-hover, var(--border-color));
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 8px 0;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .mobileMessageButton:active {
     opacity: 0.7;
   }
 

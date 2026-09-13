@@ -226,6 +226,23 @@ const UserProfilePage = () => {
     }
   }, [username, navigate]);
 
+  const handleOpenChat = async () => {
+    if (!user) return;
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return navigate("/login");
+
+      await API.post(
+        "/api/chat",
+        { userId: user._id },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      navigate("/messages");
+    } catch (err) {
+      console.error("Error opening chat with user:", err);
+    }
+  };
+
   const handleFollowToggle = useCallback(async () => {
     if (!user) return;
 
@@ -491,6 +508,9 @@ const UserProfilePage = () => {
             >
               {isFollowing ? "Following" : "Follow"}
             </button>
+            <button className={styles.messageButton} onClick={handleOpenChat}>
+              Message
+            </button>
           </div>
 
           <div className={`${styles.statsRow} ${styles.desktopStats}`}>
@@ -562,6 +582,12 @@ const UserProfilePage = () => {
               onClick={handleFollowToggle}
             >
               {isFollowing ? "Following" : "Follow"}
+            </button>
+            <button
+              className={styles.mobileMessageButton}
+              onClick={handleOpenChat}
+            >
+              Message
             </button>
           </div>
         </section>
