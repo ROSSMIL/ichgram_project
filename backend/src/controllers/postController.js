@@ -1,6 +1,13 @@
 import { v2 as cloudinary } from "cloudinary";
 import Post from "../models/postModel.js";
 import User from "../models/userModel.js";
+import Notification from "../models/notificationModel.js";
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 export const createPost = async (req, res) => {
   try {
@@ -13,6 +20,7 @@ export const createPost = async (req, res) => {
 
     const uploadResponse = await cloudinary.uploader.upload(url, {
       folder: "instagram_posts",
+      resource_type: "auto",
       transformation: [
         { width: 1080, crop: "limit" },
         { quality: "auto" },
@@ -39,7 +47,10 @@ export const createPost = async (req, res) => {
     res.status(201).json(populatedPost);
   } catch (error) {
     console.error("Error creating post:", error);
-    res.status(500).json({ message: "Server error during post creation" });
+    res.status(500).json({
+      message: "Server error during post creation",
+      error: error.message,
+    });
   }
 };
 
@@ -78,7 +89,7 @@ export const getPostById = async (req, res) => {
 export const updatePost = async (req, res) => {
   try {
     const { postId } = req.params;
-    const { caption, url } = req.body;
+    const { url, caption } = req.body;
     const userId = req.user?.userId || req.user?.id || req.user?._id;
 
     const post = await Post.findById(postId);
@@ -87,24 +98,37 @@ export const updatePost = async (req, res) => {
     }
 
     if (post.user.toString() !== userId.toString()) {
-      return res.status(403).json({
-        message: "You are not authorized to edit this post",
-      });
+      return res.status(403).json({ message: "Not authorized" });
     }
 
-    if (caption !== undefined) post.caption = caption;
-    if (url !== undefined) post.url = url;
+    if (url && url !== post.url) {
+      const uploadResponse = await cloudinary.uploader.upload(url, {
+        folder: "instagram_posts",
+        resource_type: "auto",
+        transformation: [
+          { width: 1080, crop: "limit" },
+          { quality: "auto" },
+          { fetch_format: "auto" },
+        ],
+      });
+      post.url = uploadResponse.secure_url;
+      post.cloudinaryId = uploadResponse.public_id;
+    }
+
+    if (caption !== undefined) {
+      post.caption = caption;
+    }
 
     await post.save();
 
-    const updatedPost = await Post.findById(postId)
+    const populatedPost = await Post.findById(post._id)
       .populate("user", "username avatar fullName")
       .populate("comments.user", "username avatar");
 
-    res.status(200).json(updatedPost);
+    res.status(200).json(populatedPost);
   } catch (error) {
     console.error("Error updating post:", error);
-    res.status(500).json({ message: "Server error while updating post" });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -159,6 +183,25 @@ export const addCommentToPost = async (req, res) => {
     post.comments.push(newComment);
     await post.save();
 
+    if (post.user.toString() !== userId.toString()) {
+      const notif = await Notification.create({
+        recipient: post.user,
+        sender: userId,
+        type: "comment",
+        post: postId,
+        commentText: text,
+      });
+
+      const populatedNotif = await Notification.findById(notif._id)
+        .populate("sender", "username avatar fullName")
+        .populate("post", "url");
+
+      const io = req.app.get("io");
+      if (io) {
+        io.to(post.user.toString()).emit("new notification", populatedNotif);
+      }
+    }
+
     const updatedPost = await Post.findById(postId)
       .populate("user", "username avatar fullName")
       .populate("comments.user", "username avatar");
@@ -184,12 +227,47 @@ export const toggleLikePost = async (req, res) => {
       (likeId) => likeId.toString() === userId.toString(),
     );
 
+    const io = req.app.get("io");
+
     if (isAlreadyLiked) {
       post.likes = post.likes.filter(
         (likeId) => likeId.toString() !== userId.toString(),
       );
+
+      const deletedNotif = await Notification.findOneAndDelete({
+        recipient: post.user,
+        sender: userId,
+        type: "like",
+        post: postId,
+      });
+
+      if (io && post.user.toString() !== userId.toString()) {
+        io.to(post.user.toString()).emit("notification deleted", {
+          notificationId: deletedNotif?._id,
+          type: "like",
+          senderId: userId,
+          postId: postId,
+        });
+      }
     } else {
       post.likes.push(userId);
+
+      if (post.user.toString() !== userId.toString()) {
+        const notif = await Notification.create({
+          recipient: post.user,
+          sender: userId,
+          type: "like",
+          post: postId,
+        });
+
+        const populatedNotif = await Notification.findById(notif._id)
+          .populate("sender", "username avatar fullName")
+          .populate("post", "url");
+
+        if (io) {
+          io.to(post.user.toString()).emit("new notification", populatedNotif);
+        }
+      }
     }
 
     await post.save();
@@ -229,8 +307,27 @@ export const deleteComment = async (req, res) => {
       });
     }
 
+    const commentAuthorId = comment.user.toString();
     comment.deleteOne();
     await post.save();
+
+    const deletedNotif = await Notification.findOneAndDelete({
+      recipient: post.user,
+      sender: commentAuthorId,
+      type: "comment",
+      post: postId,
+      commentText: comment.text,
+    });
+
+    const io = req.app.get("io");
+    if (io && post.user.toString() !== commentAuthorId) {
+      io.to(post.user.toString()).emit("notification deleted", {
+        notificationId: deletedNotif?._id,
+        type: "comment",
+        senderId: commentAuthorId,
+        postId: postId,
+      });
+    }
 
     const updatedPost = await Post.findById(postId)
       .populate("user", "username avatar fullName")
@@ -266,6 +363,8 @@ export const deletePost = async (req, res) => {
         console.error("Failed to delete image from Cloudinary:", cloudinaryErr);
       }
     }
+
+    await Notification.deleteMany({ post: postId });
 
     await Post.findByIdAndDelete(postId);
 

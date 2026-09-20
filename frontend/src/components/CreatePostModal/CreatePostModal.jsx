@@ -9,11 +9,64 @@ import styles from "./CreatePostModal.module.css";
 import Avatar from "../Avatar/Avatar";
 import PostCard from "../PostCard/PostCard";
 
-const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
+const getUserFromToken = () => {
+  const token = localStorage.getItem("token");
+  if (!token) return null;
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join(""),
+    );
+    const payload = JSON.parse(jsonPayload);
+    return {
+      _id: payload.userId || payload.id || payload._id,
+      username: payload.username,
+      avatar: payload.avatar || "",
+    };
+  } catch (e) {
+    console.error("Error parsing JWT token:", e);
+    return null;
+  }
+};
+
+const CreatePostModal = ({
+  isOpen,
+  onClose,
+  currentUser: initialUser,
+  onPostCreated,
+  editingPost = null,
+  onPostUpdated = null,
+}) => {
   const [rawImage, setRawImage] = useState(null);
   const [croppedImage, setCroppedImage] = useState(null);
-
   const [caption, setCaption] = useState("");
+
+  const [prevEditingPost, setPrevEditingPost] = useState(null);
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+
+  if (isOpen !== prevIsOpen || editingPost !== prevEditingPost) {
+    setPrevIsOpen(isOpen);
+    setPrevEditingPost(editingPost);
+
+    if (isOpen && editingPost) {
+      setRawImage(editingPost.url);
+      setCroppedImage(editingPost.url);
+      setCaption(editingPost.caption || "");
+    }
+  }
+
+  const [user, setUser] = useState(() => initialUser || getUserFromToken());
+  const [prevInitialUser, setPrevInitialUser] = useState(initialUser);
+
+  if (initialUser !== prevInitialUser) {
+    setPrevInitialUser(initialUser);
+    setUser(initialUser || getUserFromToken());
+  }
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isDragOver, setIsDragOver] = useState(false);
@@ -35,6 +88,7 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
   const captionInputRef = useRef(null);
 
   const navigate = useNavigate();
+
   const hasAnyData = !!rawImage || caption.trim().length > 0;
 
   useEffect(() => {
@@ -177,7 +231,7 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
   };
 
   const handleProfileClick = () => {
-    if (currentUser?.username) {
+    if (user?.username) {
       forceClose();
       navigate(`/profile`);
     }
@@ -249,25 +303,34 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
     setError("");
 
     try {
-      const token = localStorage.getItem("token");
-      const response = await API.post(
-        "/api/posts",
-        { url: croppedImage, caption },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      if (editingPost) {
+        const response = await API.put(`/api/posts/${editingPost._id}`, {
+          url: croppedImage,
+          caption,
+        });
 
-      if (onPostCreated) {
-        onPostCreated(response.data);
+        if (onPostUpdated) {
+          onPostUpdated(response.data);
+        }
+      } else {
+        const response = await API.post("/api/posts", {
+          url: croppedImage,
+          caption,
+        });
+
+        if (onPostCreated) {
+          onPostCreated(response.data);
+        }
+
+        const event = new CustomEvent("postCreated", { detail: response.data });
+        window.dispatchEvent(event);
       }
-
-      const event = new CustomEvent("postCreated", { detail: response.data });
-      window.dispatchEvent(event);
 
       forceClose();
     } catch (err) {
-      console.error("Failed to create post:", err);
+      console.error("Failed to save post:", err);
       setError(
-        err.response?.data?.message || "Failed to upload post. Try again.",
+        err.response?.data?.message || "Failed to save post. Try again.",
       );
     } finally {
       setLoading(false);
@@ -275,13 +338,13 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
   };
 
   const previewPostData = {
-    _id: "preview_temp_id",
+    _id: editingPost ? editingPost._id : "preview_temp_id",
     url: croppedImage || rawImage,
     caption: caption,
-    createdAt: new Date().toISOString(),
-    likes: [],
-    likesCount: 0,
-    user: currentUser || {
+    createdAt: editingPost ? editingPost.createdAt : new Date().toISOString(),
+    likes: editingPost ? editingPost.likes : [],
+    likesCount: editingPost ? editingPost.likesCount : 0,
+    user: user || {
       username: "username",
       avatar: "",
     },
@@ -340,7 +403,7 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
                 }`}
                 onClick={() => setViewMode("edit")}
               >
-                Create
+                {editingPost ? "Edit" : "Create"}
               </button>
               <button
                 type="button"
@@ -353,7 +416,9 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
               </button>
             </div>
           ) : (
-            <h3 className={styles.modalTitle}>Create new post</h3>
+            <h3 className={styles.modalTitle}>
+              {editingPost ? "Edit post" : "Create new post"}
+            </h3>
           )}
 
           <div className={styles.headerRightActions}>
@@ -377,8 +442,10 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
               {loading ? (
                 <span className={styles.btnLoadingWrapper}>
                   <span className={styles.btnSpinner} />
-                  <span>Sharing...</span>
+                  <span>{editingPost ? "Saving..." : "Sharing..."}</span>
                 </span>
+              ) : editingPost ? (
+                "Save"
               ) : (
                 "Share"
               )}
@@ -577,10 +644,10 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
             <div className={styles.rightColumn}>
               <div className={styles.userInfo} onClick={handleProfileClick}>
                 <div className={styles.avatarWrapper}>
-                  <Avatar user={currentUser} size={32} />
+                  <Avatar user={user} size={32} />
                 </div>
                 <span className={styles.username}>
-                  {currentUser?.username || "username"}
+                  {user?.username || "username"}
                 </span>
               </div>
 
@@ -661,8 +728,8 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
             <div className={styles.previewCardContainer}>
               <PostCard
                 post={previewPostData}
-                currentUserId={currentUser?._id || currentUser?.id}
-                currentUsername={currentUser?.username}
+                currentUserId={user?._id || user?.id}
+                currentUsername={user?.username}
                 onOpenModal={() => {}}
               />
             </div>
@@ -699,7 +766,9 @@ const CreatePostModal = ({ isOpen, onClose, currentUser, onPostCreated }) => {
               </svg>
             </div>
 
-            <h3 className={styles.confirmModalTitle}>Discard post?</h3>
+            <h3 className={styles.confirmModalTitle}>
+              {editingPost ? "Discard changes?" : "Discard post?"}
+            </h3>
 
             <p className={styles.confirmModalText}>
               If you leave, your edits will be lost.
@@ -733,6 +802,8 @@ CreatePostModal.propTypes = {
   onClose: PropTypes.func.isRequired,
   currentUser: PropTypes.object,
   onPostCreated: PropTypes.func,
+  editingPost: PropTypes.object,
+  onPostUpdated: PropTypes.func,
 };
 
 export default CreatePostModal;

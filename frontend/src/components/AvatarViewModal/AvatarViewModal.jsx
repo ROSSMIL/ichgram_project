@@ -58,6 +58,7 @@ const CloseIcon = () => (
 const AvatarViewModal = ({
   user,
   isOwnProfile = false,
+  showStatus = false,
   onClose,
   onUploadSave,
   onRemovePhoto,
@@ -166,7 +167,7 @@ const AvatarViewModal = ({
               previewUrl ? styles.previewActive : ""
             } ${isConfirmingDelete ? styles.deleteActive : ""}`}
           >
-            <Avatar user={displayUser} size={180} />
+            <Avatar user={displayUser} size={180} showStatus={showStatus} />
           </div>
         </div>
 

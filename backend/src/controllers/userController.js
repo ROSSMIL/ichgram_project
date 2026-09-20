@@ -2,6 +2,7 @@ import User from "../models/userModel.js";
 import { uploadToCloudinary } from "../middlewares/uploadMiddleware.js";
 import Post from "../models/postModel.js";
 import { resetGuestAccount } from "../config/seeder.js";
+import Notification from "../models/notificationModel.js";
 import { SEEDED_EMAILS, resetSeededAccount } from "../config/seeder.js";
 
 export const getProfile = async (req, res) => {
@@ -188,11 +189,33 @@ export const toggleFollow = async (req, res) => {
       currentUser.following = cleanFollowing.filter(
         (id) => id !== targetUserId.toString(),
       );
+
+      await Notification.findOneAndDelete({
+        recipient: targetUserId,
+        sender: currentUserId,
+        type: "follow",
+      });
     } else {
       cleanFollowers.push(currentUserId.toString());
       cleanFollowing.push(targetUserId.toString());
       targetUser.followers = cleanFollowers;
       currentUser.following = cleanFollowing;
+
+      const notif = await Notification.create({
+        recipient: targetUserId,
+        sender: currentUserId,
+        type: "follow",
+      });
+
+      const populatedNotif = await Notification.findById(notif._id).populate(
+        "sender",
+        "username avatar fullName",
+      );
+
+      const io = req.app.get("io");
+      if (io) {
+        io.to(targetUserId.toString()).emit("new notification", populatedNotif);
+      }
     }
 
     targetUser.followersCount = targetUser.followers.length;

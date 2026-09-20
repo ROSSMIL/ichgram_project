@@ -5,6 +5,7 @@ import {
   useRef,
   useLayoutEffect,
 } from "react";
+import PropTypes from "prop-types";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import API from "../../api/axios";
@@ -448,6 +449,13 @@ const PostModal = ({
     }, 250);
   };
 
+  const handleTriggerEdit = () => {
+    handleCloseMenu();
+    onClose();
+
+    window.dispatchEvent(new CustomEvent("openEditPost", { detail: post }));
+  };
+
   const handleDeletePost = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -869,6 +877,14 @@ const PostModal = ({
               <div className={styles.drawerOverlay} onClick={handleCloseMenu} />
               <div className={styles.drawerContent}>
                 <div className={styles.drawerIndicator} />
+
+                <button
+                  className={styles.drawerBtn}
+                  onClick={handleTriggerEdit}
+                >
+                  Edit Post
+                </button>
+
                 <button
                   className={`${styles.drawerBtn} ${styles.deleteBtn}`}
                   onClick={handleDeletePost}
@@ -914,6 +930,15 @@ const PostModal = ({
     </div>,
     document.body,
   );
+};
+
+PostModal.propTypes = {
+  post: PropTypes.object,
+  onClose: PropTypes.func.isRequired,
+  onPostUpdate: PropTypes.func,
+  currentUserFollowing: PropTypes.array,
+  onFollowToggle: PropTypes.func,
+  autoFocusComment: PropTypes.bool,
 };
 
 export default PostModal;

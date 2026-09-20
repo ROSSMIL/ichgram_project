@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import PropTypes from "prop-types";
 import styles from "./LoadingHints.module.css";
 
 const HINT_ICONS = {
@@ -158,6 +159,7 @@ const LoadingHints = ({
 
     let initialTimer;
     let intervalTimer;
+    let transitionTimer;
 
     const startCycle = () => {
       setHintIndex(0);
@@ -166,7 +168,7 @@ const LoadingHints = ({
       intervalTimer = setInterval(() => {
         setIsChanging(true);
 
-        setTimeout(() => {
+        transitionTimer = setTimeout(() => {
           setHintIndex((prev) => (prev + 1) % shuffledHints.length);
           setIsChanging(false);
         }, 350);
@@ -185,6 +187,7 @@ const LoadingHints = ({
     return () => {
       if (initialTimer) clearTimeout(initialTimer);
       if (intervalTimer) clearInterval(intervalTimer);
+      if (transitionTimer) clearTimeout(transitionTimer);
     };
   }, [active, delay, shuffledHints.length, testMode]);
 
@@ -217,6 +220,19 @@ const LoadingHints = ({
       </div>
     </div>
   );
+};
+
+LoadingHints.propTypes = {
+  active: PropTypes.bool,
+  delay: PropTypes.number,
+  hints: PropTypes.arrayOf(
+    PropTypes.shape({
+      tag: PropTypes.string.isRequired,
+      text: PropTypes.string.isRequired,
+    }),
+  ),
+  className: PropTypes.string,
+  testMode: PropTypes.bool,
 };
 
 export default LoadingHints;

@@ -52,9 +52,14 @@ const LoginPage = () => {
         navigate("/dashboard");
       }
     } catch (err) {
-      const serverMessage =
-        err.response?.data?.message ||
-        "Something went wrong. Please try again.";
+      let serverMessage = "Something went wrong. Please try again.";
+
+      if (err.code === "ECONNABORTED" || !err.response) {
+        serverMessage = "Server is warming up. Please try logging in again!";
+      } else if (err.response?.data?.message) {
+        serverMessage = err.response.data.message;
+      }
+
       setError(serverMessage);
       setPassword("");
     } finally {
@@ -74,9 +79,14 @@ const LoginPage = () => {
         navigate("/dashboard");
       }
     } catch (err) {
-      const serverMessage =
-        err.response?.data?.message ||
-        "Failed to log in as guest. Please try again.";
+      let serverMessage = "Failed to log in as guest. Please try again.";
+
+      if (err.code === "ECONNABORTED" || !err.response) {
+        serverMessage = "Server takes long to wake up. Please click once more!";
+      } else if (err.response?.data?.message) {
+        serverMessage = err.response.data.message;
+      }
+
       setError(serverMessage);
     } finally {
       setIsGuestLoading(false);

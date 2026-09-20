@@ -1,13 +1,235 @@
-import { useState, useEffect, useCallback, memo, useRef } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  memo,
+  useRef,
+  useLayoutEffect,
+} from "react";
 import PropTypes from "prop-types";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { createPortal } from "react-dom";
+import { useSocket } from "../../context/useSocket.js";
 import API from "../../api/axios.js";
 import styles from "./UserProfilePage.module.css";
 import PostModal from "../../components/PostModal/PostModal";
 import Avatar from "../../components/Avatar/Avatar";
 import AvatarViewModal from "../../components/AvatarViewModal/AvatarViewModal";
 import PageHeader from "../../components/PageHeader/PageHeader";
+
+const renderActivityStatus = (statusKey) => {
+  const iconProps = {
+    width: 13,
+    height: 13,
+    fill: "none",
+    color: "currentColor",
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    style: {
+      display: "inline-block",
+      verticalAlign: "middle",
+      marginRight: "5px",
+      flexShrink: 0,
+    },
+  };
+
+  switch (statusKey) {
+    case "dashboard":
+      return (
+        <span className={styles.statusContentInner}>
+          <svg aria-label="Home" viewBox="0 0 24 24" {...iconProps}>
+            <path d="M9 16.5 A3 3 0 0 1 15 16.5 V22 H22 V11.5 L12 2 L2 11.5 V22 H9 Z" />
+          </svg>
+          Viewing Feed
+        </span>
+      );
+
+    case "explore":
+      return (
+        <span className={styles.statusContentInner}>
+          <svg aria-label="Explore" viewBox="0 0 24 24" {...iconProps}>
+            <polygon
+              fill="currentColor"
+              points="13.941 13.953 7.581 16.424 10.06 10.056 16.42 7.585 13.941 13.953"
+            />
+            <circle cx="12.004" cy="12.004" r="10.5" />
+          </svg>
+          Exploring Trends
+        </span>
+      );
+
+    case "messages":
+      return (
+        <span className={styles.statusContentInner}>
+          <svg aria-label="Direct" viewBox="0 0 24 24" {...iconProps}>
+            <line x1="22" x2="9.218" y1="2" y2="10.083" />
+            <polygon
+              fill="currentColor"
+              points="22 2 1.93 9.312 8.781 12.656 12.125 19.507 22 2"
+            />
+          </svg>
+          In Direct Messages
+        </span>
+      );
+
+    case "notifications":
+      return (
+        <span className={styles.statusContentInner}>
+          <svg aria-label="Notifications" viewBox="0 0 24 24" {...iconProps}>
+            <path d="M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.65 5.618-5.91 8.526L12 21l-3.59-3.352C5.15 14.74 2.5 12.194 2.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941L12 7.428l1.117-1.775a4.21 4.21 0 0 1 3.675-1.949Z" />
+          </svg>
+          Viewing Notifications
+        </span>
+      );
+
+    case "edit_profile":
+      return (
+        <span className={styles.statusContentInner}>
+          <svg aria-label="Edit Profile" viewBox="0 0 24 24" {...iconProps}>
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+          </svg>
+          Editing Profile
+        </span>
+      );
+
+    case "profile":
+      return (
+        <span className={styles.statusContentInner}>
+          <svg aria-label="Profile" viewBox="0 0 24 24" {...iconProps}>
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          Viewing Profile
+        </span>
+      );
+
+    case "user_profile":
+      return (
+        <span className={styles.statusContentInner}>
+          <svg
+            aria-label="Checking User Profile"
+            viewBox="0 0 24 24"
+            {...iconProps}
+          >
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          Checking User Profile
+        </span>
+      );
+
+    case "post":
+      return (
+        <span className={styles.statusContentInner}>
+          <svg aria-label="Reading Post" viewBox="0 0 24 24" {...iconProps}>
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <line x1="7" y1="8" x2="17" y2="8" />
+            <line x1="7" y1="12" x2="17" y2="12" />
+            <line x1="7" y1="16" x2="13" y2="16" />
+          </svg>
+          Reading Post
+        </span>
+      );
+
+    case "online":
+      return (
+        <span className={styles.statusContentInner}>
+          <svg aria-label="Online" viewBox="0 0 24 24" {...iconProps}>
+            <circle cx="12" cy="12" r="6" fill="currentColor" stroke="none" />
+          </svg>
+          Online
+        </span>
+      );
+
+    default:
+      return (
+        <span className={styles.statusContentInner}>
+          {statusKey || "Offline"}
+        </span>
+      );
+  }
+};
+
+const useDwellPresence = (presence, dwellTime = 3500) => {
+  const [debouncedPresence, setDebouncedPresence] = useState(presence);
+
+  useEffect(() => {
+    if (!presence) {
+      const timer = setTimeout(() => {
+        setDebouncedPresence(null);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+
+    if (!debouncedPresence) {
+      const timer = setTimeout(() => {
+        setDebouncedPresence(presence);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+
+    const timer = setTimeout(() => {
+      setDebouncedPresence(presence);
+    }, dwellTime);
+
+    return () => clearTimeout(timer);
+  }, [presence, dwellTime, debouncedPresence]);
+
+  return debouncedPresence;
+};
+
+const StatusTextSwitcher = memo(({ statusKey, isUserOnline }) => {
+  const containerRef = useRef(null);
+  const measureRef = useRef(null);
+  const [bubbleWidth, setBubbleWidth] = useState("auto");
+
+  useLayoutEffect(() => {
+    if (measureRef.current) {
+      const rect = measureRef.current.getBoundingClientRect();
+      const targetWidth = Math.ceil(rect.width) + 26;
+      setBubbleWidth(`${targetWidth}px`);
+    }
+  }, [statusKey, isUserOnline]);
+
+  return (
+    <div
+      ref={containerRef}
+      className={`${styles.avatarStatusBubble} ${
+        isUserOnline ? styles.bubbleOnline : styles.bubbleOffline
+      }`}
+      style={{ width: bubbleWidth }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div
+        ref={measureRef}
+        className={styles.measureContainer}
+        aria-hidden="true"
+      >
+        <span className={styles.bubbleDot} />
+        {renderActivityStatus(statusKey)}
+      </div>
+
+      <span className={styles.bubbleDot} />
+      <div className={styles.statusTextViewport}>
+        <span key={statusKey} className={styles.statusTextAnimated}>
+          {renderActivityStatus(statusKey)}
+        </span>
+      </div>
+    </div>
+  );
+});
+
+StatusTextSwitcher.displayName = "StatusTextSwitcher";
+
+StatusTextSwitcher.propTypes = {
+  statusKey: PropTypes.string,
+  isUserOnline: PropTypes.bool,
+};
 
 const ProfilePostItem = memo(({ post, index, onSelectPost }) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -162,6 +384,7 @@ ProfilePostItem.propTypes = {
 const UserProfilePage = () => {
   const navigate = useNavigate();
   const { username } = useParams();
+  const { onlineUsers } = useSocket();
 
   const [user, setUser] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
@@ -395,6 +618,12 @@ const UserProfilePage = () => {
     closeUsersModal,
   ]);
 
+  const userIdStr = (user?._id || user?.id)?.toString();
+  const rawPresence = onlineUsers?.[userIdStr];
+
+  const isUserOnline = Boolean(rawPresence);
+  const presence = useDwellPresence(rawPresence, 3500);
+
   if (loading) {
     return (
       <div className={styles.profileContainer}>
@@ -461,12 +690,25 @@ const UserProfilePage = () => {
       <header className={styles.header}>
         <div className={styles.headerTopMobile}>
           <div
-            className={styles.avatarContainer}
+            className={`${styles.avatarContainer} ${
+              isUserOnline ? styles.avatarOnlineContainer : ""
+            }`}
             onClick={() => setIsAvatarModalOpen(true)}
           >
-            <div className={styles.avatarFrame}>
-              <Avatar user={user} size={150} />
+            <div
+              className={`${styles.avatarFrame} ${
+                isUserOnline ? styles.avatarOnlineGlow : ""
+              }`}
+            >
+              <Avatar user={user} size={150} showStatus={false} />
             </div>
+
+            <StatusTextSwitcher
+              statusKey={
+                isUserOnline ? presence?.status || "online" : "offline"
+              }
+              isUserOnline={isUserOnline}
+            />
           </div>
 
           <div className={styles.mobileRightBlock}>
@@ -500,17 +742,56 @@ const UserProfilePage = () => {
         <section className={styles.userInfo}>
           <div className={styles.usernameRow}>
             <h2>{user.username}</h2>
-            <button
-              className={`${styles.followButton} ${
-                isFollowing ? styles.followingActive : ""
-              }`}
-              onClick={handleFollowToggle}
-            >
-              {isFollowing ? "Following" : "Follow"}
-            </button>
-            <button className={styles.messageButton} onClick={handleOpenChat}>
-              Message
-            </button>
+
+            <div className={styles.actionsGroup}>
+              <button
+                className={`${styles.followButton} ${
+                  isFollowing ? styles.followingActive : ""
+                }`}
+                onClick={handleFollowToggle}
+              >
+                {isFollowing ? (
+                  <>
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span>Following</span>
+                  </>
+                ) : (
+                  <span>Follow</span>
+                )}
+              </button>
+
+              <button
+                className={styles.messageIconButton}
+                onClick={handleOpenChat}
+                aria-label="Message user"
+                title="Send message"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           <div className={`${styles.statsRow} ${styles.desktopStats}`}>
@@ -581,13 +862,26 @@ const UserProfilePage = () => {
               }`}
               onClick={handleFollowToggle}
             >
-              {isFollowing ? "Following" : "Follow"}
+              {isFollowing ? "✓ Following" : "Follow"}
             </button>
             <button
-              className={styles.mobileMessageButton}
+              className={styles.mobileMessageIconButton}
               onClick={handleOpenChat}
+              aria-label="Message user"
             >
-              Message
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
             </button>
           </div>
         </section>
@@ -801,6 +1095,7 @@ const UserProfilePage = () => {
         <AvatarViewModal
           user={user}
           isOwnProfile={false}
+          showStatus={false}
           onClose={() => setIsAvatarModalOpen(false)}
         />
       )}

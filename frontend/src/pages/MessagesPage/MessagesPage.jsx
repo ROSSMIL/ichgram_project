@@ -1,13 +1,612 @@
-import { useState, useEffect, useRef } from "react";
-import { io } from "socket.io-client";
+import {
+  useState,
+  useEffect,
+  memo,
+  useRef,
+  useLayoutEffect,
+  useCallback,
+  useMemo,
+  Fragment,
+} from "react";
+import PropTypes from "prop-types";
+import { Link, useLocation } from "react-router-dom";
+import { useSocket } from "../../context/useSocket.js";
 import API from "../../api/axios.js";
 import Avatar from "../../components/Avatar/Avatar";
+import PageHeader from "../../components/PageHeader/PageHeader";
 import styles from "./MessagesPage.module.css";
 
-const ENDPOINT = "http://localhost:3333";
-let socket;
+const QUICK_EMOJIS = ["❤️", "👍", "🔥", "😂", "😮", "😢"];
+
+const formatMessageDateDivider = (dateString) => {
+  if (!dateString) return "";
+  const msgDate = new Date(dateString);
+  const now = new Date();
+
+  const isToday = msgDate.toDateString() === now.toDateString();
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = msgDate.toDateString() === yesterday.toDateString();
+
+  if (isToday) return "Today";
+  if (isYesterday) return "Yesterday";
+
+  const isSameYear = msgDate.getFullYear() === now.getFullYear();
+  if (isSameYear) {
+    return msgDate.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  }
+
+  return msgDate.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
+
+const CheckmarkIcon = memo(({ isRead, isSending }) => {
+  if (isSending) {
+    return (
+      <span
+        className={`${styles.readStatus} ${styles.sendingStatus}`}
+        title="Sending..."
+      >
+        <svg
+          viewBox="0 0 12 11"
+          className={styles.singleCheckSvg}
+          style={{ opacity: 0.5 }}
+        >
+          <path
+            d="M1.5 5.5L4.5 8.5L10.5 2.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
+    );
+  }
+
+  if (isRead) {
+    return (
+      <span className={`${styles.readStatus} ${styles.read}`} title="Read">
+        <svg viewBox="0 0 16 11" className={styles.doubleCheckSvg}>
+          <path
+            d="M1.5 5.5L4.5 8.5L10.5 2.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M5.5 5.5L8.5 8.5L14.5 2.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
+    );
+  }
+
+  return (
+    <span className={`${styles.readStatus} ${styles.unread}`} title="Sent">
+      <svg viewBox="0 0 12 11" className={styles.singleCheckSvg}>
+        <path
+          d="M1.5 5.5L4.5 8.5L10.5 2.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  );
+});
+
+CheckmarkIcon.displayName = "CheckmarkIcon";
+CheckmarkIcon.propTypes = { isRead: PropTypes.bool, isSending: PropTypes.bool };
+
+const InlineMessageMenu = memo(
+  ({
+    isMyMessage,
+    msg,
+    isClosing,
+    onToggleReaction,
+    onStartEdit,
+    onDeleteMessage,
+    onCloseAnimated,
+  }) => {
+    const [activeTab, setActiveTab] = useState(
+      isMyMessage ? "actions" : "reactions",
+    );
+
+    return (
+      <div
+        className={`${styles.inlineMenuPopover} ${
+          isMyMessage ? styles.menuRight : styles.menuLeft
+        } ${isClosing ? styles.menuClosing : ""}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className={styles.actionModalContainer}>
+          {isMyMessage && (
+            <div className={styles.tabSwitcher}>
+              <div
+                className={styles.glider}
+                style={{
+                  transform:
+                    activeTab === "actions"
+                      ? "translateX(0%)"
+                      : "translateX(100%)",
+                }}
+              />
+              <button
+                type="button"
+                className={`${styles.switchTab} ${activeTab === "actions" ? styles.activeTab : ""}`}
+                onClick={() => setActiveTab("actions")}
+              >
+                Actions
+              </button>
+              <button
+                type="button"
+                className={`${styles.switchTab} ${activeTab === "reactions" ? styles.activeTab : ""}`}
+                onClick={() => setActiveTab("reactions")}
+              >
+                Reactions
+              </button>
+            </div>
+          )}
+
+          <div className={styles.modalBodyViewport}>
+            {!isMyMessage || activeTab === "reactions" ? (
+              <div className={styles.quickEmojiBar}>
+                {QUICK_EMOJIS.map((emoji, idx) => {
+                  const hasReacted = msg.reactions?.some(
+                    (r) =>
+                      r.emoji === emoji &&
+                      r.users?.some(
+                        (uId) => (uId._id || uId).toString() === msg.myIdStr,
+                      ),
+                  );
+                  return (
+                    <button
+                      key={emoji}
+                      type="button"
+                      className={`${styles.emojiPickerBtn} ${hasReacted ? styles.activeEmojiBtn : ""}`}
+                      style={{ "--emoji-idx": idx }}
+                      onClick={() =>
+                        onCloseAnimated(() => onToggleReaction(msg._id, emoji))
+                      }
+                    >
+                      <span className={styles.emojiInner}>{emoji}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className={styles.actionsGroupContent}>
+                <button
+                  type="button"
+                  className={styles.actionBtnWithLabel}
+                  onClick={() => onCloseAnimated(() => onStartEdit(msg))}
+                >
+                  <svg viewBox="0 0 24 24" className={styles.actionIconSvg}>
+                    <path
+                      d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <span>Edit</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`${styles.actionBtnWithLabel} ${styles.deleteActionBtn}`}
+                  onClick={() =>
+                    onCloseAnimated(() => onDeleteMessage(msg._id))
+                  }
+                >
+                  <svg viewBox="0 0 24 24" className={styles.actionIconSvg}>
+                    <polyline
+                      points="3 6 5 6 21 6"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <span>Delete</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  },
+);
+
+InlineMessageMenu.displayName = "InlineMessageMenu";
+InlineMessageMenu.propTypes = {
+  isMyMessage: PropTypes.bool,
+  msg: PropTypes.object,
+  isClosing: PropTypes.bool,
+  onToggleReaction: PropTypes.func,
+  onStartEdit: PropTypes.func,
+  onDeleteMessage: PropTypes.func,
+  onCloseAnimated: PropTypes.func,
+};
+
+const HeaderStatusTextSwitcher = memo(({ statusKey, isUserOnline }) => {
+  const containerRef = useRef(null);
+  const measureRef = useRef(null);
+
+  const [delayedStatus, setDelayedStatus] = useState(null);
+  const [bubbleWidth, setBubbleWidth] = useState("auto");
+
+  const activeDisplayStatus = !isUserOnline
+    ? "offline"
+    : delayedStatus || (statusKey === "messages" ? "online" : "online");
+
+  useEffect(() => {
+    if (!isUserOnline) return;
+
+    let timer;
+    if (statusKey === "messages") {
+      timer = setTimeout(() => {
+        setDelayedStatus("messages");
+      }, 300);
+    } else {
+      timer = setTimeout(() => {
+        setDelayedStatus("online");
+      }, 2000);
+    }
+
+    return () => clearTimeout(timer);
+  }, [statusKey, isUserOnline]);
+
+  useLayoutEffect(() => {
+    if (measureRef.current) {
+      const rect = measureRef.current.getBoundingClientRect();
+      const targetWidth = Math.ceil(rect.width) + 26;
+      setBubbleWidth(`${targetWidth}px`);
+    }
+  }, [activeDisplayStatus, isUserOnline]);
+
+  if (!isUserOnline) {
+    return (
+      <div className={`${styles.headerStatusBubble} ${styles.bubbleOffline}`}>
+        <span className={`${styles.bubbleDot} ${styles.dotOffline}`} />
+        <span className={styles.statusContentInner}>Offline</span>
+      </div>
+    );
+  }
+
+  const isDirect = activeDisplayStatus === "messages";
+
+  return (
+    <div
+      ref={containerRef}
+      className={`${styles.headerStatusBubble} ${isDirect ? styles.bubbleDirect : styles.bubbleOnline}`}
+      style={{ width: bubbleWidth }}
+    >
+      <div
+        ref={measureRef}
+        className={styles.measureContainer}
+        aria-hidden="true"
+      >
+        <span className={styles.bubbleDot} />
+        {isDirect ? (
+          <span className={styles.statusContentInner}>
+            <svg
+              aria-label="Direct"
+              viewBox="0 0 24 24"
+              width="12"
+              height="12"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ marginRight: "5px" }}
+            >
+              <line x1="22" x2="9.218" y1="2" y2="10.083" />
+              <polygon
+                fill="currentColor"
+                points="22 2 1.93 9.312 8.781 12.656 12.125 19.507 22 2"
+              />
+            </svg>
+            In Direct Messages
+          </span>
+        ) : (
+          <span className={styles.statusContentInner}>Online</span>
+        )}
+      </div>
+
+      <span
+        className={`${styles.bubbleDot} ${isDirect ? styles.dotPulse : styles.dotOnline}`}
+      />
+
+      <div className={styles.statusTextViewport}>
+        <span key={activeDisplayStatus} className={styles.statusTextAnimated}>
+          {isDirect ? (
+            <span className={styles.statusContentInner}>
+              <svg
+                aria-label="Direct"
+                viewBox="0 0 24 24"
+                width="12"
+                height="12"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ marginRight: "5px" }}
+              >
+                <line x1="22" x2="9.218" y1="2" y2="10.083" />
+                <polygon
+                  fill="currentColor"
+                  points="22 2 1.93 9.312 8.781 12.656 12.125 19.507 22 2"
+                />
+              </svg>
+              In Direct Messages
+            </span>
+          ) : (
+            <span className={styles.statusContentInner}>Online</span>
+          )}
+        </span>
+      </div>
+    </div>
+  );
+});
+
+HeaderStatusTextSwitcher.displayName = "HeaderStatusTextSwitcher";
+HeaderStatusTextSwitcher.propTypes = {
+  statusKey: PropTypes.string,
+  isUserOnline: PropTypes.bool,
+};
+
+const getLoggedInUsername = () => {
+  const token = localStorage.getItem("token");
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.username;
+  } catch (e) {
+    console.error("Failed to decode token:", e);
+    return null;
+  }
+};
+
+const MessageItem = memo(
+  ({
+    msg,
+    isMyMessage,
+    isEditing,
+    isDeleted,
+    isRead,
+    isActive,
+    editingContent,
+    setEditingContent,
+    onSaveEdit,
+    onCancelEdit,
+    onStartEdit,
+    onDeleteMessage,
+    onToggleReaction,
+    onTriggerClick,
+    onClosePortalAnimated,
+    isClosing,
+    selectedChat,
+  }) => {
+    const itemRef = useRef(null);
+
+    const formatTime = (dateString) => {
+      if (!dateString) return "";
+      const date = new Date(dateString);
+      return date.toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+    };
+
+    return (
+      <div
+        className={`${styles.messageOuterContainer} ${isMyMessage ? styles.myOuter : styles.theirOuter}`}
+      >
+        <div
+          ref={itemRef}
+          className={`${styles.messageBubble} ${isMyMessage ? styles.myMessage : styles.theirMessage} ${msg.isSending ? styles.sending : ""} ${isDeleted ? styles.deletedMessage : ""} ${styles.msgPopIn}`}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            if (!isDeleted) {
+              onToggleReaction(msg._id, "❤️");
+            }
+          }}
+        >
+          <div className={styles.floatWrapper}>
+            {!isMyMessage && selectedChat?.isGroupChat && (
+              <span className={styles.senderName}>{msg.sender?.username}</span>
+            )}
+
+            {isEditing ? (
+              <div className={styles.editForm}>
+                <input
+                  type="text"
+                  value={editingContent}
+                  onChange={(e) => setEditingContent(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      onSaveEdit(msg._id);
+                    }
+                    if (e.key === "Escape") onCancelEdit();
+                  }}
+                  className={styles.editInput}
+                  autoFocus
+                />
+                <div className={styles.editActions}>
+                  <button
+                    type="button"
+                    onClick={() => onSaveEdit(msg._id)}
+                    className={styles.saveEditBtn}
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onCancelEdit}
+                    className={styles.cancelEditBtn}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className={styles.bubbleBody}>
+                <p className={styles.messageContent}>
+                  {isDeleted ? <i>🚫 {msg.content}</i> : msg.content}
+                </p>
+
+                <div className={styles.metaWrapper}>
+                  {msg.isEdited && !isDeleted && (
+                    <span className={styles.editedTag}>(edited)</span>
+                  )}
+                  <span className={styles.messageTime}>
+                    {formatTime(msg.createdAt)}
+                  </span>
+                  {isMyMessage && (
+                    <CheckmarkIcon isRead={isRead} isSending={msg.isSending} />
+                  )}
+                </div>
+              </div>
+            )}
+
+            {msg.reactions && msg.reactions.length > 0 && !isDeleted && (
+              <div className={styles.reactionsList}>
+                {msg.reactions.map((r) => {
+                  const hasMyReaction = r.users?.some(
+                    (uId) => (uId._id || uId).toString() === msg.myIdStr,
+                  );
+                  const count = r.users?.length || 0;
+
+                  return (
+                    <button
+                      key={r.emoji}
+                      type="button"
+                      className={`${styles.reactionBadge} ${hasMyReaction ? styles.myReactionBadge : ""} ${styles.reactionBadgeAnimated}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleReaction(msg._id, r.emoji);
+                      }}
+                      title={`${count} reactions`}
+                    >
+                      <span className={styles.reactionEmoji}>{r.emoji}</span>
+                      <span
+                        key={count}
+                        className={styles.reactionCountAnimated}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {!isDeleted && (
+          <div className={styles.actionTriggerWrapper}>
+            <button
+              type="button"
+              className={`${styles.threeDotsCircleBtn} ${isActive ? styles.threeDotsActive : ""}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onTriggerClick(msg._id);
+              }}
+              title="Options"
+            >
+              <svg viewBox="0 0 24 24" className={styles.threeDotsSvg}>
+                <circle cx="5" cy="12" r="2" fill="currentColor" />
+                <circle cx="12" cy="12" r="2" fill="currentColor" />
+                <circle cx="19" cy="12" r="2" fill="currentColor" />
+              </svg>
+            </button>
+          </div>
+        )}
+
+        {(isActive || isClosing) && (
+          <InlineMessageMenu
+            isMyMessage={isMyMessage}
+            msg={msg}
+            isClosing={isClosing}
+            onToggleReaction={onToggleReaction}
+            onStartEdit={onStartEdit}
+            onDeleteMessage={onDeleteMessage}
+            onCloseAnimated={onClosePortalAnimated}
+          />
+        )}
+      </div>
+    );
+  },
+);
+
+MessageItem.displayName = "MessageItem";
+MessageItem.propTypes = {
+  msg: PropTypes.object,
+  isMyMessage: PropTypes.bool,
+  isEditing: PropTypes.bool,
+  isDeleted: PropTypes.bool,
+  isRead: PropTypes.bool,
+  isActive: PropTypes.bool,
+  editingContent: PropTypes.string,
+  setEditingContent: PropTypes.func,
+  onSaveEdit: PropTypes.func,
+  onCancelEdit: PropTypes.func,
+  onStartEdit: PropTypes.func,
+  onDeleteMessage: PropTypes.func,
+  onToggleReaction: PropTypes.func,
+  onTriggerClick: PropTypes.func,
+  onClosePortalAnimated: PropTypes.func,
+  isClosing: PropTypes.bool,
+  selectedChat: PropTypes.object,
+};
 
 const MessagesPage = () => {
+  const { socket, onlineUsers } = useSocket();
+  const location = useLocation();
+
   const [currentUser, setCurrentUser] = useState(null);
   const [chats, setChats] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
@@ -17,14 +616,117 @@ const MessagesPage = () => {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
 
+  const [unreadCounts, setUnreadCounts] = useState({});
+  const [socketDeletedChatId, setSocketDeletedChatId] = useState(null);
+
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editingContent, setEditingContent] = useState("");
+
+  const [activeActionId, setActiveActionId] = useState(null);
+  const [closingActionId, setClosingActionId] = useState(null);
+
+  const [sidebarSearch, setSidebarSearch] = useState("");
+  const [allGlobalUsers, setAllGlobalUsers] = useState([]);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [groupName, setGroupName] = useState("");
   const [allUsers, setAllUsers] = useState([]);
   const [selectedGroupUsers, setSelectedGroupUsers] = useState([]);
   const [searchUserQuery, setSearchUserQuery] = useState("");
 
-  const messagesEndRef = useRef(null);
+  const [isDeleteChatModalOpen, setIsDeleteChatModalOpen] = useState(false);
+
+  const messagesContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const selectedChatRef = useRef(selectedChat);
+  const handledLocationStateRef = useRef(false);
+
+  useEffect(() => {
+    selectedChatRef.current = selectedChat;
+    window.dispatchEvent(
+      new CustomEvent("activeChatChanged", {
+        detail: { chatId: selectedChat?._id || null },
+      }),
+    );
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("activeChatChanged", {
+          detail: { chatId: null },
+        }),
+      );
+    };
+  }, [selectedChat]);
+
+  const handleSelectChat = useCallback((chat) => {
+    setSelectedChat(chat);
+    setIsTyping(false);
+    setEditingMessageId(null);
+    setEditingContent("");
+
+    if (chat?._id) {
+      setUnreadCounts((prev) => ({
+        ...prev,
+        [chat._id]: 0,
+      }));
+    }
+  }, []);
+
+  const handleStartDirectChat = useCallback(
+    async (targetUserId) => {
+      try {
+        setIsSearchingUsers(true);
+        const { data } = await API.post("/api/chat", { userId: targetUserId });
+        setChats((prev) => {
+          if (!prev.some((c) => c._id === data._id)) {
+            return [data, ...prev];
+          }
+          return prev;
+        });
+        handleSelectChat(data);
+        setSidebarSearch("");
+      } catch (err) {
+        console.error("Error opening chat with user:", err);
+      } finally {
+        setIsSearchingUsers(false);
+      }
+    },
+    [handleSelectChat],
+  );
+
+  const handleClosePortalAnimated = useCallback((actionCallback) => {
+    setActiveActionId((prevActiveId) => {
+      if (!prevActiveId) {
+        if (actionCallback) actionCallback();
+        return null;
+      }
+      setClosingActionId(prevActiveId);
+      setTimeout(() => {
+        if (actionCallback) actionCallback();
+        setClosingActionId(null);
+      }, 180);
+      return null;
+    });
+  }, []);
+
+  const scrollToBottom = useCallback(
+    (isMyOwnMessage = false, forceAuto = false) => {
+      if (!messagesContainerRef.current) return;
+      const container = messagesContainerRef.current;
+      const { scrollHeight, clientHeight, scrollTop } = container;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 180;
+
+      if (isMyOwnMessage || isNearBottom || forceAuto) {
+        requestAnimationFrame(() => {
+          container.scrollTo({
+            top: container.scrollHeight,
+            behavior: forceAuto ? "auto" : "smooth",
+          });
+        });
+      }
+    },
+    [],
+  );
 
   const refreshChats = async () => {
     try {
@@ -35,28 +737,14 @@ const MessagesPage = () => {
     }
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
   useEffect(() => {
-    socket = io(ENDPOINT, {
-      transports: ["websocket"],
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-    });
-
     const fetchProfile = async () => {
       try {
         const { data } = await API.get("/api/users/profile");
         setCurrentUser(data);
 
-        if (socket?.connected) {
-          socket.emit("setup", data);
-        } else {
-          socket.on("connect", () => {
-            socket.emit("setup", data);
-          });
+        if (socket && selectedChatRef.current) {
+          socket.emit("join chat", selectedChatRef.current._id);
         }
       } catch (err) {
         console.error("Error fetching user profile:", err);
@@ -64,37 +752,60 @@ const MessagesPage = () => {
     };
 
     fetchProfile();
-
-    return () => {
-      if (socket) {
-        socket.off("connect");
-        if (socket.connected) {
-          socket.disconnect();
-        }
-      }
-    };
-  }, []);
+  }, [socket]);
 
   useEffect(() => {
     let isMounted = true;
-
-    const loadChats = async () => {
+    const loadChatsAndUsers = async () => {
       try {
-        const { data } = await API.get("/api/chat");
-        if (isMounted) setChats(data);
+        const [chatsRes, usersRes] = await Promise.all([
+          API.get("/api/chat"),
+          API.get("/api/users/search/all"),
+        ]);
+        if (isMounted) {
+          setChats(chatsRes.data);
+          setAllGlobalUsers(usersRes.data);
+        }
       } catch (err) {
-        console.error("Error fetching chats:", err);
+        console.error("Error fetching initial chats or users:", err);
       } finally {
         if (isMounted) setLoadingChats(false);
       }
     };
-
-    loadChats();
-
+    loadChatsAndUsers();
     return () => {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!loadingChats && location.state && !handledLocationStateRef.current) {
+      const { openChatId, partnerId } = location.state;
+
+      if (openChatId && chats.length > 0) {
+        const targetChat = chats.find(
+          (c) => c._id.toString() === openChatId.toString(),
+        );
+        if (targetChat) {
+          handledLocationStateRef.current = true;
+          queueMicrotask(() => {
+            handleSelectChat(targetChat);
+          });
+        }
+      } else if (partnerId) {
+        handledLocationStateRef.current = true;
+        queueMicrotask(() => {
+          handleStartDirectChat(partnerId);
+        });
+      }
+    }
+  }, [
+    loadingChats,
+    location.state,
+    chats,
+    handleSelectChat,
+    handleStartDirectChat,
+  ]);
 
   useEffect(() => {
     if (!selectedChat) return;
@@ -105,12 +816,36 @@ const MessagesPage = () => {
       setLoadingMessages(true);
       try {
         const { data } = await API.get(`/api/message/${selectedChat._id}`);
+        await API.put(`/api/message/mark-read/${selectedChat._id}`);
+        const myId = currentUser?._id || currentUser?.id || currentUser?.userId;
+
         if (isMounted) {
-          setMessages(data);
-          scrollToBottom();
+          setUnreadCounts((prev) => ({
+            ...prev,
+            [selectedChat._id]: 0,
+          }));
+
+          const updatedData = data.map((msg) => {
+            const hasMyId = msg.readBy?.some(
+              (id) => (id._id || id).toString() === myId?.toString(),
+            );
+            if (!hasMyId && myId) {
+              return { ...msg, readBy: [...(msg.readBy || []), myId] };
+            }
+            return msg;
+          });
+          setMessages(updatedData);
+          requestAnimationFrame(() => scrollToBottom(false, true));
         }
+
         if (socket) {
           socket.emit("join chat", selectedChat._id);
+          if (myId) {
+            socket.emit("messages read", {
+              chatId: selectedChat._id,
+              userId: myId,
+            });
+          }
         }
       } catch (err) {
         console.error("Error fetching messages:", err);
@@ -120,72 +855,457 @@ const MessagesPage = () => {
     };
 
     loadMessages();
-
     return () => {
       isMounted = false;
     };
-  }, [selectedChat]);
+  }, [selectedChat, currentUser, socket, scrollToBottom]);
 
   useEffect(() => {
     if (!socket) return;
 
+    const myIdStr = (
+      currentUser?._id ||
+      currentUser?.id ||
+      currentUser?.userId
+    )?.toString();
+
     const handleMessageReceived = (newMessageReceived) => {
-      if (selectedChat && selectedChat._id === newMessageReceived.chat._id) {
-        setMessages((prev) => [...prev, newMessageReceived]);
-        scrollToBottom();
+      const activeChat = selectedChatRef.current;
+      const incomingChatId = (
+        newMessageReceived.chat?._id || newMessageReceived.chat
+      )?.toString();
+
+      if (activeChat && activeChat._id.toString() === incomingChatId) {
+        setMessages((prev) => {
+          if (prev.some((msg) => msg._id === newMessageReceived._id))
+            return prev;
+          return [...prev, newMessageReceived];
+        });
+        requestAnimationFrame(() => scrollToBottom(false));
+
+        API.put(`/api/message/mark-read/${activeChat._id}`);
+        const myId = currentUser?._id || currentUser?.id || currentUser?.userId;
+        if (myId) {
+          socket.emit("messages read", {
+            chatId: activeChat._id,
+            userId: myId,
+          });
+        }
+      } else {
+        if (incomingChatId) {
+          setUnreadCounts((prev) => ({
+            ...prev,
+            [incomingChatId]: (prev[incomingChatId] || 0) + 1,
+          }));
+        }
+      }
+
+      refreshChats();
+    };
+
+    const handleMessageReaction = (updatedMessage) => {
+      const activeChat = selectedChatRef.current;
+      const incomingChatId = (
+        updatedMessage.chat?._id || updatedMessage.chat
+      )?.toString();
+
+      if (activeChat && activeChat._id.toString() === incomingChatId) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg._id === updatedMessage._id ? updatedMessage : msg,
+          ),
+        );
+      }
+    };
+
+    const handleMessageEdited = (updatedMessage) => {
+      const activeChat = selectedChatRef.current;
+      const incomingChatId = (
+        updatedMessage.chat?._id || updatedMessage.chat
+      )?.toString();
+
+      if (activeChat && activeChat._id.toString() === incomingChatId) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg._id === updatedMessage._id ? updatedMessage : msg,
+          ),
+        );
       }
       refreshChats();
     };
 
+    const handleMessagesRead = ({ chatId, userId }) => {
+      const activeChat = selectedChatRef.current;
+      const targetChatId = (activeChat?._id || activeChat)?.toString();
+
+      if (targetChatId === chatId?.toString()) {
+        const userIdStr = userId?.toString();
+        setMessages((prev) =>
+          prev.map((msg) => {
+            const alreadyRead = msg.readBy?.some(
+              (id) => (id._id || id).toString() === userIdStr,
+            );
+            if (!alreadyRead) {
+              return { ...msg, readBy: [...(msg.readBy || []), userId] };
+            }
+            return msg;
+          }),
+        );
+      }
+    };
+
+    const handleChatDeleted = ({ chatId }) => {
+      setSocketDeletedChatId(chatId);
+      refreshChats();
+    };
+
+    const handleTyping = ({ chatId, userId }) => {
+      const activeChat = selectedChatRef.current;
+      if (
+        activeChat &&
+        activeChat._id.toString() === chatId?.toString() &&
+        userId?.toString() !== myIdStr
+      ) {
+        setIsTyping(true);
+      }
+    };
+
+    const handleStopTyping = ({ chatId, userId }) => {
+      const activeChat = selectedChatRef.current;
+      if (
+        activeChat &&
+        activeChat._id.toString() === chatId?.toString() &&
+        userId?.toString() !== myIdStr
+      ) {
+        setIsTyping(false);
+      }
+    };
+
     socket.on("message received", handleMessageReceived);
-    socket.on("typing", () => setIsTyping(true));
-    socket.on("stop typing", () => setIsTyping(false));
+    socket.on("message reaction", handleMessageReaction);
+    socket.on("message edited", handleMessageEdited);
+    socket.on("messages read", handleMessagesRead);
+    socket.on("chat deleted", handleChatDeleted);
+    socket.on("typing", handleTyping);
+    socket.on("stop typing", handleStopTyping);
 
     return () => {
       socket.off("message received", handleMessageReceived);
-      socket.off("typing");
-      socket.off("stop typing");
+      socket.off("message reaction", handleMessageReaction);
+      socket.off("message edited", handleMessageEdited);
+      socket.off("messages read", handleMessagesRead);
+      socket.off("chat deleted", handleChatDeleted);
+      socket.off("typing", handleTyping);
+      socket.off("stop typing", handleStopTyping);
     };
-  }, [selectedChat]);
+  }, [socket, currentUser, scrollToBottom]);
 
-  const handleSendMessage = async (e) => {
-    if ((e.key === "Enter" || e.type === "click") && newMessage.trim()) {
-      if (socket && selectedChat) {
-        socket.emit("stop typing", selectedChat._id);
-      }
-      const messageContent = newMessage;
-      setNewMessage("");
+  const handleConfirmDeleteChat = async () => {
+    if (!selectedChat) return;
 
-      try {
-        const { data } = await API.post("/api/message", {
-          content: messageContent,
+    const myId = currentUser?._id || currentUser?.id || currentUser?.userId;
+    const isGroup = selectedChat.isGroupChat;
+    const isAdmin =
+      isGroup &&
+      (selectedChat.groupAdmin?._id || selectedChat.groupAdmin)?.toString() ===
+        myId?.toString();
+
+    try {
+      if (isGroup && !isAdmin) {
+        await API.put("/api/chat/groupremove", {
           chatId: selectedChat._id,
+          userId: myId,
         });
-
+      } else {
+        const { data } = await API.delete(`/api/chat/${selectedChat._id}`);
         if (socket) {
-          socket.emit("new message", data);
+          socket.emit("chat deleted", {
+            chatId: selectedChat._id,
+            usersToNotify: data.usersToNotify,
+          });
         }
-        setMessages((prev) => [...prev, data]);
-        scrollToBottom();
-        refreshChats();
-      } catch (err) {
-        console.error("Error sending message:", err);
       }
+
+      setChats((prev) => prev.filter((c) => c._id !== selectedChat._id));
+      setSelectedChat(null);
+      setMessages([]);
+      setIsDeleteChatModalOpen(false);
+    } catch (err) {
+      console.error("Error deleting/leaving chat:", err);
     }
   };
 
-  const handleTyping = (e) => {
+  const getChatSender = (users) => {
+    if (!users || users.length === 0) return null;
+    const myId = currentUser?._id || currentUser?.id || currentUser?.userId;
+    const partner = users.find((u) => {
+      const uId = u._id || u.id || u;
+      return uId?.toString() !== myId?.toString();
+    });
+    return partner || users[0];
+  };
+
+  const partnerUser =
+    selectedChat && !selectedChat.isGroupChat
+      ? getChatSender(selectedChat.users)
+      : null;
+  const partnerUsername = partnerUser?.username || "user";
+  const partnerIdStr = (
+    partnerUser?._id ||
+    partnerUser?.id ||
+    partnerUser
+  )?.toString();
+  const rawPresence = onlineUsers?.[partnerIdStr];
+  const isUserOnline = Boolean(rawPresence);
+  const myId = currentUser?._id || currentUser?.id || currentUser?.userId;
+  const myIdStr = myId?.toString();
+
+  const isChatDeletedByPartner = Boolean(
+    selectedChat &&
+    !selectedChat.isGroupChat &&
+    (selectedChat.deletedFor?.some(
+      (id) => (id._id || id).toString() === partnerIdStr,
+    ) ||
+      socketDeletedChatId === selectedChat._id),
+  );
+
+  const handleSendMessage = async (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    if (
+      isChatDeletedByPartner ||
+      !newMessage.trim() ||
+      !selectedChat ||
+      !currentUser
+    ) {
+      return;
+    }
+
+    if (socket && selectedChat && myIdStr) {
+      socket.emit("stop typing", { chatId: selectedChat._id, userId: myIdStr });
+    }
+
+    const messageContent = newMessage.trim();
+    setNewMessage("");
+
+    if (!myId) {
+      console.error("Could not determine current user ID for sending.");
+      return;
+    }
+
+    const tempId = "temp-" + Date.now();
+
+    const optimisticMessage = {
+      _id: tempId,
+      stableKey: tempId,
+      content: messageContent,
+      sender: {
+        _id: myId,
+        username: currentUser?.username,
+        avatar: currentUser?.avatar,
+      },
+      chat: selectedChat,
+      createdAt: new Date().toISOString(),
+      readBy: [myId],
+      reactions: [],
+      isSending: true,
+    };
+
+    setMessages((prev) => [...prev, optimisticMessage]);
+    requestAnimationFrame(() => scrollToBottom(true));
+
+    try {
+      const { data } = await API.post("/api/message", {
+        content: messageContent,
+        chatId: selectedChat._id,
+      });
+
+      if (socket) {
+        socket.emit("new message", data);
+      }
+
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg._id === tempId
+            ? { ...data, stableKey: tempId, isSending: false }
+            : msg,
+        ),
+      );
+
+      setChats((prevChats) =>
+        prevChats.map((c) =>
+          c._id === selectedChat._id ? { ...c, latestMessage: data } : c,
+        ),
+      );
+    } catch (err) {
+      console.error("Error sending message:", err);
+      setMessages((prev) => prev.filter((msg) => msg._id !== tempId));
+    }
+  };
+
+  const handleInputKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage(e);
+    }
+  };
+
+  const handleStartEdit = useCallback((msg) => {
+    setEditingMessageId(msg._id);
+    setEditingContent(msg.content);
+  }, []);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingMessageId(null);
+    setEditingContent("");
+  }, []);
+
+  const handleSaveEdit = useCallback(
+    async (msgId) => {
+      const newText = editingContent.trim();
+      if (!newText) return;
+
+      let previousMessage = null;
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (msg._id === msgId) {
+            previousMessage = msg;
+            return { ...msg, content: newText, isEdited: true };
+          }
+          return msg;
+        }),
+      );
+      setEditingMessageId(null);
+
+      try {
+        const { data } = await API.put(`/api/message/${msgId}`, {
+          content: newText,
+        });
+        setMessages((prev) =>
+          prev.map((msg) => (msg._id === msgId ? data : msg)),
+        );
+        if (socket) socket.emit("message edited", data);
+        refreshChats();
+      } catch (err) {
+        console.error("Error editing message:", err);
+        if (previousMessage) {
+          setMessages((prev) =>
+            prev.map((msg) => (msg._id === msgId ? previousMessage : msg)),
+          );
+        }
+      }
+    },
+    [editingContent, socket],
+  );
+
+  const handleDeleteMessage = useCallback(
+    async (msgId) => {
+      let previousMessagesState = [];
+      setMessages((prev) => {
+        previousMessagesState = prev;
+        return prev.map((msg) => {
+          if (msg._id === msgId) {
+            return {
+              ...msg,
+              isDeleted: true,
+              content: "This message was deleted",
+            };
+          }
+          return msg;
+        });
+      });
+
+      try {
+        const { data } = await API.delete(`/api/message/${msgId}`);
+        if (data.isHardDelete) {
+          setMessages((prev) => prev.filter((msg) => msg._id !== msgId));
+        } else {
+          setMessages((prev) =>
+            prev.map((msg) => (msg._id === msgId ? data.message : msg)),
+          );
+        }
+        if (socket) socket.emit("message deleted", data);
+        refreshChats();
+      } catch (err) {
+        console.error("Error deleting message:", err);
+        setMessages(previousMessagesState);
+      }
+    },
+    [socket],
+  );
+
+  const handleToggleReaction = useCallback(
+    async (msgId, emoji) => {
+      const currentMyIdStr =
+        currentUser?._id || currentUser?.id || currentUser?.userId;
+      if (!currentMyIdStr) return;
+
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) => {
+          if (msg._id !== msgId) return msg;
+          let reactions = msg.reactions
+            ? JSON.parse(JSON.stringify(msg.reactions))
+            : [];
+          const targetGroup = reactions.find((r) => r.emoji === emoji);
+          const hasMyReaction = targetGroup?.users?.some(
+            (uId) => (uId._id || uId).toString() === currentMyIdStr.toString(),
+          );
+
+          reactions = reactions
+            .map((r) => ({
+              ...r,
+              users: r.users.filter(
+                (uId) =>
+                  (uId._id || uId).toString() !== currentMyIdStr.toString(),
+              ),
+            }))
+            .filter((r) => r.users.length > 0);
+
+          if (!hasMyReaction) {
+            const existingGroup = reactions.find((r) => r.emoji === emoji);
+            if (existingGroup) {
+              existingGroup.users.push(currentMyIdStr);
+            } else {
+              reactions.push({ emoji, users: [currentMyIdStr] });
+            }
+          }
+
+          return { ...msg, reactions };
+        }),
+      );
+
+      try {
+        const { data } = await API.put(`/api/message/react/${msgId}`, {
+          emoji,
+        });
+        setMessages((prev) =>
+          prev.map((msg) => (msg._id === msgId ? data : msg)),
+        );
+        if (socket) socket.emit("message reaction", data);
+      } catch (err) {
+        console.error("Error toggling reaction:", err);
+        refreshChats();
+      }
+    },
+    [currentUser, socket],
+  );
+
+  const handleTypingInput = (e) => {
     setNewMessage(e.target.value);
+    if (!socket || !selectedChat || !myIdStr) return;
 
-    if (!socket || !selectedChat) return;
-
-    socket.emit("typing", selectedChat._id);
+    socket.emit("typing", { chatId: selectedChat._id, userId: myIdStr });
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-
     typingTimeoutRef.current = setTimeout(() => {
       if (socket && selectedChat) {
-        socket.emit("stop typing", selectedChat._id);
+        socket.emit("stop typing", {
+          chatId: selectedChat._id,
+          userId: myIdStr,
+        });
       }
     }, 2000);
   };
@@ -194,8 +1314,7 @@ const MessagesPage = () => {
     setIsGroupModalOpen(true);
     try {
       const { data } = await API.get("/api/users/search/all");
-      const myId = currentUser?._id || currentUser?.id || currentUser?.userId;
-      setAllUsers(data.filter((u) => u._id?.toString() !== myId?.toString()));
+      setAllUsers(data.filter((u) => u._id?.toString() !== myIdStr));
     } catch (err) {
       console.error("Error fetching users for group:", err);
     }
@@ -211,15 +1330,13 @@ const MessagesPage = () => {
 
   const handleCreateGroup = async () => {
     if (!groupName.trim() || selectedGroupUsers.length < 2) return;
-
     try {
       const { data } = await API.post("/api/chat/group", {
         name: groupName,
         users: JSON.stringify(selectedGroupUsers),
       });
-
       setChats((prev) => [data, ...prev]);
-      setSelectedChat(data);
+      handleSelectChat(data);
       setIsGroupModalOpen(false);
       setGroupName("");
       setSelectedGroupUsers([]);
@@ -228,25 +1345,81 @@ const MessagesPage = () => {
     }
   };
 
-  const getChatSender = (users) => {
-    if (!users || users.length === 0) return null;
-
-    const myId = currentUser?._id || currentUser?.id || currentUser?.userId;
-
-    const partner = users.find((u) => {
-      const uId = u._id || u.id || u;
-      return uId?.toString() !== myId?.toString();
-    });
-
-    return partner || users[0];
+  const getProfileLink = (targetUsername) => {
+    const myUsername = currentUser?.username || getLoggedInUsername();
+    if (!targetUsername) return "/profile";
+    if (
+      myUsername &&
+      myUsername.toLowerCase() === targetUsername.toLowerCase()
+    ) {
+      return "/profile";
+    }
+    return `/user/${targetUsername}`;
   };
+
+  const isGroup = selectedChat?.isGroupChat;
+  const isGroupAdmin =
+    isGroup &&
+    (selectedChat.groupAdmin?._id || selectedChat.groupAdmin)?.toString() ===
+      myIdStr;
+
+  const filteredChats = chats.filter((chat) => {
+    if (!sidebarSearch.trim()) return true;
+    const query = sidebarSearch.toLowerCase();
+    if (chat.isGroupChat) {
+      return chat.chatName?.toLowerCase().includes(query);
+    } else {
+      const partner = getChatSender(chat.users);
+      return (
+        partner?.username?.toLowerCase().includes(query) ||
+        partner?.fullName?.toLowerCase().includes(query)
+      );
+    }
+  });
+
+  const filteredGlobalUsers = allGlobalUsers.filter((u) => {
+    if (!sidebarSearch.trim()) return false;
+    if (u._id?.toString() === myIdStr) return false;
+    const query = sidebarSearch.toLowerCase();
+    const matchesQuery =
+      u.username?.toLowerCase().includes(query) ||
+      u.fullName?.toLowerCase().includes(query);
+
+    const alreadyHasChat = chats.some(
+      (c) =>
+        !c.isGroupChat &&
+        c.users.some(
+          (chatUser) =>
+            (chatUser._id || chatUser).toString() === u._id?.toString(),
+        ),
+    );
+
+    return matchesQuery && !alreadyHasChat;
+  });
+
+  const recipientIdsSet = useMemo(() => {
+    if (!selectedChat?.users || !myIdStr) return new Set();
+    const set = new Set();
+    selectedChat.users.forEach((u) => {
+      const idStr = (u._id || u.id || u).toString();
+      if (idStr !== myIdStr) {
+        set.add(idStr);
+      }
+    });
+    return set;
+  }, [selectedChat, myIdStr]);
 
   return (
     <div className={styles.container}>
-      <div className={styles.sidebar}>
+      <PageHeader backTo="/dashboard" />
+
+      <div
+        className={`${styles.sidebar} ${selectedChat ? styles.hideMobile : ""}`}
+      >
         <div className={styles.sidebarHeader}>
           <h2>Messages</h2>
           <button
+            type="button"
             className={styles.newGroupBtn}
             onClick={handleOpenGroupModal}
             title="New Group Chat"
@@ -255,129 +1428,467 @@ const MessagesPage = () => {
           </button>
         </div>
 
-        <div className={styles.chatList}>
-          {loadingChats ? (
-            <div className={styles.loader}>Loading chats...</div>
-          ) : chats.length === 0 ? (
-            <div className={styles.emptyChats}>No chats yet</div>
-          ) : (
-            chats.map((chat) => {
-              const partner = !chat.isGroupChat
-                ? getChatSender(chat.users)
-                : null;
-              const isSelected = selectedChat?._id === chat._id;
-
-              return (
-                <div
-                  key={chat._id}
-                  className={`${styles.chatItem} ${isSelected ? styles.selectedChatItem : ""}`}
-                  onClick={() => setSelectedChat(chat)}
-                >
-                  <div className={styles.avatarWrapper}>
-                    {chat.isGroupChat ? (
-                      <div className={styles.groupAvatar}>👥</div>
-                    ) : (
-                      <Avatar user={partner} size={48} />
-                    )}
-                  </div>
-                  <div className={styles.chatInfo}>
-                    <span className={styles.chatName}>
-                      {chat.isGroupChat ? chat.chatName : partner?.username}
-                    </span>
-                    <span className={styles.latestMsg}>
-                      {chat.latestMessage
-                        ? `${chat.latestMessage.sender?.username || "User"}: ${chat.latestMessage.content}`
-                        : "No messages yet"}
-                    </span>
-                  </div>
-                </div>
-              );
-            })
-          )}
+        <div className={styles.sidebarSearchWrapper}>
+          <div className={styles.sidebarSearchPill}>
+            <svg
+              viewBox="0 0 24 24"
+              className={styles.searchIconSvg}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search chats or users..."
+              value={sidebarSearch}
+              onChange={(e) => setSidebarSearch(e.target.value)}
+              className={styles.sidebarSearchInput}
+            />
+            {sidebarSearch && (
+              <button
+                type="button"
+                className={styles.clearSearchBtn}
+                onClick={() => setSidebarSearch("")}
+                title="Clear"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
-      </div>
 
-      <div className={styles.chatWindow}>
-        {selectedChat ? (
-          <>
-            <div className={styles.chatHeader}>
-              <div className={styles.headerPartner}>
-                {selectedChat.isGroupChat ? (
-                  <div className={styles.groupAvatar}>👥</div>
-                ) : (
-                  <Avatar user={getChatSender(selectedChat.users)} size={40} />
-                )}
-                <div>
-                  <h3>
-                    {selectedChat.isGroupChat
-                      ? selectedChat.chatName
-                      : getChatSender(selectedChat.users)?.username}
-                  </h3>
-                  {selectedChat.isGroupChat && (
-                    <span className={styles.groupMembersCount}>
-                      {selectedChat.users.length} members
-                    </span>
-                  )}
+        <div className={styles.chatListContainer}>
+          <div className={styles.chatList}>
+            {loadingChats || isSearchingUsers ? (
+              [1, 2, 3, 4, 5].map((n) => (
+                <div key={n} className={styles.skeletonChatItem}>
+                  <div
+                    className={`${styles.skeletonAvatarCircle} ${styles.skeletonPulse}`}
+                  />
+                  <div className={styles.skeletonChatInfo}>
+                    <div
+                      className={`${styles.skeletonUsernameLine} ${styles.skeletonPulse}`}
+                    />
+                    <div
+                      className={`${styles.skeletonSubtextLine} ${styles.skeletonPulse}`}
+                    />
+                  </div>
                 </div>
+              ))
+            ) : filteredChats.length === 0 &&
+              filteredGlobalUsers.length === 0 ? (
+              <div className={styles.emptyChats}>
+                <svg
+                  viewBox="0 0 24 24"
+                  className={styles.emptyChatsSvg}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                <span>
+                  {sidebarSearch
+                    ? "No matching chats or users"
+                    : "No chats yet"}
+                </span>
               </div>
-            </div>
+            ) : (
+              <>
+                {filteredChats.map((chat) => {
+                  const partner = !chat.isGroupChat
+                    ? getChatSender(chat.users)
+                    : null;
+                  const partnerId = (
+                    partner?._id ||
+                    partner?.id ||
+                    partner
+                  )?.toString();
 
-            <div className={styles.messagesContainer}>
-              {loadingMessages ? (
-                <div className={styles.loader}>Loading history...</div>
-              ) : (
-                messages.map((msg) => {
-                  const myId =
-                    currentUser?._id || currentUser?.id || currentUser?.userId;
-                  const msgSenderId = msg.sender?._id || msg.sender;
+                  const isPartnerDeleted =
+                    !chat.isGroupChat &&
+                    (chat.deletedFor?.some(
+                      (id) => (id._id || id).toString() === partnerId,
+                    ) ||
+                      socketDeletedChatId === chat._id);
 
-                  const isMyMessage =
-                    msgSenderId?.toString() === myId?.toString();
+                  const isSelected = selectedChat?._id === chat._id;
+                  const unreadCount = unreadCounts[chat._id] || 0;
+                  const hasUnread = !isSelected && unreadCount > 0;
 
                   return (
                     <div
-                      key={msg._id}
-                      className={`${styles.messageBubble} ${
-                        isMyMessage ? styles.myMessage : styles.theirMessage
-                      }`}
+                      key={chat._id}
+                      className={`${styles.chatItem} ${isSelected ? styles.selectedChatItem : ""} ${
+                        hasUnread ? styles.unreadChatItem : ""
+                      } ${isPartnerDeleted ? styles.partnerDeletedItem : ""}`}
+                      onClick={() => {
+                        handleSelectChat(chat);
+                        handleClosePortalAnimated();
+                      }}
                     >
-                      {!isMyMessage && selectedChat.isGroupChat && (
-                        <span className={styles.senderName}>
-                          {msg.sender?.username}
+                      <div className={styles.avatarWrapper}>
+                        {chat.isGroupChat ? (
+                          <div className={styles.groupAvatar}>👥</div>
+                        ) : (
+                          <Avatar user={partner} size={42} />
+                        )}
+                      </div>
+
+                      <div className={styles.chatInfo}>
+                        <div className={styles.chatNameRow}>
+                          <span className={styles.chatName}>
+                            {chat.isGroupChat
+                              ? chat.chatName
+                              : partner?.username}
+                          </span>
+                          {isPartnerDeleted && (
+                            <span
+                              className={styles.closedBadge}
+                              title="Partner closed this chat"
+                            >
+                              Closed
+                            </span>
+                          )}
+                        </div>
+                        <span className={styles.latestMsg}>
+                          {chat.latestMessage
+                            ? `${chat.latestMessage.sender?.username || "User"}: ${chat.latestMessage.content}`
+                            : "No messages yet"}
                         </span>
+                      </div>
+
+                      {hasUnread && (
+                        <div key={unreadCount} className={styles.unreadBadge}>
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </div>
                       )}
-                      <p className={styles.messageContent}>{msg.content}</p>
                     </div>
+                  );
+                })}
+
+                {filteredGlobalUsers.length > 0 && (
+                  <div className={styles.globalSearchSection}>
+                    <span className={styles.globalSearchTitle}>
+                      New Contacts
+                    </span>
+                    {filteredGlobalUsers.map((u) => (
+                      <div
+                        key={u._id}
+                        className={styles.globalUserItem}
+                        onClick={() => handleStartDirectChat(u._id)}
+                      >
+                        <Avatar user={u} size={38} />
+                        <div className={styles.globalUserInfo}>
+                          <span className={styles.globalUsername}>
+                            {u.username}
+                          </span>
+                          {u.fullName && (
+                            <span className={styles.globalFullName}>
+                              {u.fullName}
+                            </span>
+                          )}
+                        </div>
+                        <span className={styles.startChatPill}>Chat</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div
+        className={`${styles.chatWindow} ${!selectedChat ? styles.hideMobile : styles.showMobile}`}
+      >
+        {selectedChat ? (
+          <>
+            <div className={styles.chatHeader}>
+              <button
+                type="button"
+                className={styles.backBtn}
+                onClick={() => {
+                  setSelectedChat(null);
+                  setIsTyping(false);
+                  setEditingMessageId(null);
+                  setEditingContent("");
+                  handleClosePortalAnimated();
+                }}
+                title="Back to chats"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                >
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              </button>
+
+              <div className={styles.userInfo}>
+                {selectedChat.isGroupChat ? (
+                  <div className={styles.authorBadgeStatic}>
+                    <div className={styles.groupAvatarHeader}>👥</div>
+                    <span className={styles.username}>
+                      {selectedChat.chatName}
+                    </span>
+                  </div>
+                ) : (
+                  <Link
+                    to={getProfileLink(partnerUsername)}
+                    className={styles.authorBadge}
+                  >
+                    <Avatar user={partnerUser} size={36} />
+                    <span className={styles.username}>{partnerUsername}</span>
+                  </Link>
+                )}
+
+                <div className={styles.userMeta}>
+                  <span className={styles.dot}>•</span>
+                  {isTyping ? (
+                    <div className={styles.avatarTypingBadge}>
+                      <span className={styles.typingBadgeText}>typing</span>
+                      <div className={styles.typingDots}>
+                        <span className={styles.dotWave}></span>
+                        <span className={styles.dotWave}></span>
+                        <span className={styles.dotWave}></span>
+                      </div>
+                    </div>
+                  ) : selectedChat.isGroupChat ? (
+                    <span
+                      className={styles.statusText}
+                    >{`${selectedChat.users.length} members`}</span>
+                  ) : (
+                    <HeaderStatusTextSwitcher
+                      statusKey={
+                        isUserOnline
+                          ? rawPresence?.status || "online"
+                          : "offline"
+                      }
+                      isUserOnline={isUserOnline}
+                    />
+                  )}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className={styles.deleteChatHeaderBtn}
+                onClick={() => setIsDeleteChatModalOpen(true)}
+                title={
+                  isGroup
+                    ? isGroupAdmin
+                      ? "Delete Group"
+                      : "Leave Group"
+                    : "Delete Chat"
+                }
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="20"
+                  height="20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+              </button>
+            </div>
+
+            <div
+              ref={messagesContainerRef}
+              className={styles.messagesContainer}
+              onClick={() => handleClosePortalAnimated()}
+            >
+              {loadingMessages ? (
+                [1, 2, 3, 4].map((item) => (
+                  <div
+                    key={item}
+                    className={`${styles.messageRow} ${item % 2 === 0 ? styles.myRow : styles.theirRow}`}
+                  >
+                    <div
+                      className={`${styles.skeletonMessageBubble} ${styles.skeletonPulse}`}
+                      style={{ width: "160px" }}
+                    />
+                  </div>
+                ))
+              ) : messages.length === 0 ? (
+                <div className={styles.emptyConversation}>
+                  <div className={styles.emptyConversationIcon}>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      width="48"
+                      height="48"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M10.05 4.575a1.575 1.575 0 1 0-3.15 0v3m3.15-3v-1.5a1.575 1.575 0 0 1 3.15 0v1.5m-3.15 0 .075 5.925m3.075.75V4.575m0 0a1.575 1.575 0 0 1 3.15 0V15M6.9 7.575a1.575 1.575 0 1 0-3.15 0v8.175a6.75 6.75 0 0 0 6.75 6.75h2.018a5.25 5.25 0 0 0 3.712-1.538l1.732-1.732a5.25 5.25 0 0 0 1.538-3.712l.003-2.024a.668.668 0 0 1 .198-.471 1.575 1.575 0 1 0-2.228-2.228 3.818 3.818 0 0 0-1.12 2.687M6.9 7.575V12m6.27 4.318A4.49 4.49 0 0 1 16.35 15m.002 0h-.002"
+                      />
+                    </svg>
+                  </div>
+                  <h4>No messages here yet</h4>
+                  <p>Send a message to start the conversation!</p>
+                </div>
+              ) : (
+                messages.map((msg, index) => {
+                  const msgSenderId = msg.sender?._id || msg.sender;
+                  const isMyMessage = msgSenderId?.toString() === myIdStr;
+                  const isEditing = editingMessageId === msg._id;
+                  const isDeleted = msg.isDeleted;
+
+                  const isRead =
+                    msg.readBy?.some((readId) =>
+                      recipientIdsSet.has((readId._id || readId).toString()),
+                    ) || false;
+
+                  const isActive = activeActionId === msg._id;
+                  const isClosing = closingActionId === msg._id;
+                  const itemKey = msg.stableKey || msg._id;
+
+                  const currentDateFormatted = formatMessageDateDivider(
+                    msg.createdAt,
+                  );
+                  const prevMsgDateFormatted =
+                    index > 0
+                      ? formatMessageDateDivider(messages[index - 1].createdAt)
+                      : null;
+
+                  const showDateDivider =
+                    currentDateFormatted &&
+                    currentDateFormatted !== prevMsgDateFormatted;
+
+                  return (
+                    <Fragment key={itemKey}>
+                      {showDateDivider && (
+                        <div className={styles.dateDividerWrapper}>
+                          <span className={styles.dateDividerBubble}>
+                            {currentDateFormatted}
+                          </span>
+                        </div>
+                      )}
+
+                      <div
+                        className={`${styles.messageRow} ${isMyMessage ? styles.myRow : styles.theirRow}`}
+                      >
+                        <MessageItem
+                          msg={{ ...msg, myIdStr }}
+                          isMyMessage={isMyMessage}
+                          isEditing={isEditing}
+                          isDeleted={isDeleted}
+                          isRead={isRead}
+                          isActive={isActive}
+                          isClosing={isClosing}
+                          editingContent={editingContent}
+                          setEditingContent={setEditingContent}
+                          onSaveEdit={handleSaveEdit}
+                          onCancelEdit={handleCancelEdit}
+                          onStartEdit={handleStartEdit}
+                          onDeleteMessage={handleDeleteMessage}
+                          onToggleReaction={handleToggleReaction}
+                          onTriggerClick={(id) => {
+                            if (activeActionId === id) {
+                              handleClosePortalAnimated();
+                            } else if (activeActionId) {
+                              handleClosePortalAnimated(() =>
+                                setActiveActionId(id),
+                              );
+                            } else {
+                              setActiveActionId(id);
+                            }
+                          }}
+                          onClosePortalAnimated={handleClosePortalAnimated}
+                          selectedChat={selectedChat}
+                        />
+                      </div>
+                    </Fragment>
                   );
                 })
               )}
-              {isTyping && (
-                <div className={styles.typingIndicator}>typing...</div>
-              )}
-              <div ref={messagesEndRef} />
             </div>
 
-            <div className={styles.inputContainer}>
-              <input
-                type="text"
-                placeholder="Write a message..."
-                value={newMessage}
-                onChange={handleTyping}
-                onKeyDown={handleSendMessage}
-                className={styles.messageInput}
-              />
-              <button
-                onClick={handleSendMessage}
-                className={styles.sendButton}
-                disabled={!newMessage.trim()}
-              >
-                Send
-              </button>
-            </div>
+            {isChatDeletedByPartner ? (
+              <div className={styles.deletedNoticeBanner}>
+                <svg
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <span>
+                  The other user has deleted this chat. Messages are kept for
+                  your safety.
+                </span>
+              </div>
+            ) : (
+              <form className={styles.inputFooter} onSubmit={handleSendMessage}>
+                <div className={styles.inputPill}>
+                  <input
+                    type="text"
+                    placeholder="Write a message..."
+                    value={newMessage}
+                    onChange={handleTypingInput}
+                    onKeyDown={handleInputKeyDown}
+                    className={styles.commentInput}
+                  />
+                  <button
+                    type="submit"
+                    className={styles.sendBtn}
+                    disabled={!newMessage.trim()}
+                  >
+                    Send
+                  </button>
+                </div>
+              </form>
+            )}
           </>
         ) : (
           <div className={styles.noChatSelected}>
-            <div className={styles.chatIconPlaceholder}>💬</div>
+            <div className={styles.chatIconPlaceholder}>
+              <svg
+                viewBox="0 0 24 24"
+                width="48"
+                height="48"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                <circle cx="9" cy="12" r="1" fill="currentColor" />
+                <circle cx="12" cy="12" r="1" fill="currentColor" />
+                <circle cx="15" cy="12" r="1" fill="currentColor" />
+              </svg>
+            </div>
             <h3>Your Messages</h3>
             <p>Send private messages or create a group chat with friends.</p>
           </div>
@@ -393,64 +1904,148 @@ const MessagesPage = () => {
             className={styles.modalContent}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3>Create Group Chat</h3>
-            <input
-              type="text"
-              placeholder="Group Name"
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              className={styles.modalInput}
-            />
+            <div className={styles.modalHeader}>
+              <h3>Create Group Chat</h3>
+              <button
+                type="button"
+                className={styles.closeModalBtn}
+                onClick={() => setIsGroupModalOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
 
-            <input
-              type="text"
-              placeholder="Search users..."
-              value={searchUserQuery}
-              onChange={(e) => setSearchUserQuery(e.target.value)}
-              className={styles.modalInput}
-            />
+            <div className={styles.modalInputsWrapper}>
+              <input
+                type="text"
+                placeholder="Group Name"
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+                className={styles.modalInput}
+              />
+              <input
+                type="text"
+                placeholder="Search users..."
+                value={searchUserQuery}
+                onChange={(e) => setSearchUserQuery(e.target.value)}
+                className={styles.modalInput}
+              />
+            </div>
 
-            <div className={styles.userSelectionList}>
-              {allUsers
-                .filter((u) =>
-                  u.username
-                    .toLowerCase()
-                    .includes(searchUserQuery.toLowerCase()),
-                )
-                .map((u) => {
-                  const isSelected = selectedGroupUsers.includes(u._id);
-                  return (
-                    <div
-                      key={u._id}
-                      className={`${styles.userSelectItem} ${isSelected ? styles.selectedUserItem : ""}`}
-                      onClick={() => toggleSelectUserForGroup(u._id)}
-                    >
-                      <Avatar user={u} size={36} />
-                      <span>{u.username}</span>
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        readOnly
-                        className={styles.checkbox}
-                      />
-                    </div>
-                  );
-                })}
+            <div className={styles.userSelectionContainer}>
+              <span className={styles.selectTitle}>Select Members</span>
+              <div className={styles.userSelectionList}>
+                {allUsers
+                  .filter((u) =>
+                    u.username
+                      .toLowerCase()
+                      .includes(searchUserQuery.toLowerCase()),
+                  )
+                  .map((u, idx) => {
+                    const isSelected = selectedGroupUsers.includes(u._id);
+                    return (
+                      <div
+                        key={u._id}
+                        className={`${styles.userSelectItem} ${isSelected ? styles.selectedUserItem : ""}`}
+                        style={{ "--stagger-index": idx }}
+                        onClick={() => toggleSelectUserForGroup(u._id)}
+                      >
+                        <Avatar user={u} size={36} />
+                        <span className={styles.selectUsername}>
+                          {u.username}
+                        </span>
+                        <div
+                          className={`${styles.customCheckbox} ${isSelected ? styles.checkboxChecked : ""}`}
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            className={styles.checkboxCheckmark}
+                          >
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
             </div>
 
             <div className={styles.modalActions}>
               <button
+                type="button"
                 className={styles.cancelBtn}
                 onClick={() => setIsGroupModalOpen(false)}
               >
                 Cancel
               </button>
               <button
+                type="button"
                 className={styles.createBtn}
                 onClick={handleCreateGroup}
                 disabled={!groupName.trim() || selectedGroupUsers.length < 2}
               >
                 Create Group
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isDeleteChatModalOpen && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setIsDeleteChatModalOpen(false)}
+        >
+          <div
+            className={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <h3>
+                {isGroup
+                  ? isGroupAdmin
+                    ? "Delete Group Chat"
+                    : "Leave Group Chat"
+                  : "Delete Chat"}
+              </h3>
+              <button
+                type="button"
+                className={styles.closeModalBtn}
+                onClick={() => setIsDeleteChatModalOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <p
+              style={{
+                color: "var(--text-secondary)",
+                margin: "16px 0 24px 0",
+                fontSize: "14px",
+              }}
+            >
+              {isGroup
+                ? isGroupAdmin
+                  ? "Are you sure you want to delete this group? All messages and data will be permanently removed for everyone."
+                  : "Are you sure you want to leave this group chat?"
+                : "Are you sure you want to delete this conversation for yourself?"}
+            </p>
+
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.cancelBtn}
+                onClick={() => setIsDeleteChatModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.createBtn}
+                style={{ backgroundColor: "#ed4956" }}
+                onClick={handleConfirmDeleteChat}
+              >
+                {isGroup ? (isGroupAdmin ? "Delete" : "Leave") : "Delete"}
               </button>
             </div>
           </div>

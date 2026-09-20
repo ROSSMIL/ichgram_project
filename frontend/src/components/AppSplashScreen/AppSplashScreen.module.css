@@ -1,0 +1,166 @@
+@import url("https://fonts.googleapis.com/css2?family=Bagel+Fat+One&display=swap");
+
+.splashContainer {
+  position: fixed;
+  inset: 0;
+  z-index: 9999999;
+  background-color: var(--bg-main, #0f0f11);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  opacity: 1;
+  transition:
+    opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.splashLeaving {
+  opacity: 0;
+  transform: scale(1.04);
+  pointer-events: none;
+}
+
+.testBadge {
+  position: absolute;
+  top: 20px;
+  background: #ff3b30;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 20px;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 12px rgba(255, 59, 48, 0.4);
+  z-index: 100;
+}
+
+.centerContent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.orbitLogoWrapper {
+  position: relative;
+  width: 260px;
+  height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ambientGlow {
+  position: absolute;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: var(--text-primary, #ffffff);
+  opacity: 0.12;
+  filter: blur(40px);
+  pointer-events: none;
+  animation: pulseGlow 3s ease-in-out infinite alternate;
+}
+
+@keyframes pulseGlow {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.08;
+  }
+  100% {
+    transform: scale(1.25);
+    opacity: 0.18;
+  }
+}
+
+.lettersContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orbitChar {
+  position: absolute;
+  font-family: "Bagel Fat One", cursive, sans-serif;
+  font-size: 38px;
+  font-weight: 400;
+  color: var(--text-primary, #ffffff);
+  user-select: none;
+  will-change: transform, opacity, filter;
+  text-shadow: 0 4px 18px rgba(255, 255, 255, 0.15);
+
+  animation: seamlessLogoMorph 7s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+}
+
+@keyframes seamlessLogoMorph {
+  0% {
+    transform: translate(var(--x-offset), 0px) rotate(0deg) scale(1);
+    filter: blur(0px);
+  }
+
+  18% {
+    transform: translate(var(--x-offset), -3px) rotate(0deg) scale(1.02);
+  }
+  28% {
+    transform: translate(var(--x-offset), 0px) rotate(0deg) scale(1);
+  }
+
+  40% {
+    transform: rotate(var(--angle)) translateY(-55px)
+      rotate(calc(-1 * var(--angle))) scale(0.95);
+  }
+
+  70% {
+    transform: rotate(calc(var(--angle) + 360deg)) translateY(-55px)
+      rotate(calc(-1 * (var(--angle) + 360deg))) scale(0.95);
+  }
+
+  82% {
+    transform: translate(var(--x-offset), 0px) rotate(0deg) scale(1);
+    filter: blur(0px);
+  }
+  100% {
+    transform: translate(var(--x-offset), 0px) rotate(0deg) scale(1);
+  }
+}
+
+.cornerHintsWrapper {
+  position: absolute;
+  bottom: 28px;
+  right: 28px;
+  width: 100%;
+  max-width: 340px;
+  z-index: 10;
+  animation: fadeInHint 0.4s ease-out forwards;
+}
+
+@keyframes fadeInHint {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 600px) {
+  .orbitChar {
+    font-size: 30px;
+  }
+
+  .cornerHintsWrapper {
+    bottom: 20px;
+    right: 50%;
+    transform: translateX(50%);
+    width: calc(100% - 40px);
+    max-width: 360px;
+  }
+}

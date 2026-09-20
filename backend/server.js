@@ -12,6 +12,7 @@ import userRoutes from "./src/routes/userRoutes.js";
 import postRoutes from "./src/routes/postRoutes.js";
 import chatRoutes from "./src/routes/chatRoutes.js";
 import messageRoutes from "./src/routes/messageRoutes.js";
+import notificationRoutes from "./src/routes/notificationRoutes.js";
 
 const app = express();
 const PORT = process.env.PORT || 3333;
@@ -50,6 +51,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/message", messageRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.get("/", (req, res) => {
   res.send("API is running smoothly with ES Modules & Socket.io...");
@@ -59,55 +61,142 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: (origin, callback) => {
-      if (
-        !origin ||
-        allowedOrigins.includes(origin) ||
-        process.env.NODE_ENV !== "production"
-      ) {
-        callback(null, true);
-      } else {
-        callback(null, true);
-      }
-    },
+    origin: ["http://localhost:5173", process.env.CLIENT_URL].filter(Boolean),
+    methods: ["GET", "POST"],
     credentials: true,
   },
 });
+
+app.set("io", io);
+
+const activeUsers = new Map();
 
 io.on("connection", (socket) => {
   console.log(`Connected to socket.io: ${socket.id}`);
 
   socket.on("setup", (userData) => {
-    socket.join(userData._id);
-    console.log(`User ${userData.username} (${userData._id}) setup completed`);
+    if (userData?._id) {
+      const userId = userData._id.toString();
+      socket.join(userId);
+      socket.userId = userId;
+
+      activeUsers.set(userId, {
+        socketId: socket.id,
+        username: userData.username,
+        status: "Online 🟢",
+        updatedAt: new Date(),
+      });
+
+      io.emit("presence update", Object.fromEntries(activeUsers));
+      console.log(
+        `User ${userData.username} (${userId}) connected & marked online`,
+      );
+    }
     socket.emit("connected");
   });
 
-  socket.on("join chat", (room) => {
-    socket.join(room);
-    console.log(`User joined Room/Chat: ${room}`);
+  socket.on("change activity", ({ userId, activity }) => {
+    if (!userId) return;
+    const key = userId.toString();
+    const existing = activeUsers.get(key);
+
+    if (existing) {
+      activeUsers.set(key, {
+        ...existing,
+        status: activity,
+        updatedAt: new Date(),
+      });
+      io.emit("presence update", Object.fromEntries(activeUsers));
+    }
   });
 
-  socket.on("typing", (room) => socket.in(room).emit("typing"));
-  socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
+  socket.on("join chat", (room) => {
+    if (room) {
+      socket.join(room.toString());
+    }
+  });
+
+  socket.on("typing", ({ chatId, userId }) => {
+    if (chatId) {
+      socket.to(chatId.toString()).emit("typing", { chatId, userId });
+    }
+  });
+
+  socket.on("stop typing", ({ chatId, userId }) => {
+    if (chatId) {
+      socket.to(chatId.toString()).emit("stop typing", { chatId, userId });
+    }
+  });
 
   socket.on("new message", (newMessageReceived) => {
-    const chat = newMessageReceived.chat;
+    const chat = newMessageReceived?.chat;
+    if (!chat) return;
 
-    if (!chat || !chat.users) {
-      return console.log("chat.users not defined");
+    const chatId = (chat._id || chat).toString();
+    const senderId = (
+      newMessageReceived.sender?._id || newMessageReceived.sender
+    )?.toString();
+
+    socket.in(chatId).emit("message received", newMessageReceived);
+
+    if (chat.users && Array.isArray(chat.users)) {
+      chat.users.forEach((user) => {
+        const userId = (user._id || user).toString();
+        const userSocket = io.sockets.sockets.get(
+          activeUsers.get(userId)?.socketId,
+        );
+        if (
+          userId !== senderId &&
+          userSocket &&
+          !userSocket.rooms.has(chatId)
+        ) {
+          socket.in(userId).emit("message received", newMessageReceived);
+        }
+      });
     }
-
-    chat.users.forEach((user) => {
-      if (user._id === newMessageReceived.sender._id) return;
-
-      socket.in(user._id).emit("message received", newMessageReceived);
-    });
   });
 
-  socket.off("setup", () => {
-    console.log("USER DISCONNECTED");
-    socket.leave(userData._id);
+  socket.on("message reaction", (updatedMessage) => {
+    const chat = updatedMessage?.chat;
+    if (!chat) return;
+    const chatId = (chat._id || chat).toString();
+    socket.in(chatId).emit("message reaction", updatedMessage);
+  });
+
+  socket.on("message edited", (updatedMessage) => {
+    const chat = updatedMessage?.chat;
+    if (!chat) return;
+    socket
+      .in((chat._id || chat).toString())
+      .emit("message edited", updatedMessage);
+  });
+
+  socket.on("message deleted", (deleteData) => {
+    const chatId = (deleteData.chatId?._id || deleteData.chatId)?.toString();
+    if (!chatId) return;
+    socket.in(chatId).emit("message deleted", deleteData);
+  });
+
+  socket.on("messages read", ({ chatId, userId }) => {
+    if (chatId) {
+      socket.in(chatId.toString()).emit("messages read", { chatId, userId });
+    }
+  });
+
+  socket.on("chat deleted", ({ chatId, usersToNotify }) => {
+    if (usersToNotify && Array.isArray(usersToNotify)) {
+      usersToNotify.forEach((userId) => {
+        io.to(userId.toString()).emit("chat deleted", { chatId });
+      });
+    }
+  });
+
+  socket.on("disconnect", () => {
+    if (socket.userId && activeUsers.has(socket.userId)) {
+      activeUsers.delete(socket.userId);
+      io.emit("presence update", Object.fromEntries(activeUsers));
+      console.log(`User ${socket.userId} disconnected & removed from presence`);
+    }
   });
 });
 

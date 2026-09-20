@@ -41,13 +41,20 @@ export const accessChat = async (req, res) => {
     });
 
     if (isChat.length > 0) {
-      return res.status(200).json(isChat[0]);
+      const existingChat = isChat[0];
+      if (existingChat.deletedFor?.includes(currentUserId)) {
+        await Chat.findByIdAndUpdate(existingChat._id, {
+          $pull: { deletedFor: currentUserId },
+        });
+      }
+      return res.status(200).json(existingChat);
     }
 
     const chatData = {
       chatName: "sender",
       isGroupChat: false,
       users: [currentUserId, userId],
+      deletedFor: [],
     };
 
     const createdChat = await Chat.create(chatData);
@@ -72,6 +79,7 @@ export const fetchChats = async (req, res) => {
   try {
     let chats = await Chat.find({
       users: { $elemMatch: { $eq: currentUserId } },
+      deletedFor: { $ne: currentUserId },
     })
       .populate("users", "-password")
       .populate("groupAdmin", "-password")
@@ -115,6 +123,7 @@ export const createGroupChat = async (req, res) => {
       users: users,
       isGroupChat: true,
       groupAdmin: currentUserId,
+      deletedFor: [],
     });
 
     const fullGroupChat = await Chat.findOne({ _id: groupChat._id })
@@ -129,8 +138,18 @@ export const createGroupChat = async (req, res) => {
 
 export const renameGroup = async (req, res) => {
   const { chatId, chatName } = req.body;
+  const currentUserId = getUserId(req);
 
   try {
+    const chat = await Chat.findById(chatId);
+    if (!chat) return res.status(404).json({ message: "Chat Not Found" });
+
+    if (chat.groupAdmin.toString() !== currentUserId.toString()) {
+      return res
+        .status(403)
+        .json({ message: "Only admins can rename the group" });
+    }
+
     const updatedChat = await Chat.findByIdAndUpdate(
       chatId,
       { chatName: chatName },
@@ -138,10 +157,6 @@ export const renameGroup = async (req, res) => {
     )
       .populate("users", "-password")
       .populate("groupAdmin", "-password");
-
-    if (!updatedChat) {
-      return res.status(404).json({ message: "Chat Not Found" });
-    }
 
     res.status(200).json(updatedChat);
   } catch (error) {
@@ -151,19 +166,26 @@ export const renameGroup = async (req, res) => {
 
 export const addToGroup = async (req, res) => {
   const { chatId, userId } = req.body;
+  const currentUserId = getUserId(req);
 
   try {
+    const chat = await Chat.findById(chatId);
+    if (!chat) return res.status(404).json({ message: "Chat Not Found" });
+
+    if (chat.groupAdmin.toString() !== currentUserId.toString()) {
+      return res.status(403).json({ message: "Only admins can add members" });
+    }
+
     const added = await Chat.findByIdAndUpdate(
       chatId,
-      { $push: { users: userId } },
+      {
+        $addToSet: { users: userId },
+        $pull: { deletedFor: userId },
+      },
       { new: true },
     )
       .populate("users", "-password")
       .populate("groupAdmin", "-password");
-
-    if (!added) {
-      return res.status(404).json({ message: "Chat Not Found" });
-    }
 
     res.status(200).json(added);
   } catch (error) {
@@ -173,8 +195,21 @@ export const addToGroup = async (req, res) => {
 
 export const removeFromGroup = async (req, res) => {
   const { chatId, userId } = req.body;
+  const currentUserId = getUserId(req);
 
   try {
+    const chat = await Chat.findById(chatId);
+    if (!chat) return res.status(404).json({ message: "Chat Not Found" });
+
+    if (
+      userId !== currentUserId.toString() &&
+      chat.groupAdmin.toString() !== currentUserId.toString()
+    ) {
+      return res
+        .status(403)
+        .json({ message: "Only admins can remove members" });
+    }
+
     const removed = await Chat.findByIdAndUpdate(
       chatId,
       { $pull: { users: userId } },
@@ -183,11 +218,62 @@ export const removeFromGroup = async (req, res) => {
       .populate("users", "-password")
       .populate("groupAdmin", "-password");
 
-    if (!removed) {
-      return res.status(404).json({ message: "Chat Not Found" });
+    res.status(200).json(removed);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const deleteChat = async (req, res) => {
+  const { chatId } = req.params;
+  const currentUserId = getUserId(req);
+
+  try {
+    const chat = await Chat.findById(chatId);
+    if (!chat) {
+      return res.status(404).json({ message: "Chat not found" });
     }
 
-    res.status(200).json(removed);
+    if (chat.isGroupChat) {
+      if (chat.groupAdmin.toString() !== currentUserId.toString()) {
+        return res
+          .status(403)
+          .json({ message: "Only group admin can delete this group" });
+      }
+      await Chat.findByIdAndDelete(chatId);
+      const usersToNotify = chat.users.map((u) => u.toString());
+      return res.status(200).json({
+        message: "Group deleted successfully",
+        chatId,
+        usersToNotify,
+      });
+    }
+
+    const updatedChat = await Chat.findByIdAndUpdate(
+      chatId,
+      { $addToSet: { deletedFor: currentUserId } },
+      { new: true },
+    );
+
+    const allUsersDeleted = chat.users.every((uId) =>
+      updatedChat.deletedFor.some(
+        (delId) => delId.toString() === uId.toString(),
+      ),
+    );
+
+    if (allUsersDeleted) {
+      await Chat.findByIdAndDelete(chatId);
+    }
+
+    const usersToNotify = chat.users
+      .map((u) => u.toString())
+      .filter((uId) => uId !== currentUserId.toString());
+
+    res.status(200).json({
+      message: "Chat deleted for you successfully",
+      chatId,
+      usersToNotify,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

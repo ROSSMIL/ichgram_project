@@ -10,26 +10,64 @@ export const createImage = (url) =>
 export default async function getCroppedImg(imageSrc, pixelCrop) {
   const image = await createImage(imageSrc);
   const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
 
   if (!ctx) {
     return null;
   }
 
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
+  const cropX = pixelCrop?.x ?? 0;
+  const cropY = pixelCrop?.y ?? 0;
+  const cropWidth = pixelCrop?.width || image.naturalWidth;
+  const cropHeight = pixelCrop?.height || image.naturalHeight;
+
+  const MAX_SIZE = 1920;
+  let targetWidth = cropWidth;
+  let targetHeight = cropHeight;
+
+  if (targetWidth > MAX_SIZE || targetHeight > MAX_SIZE) {
+    if (targetWidth > targetHeight) {
+      targetHeight = Math.round((targetHeight * MAX_SIZE) / targetWidth);
+      targetWidth = MAX_SIZE;
+    } else {
+      targetWidth = Math.round((targetWidth * MAX_SIZE) / targetHeight);
+      targetHeight = MAX_SIZE;
+    }
+  }
+
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ctx.drawImage(
     image,
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height,
+    cropX,
+    cropY,
+    cropWidth,
+    cropHeight,
     0,
     0,
-    pixelCrop.width,
-    pixelCrop.height,
+    targetWidth,
+    targetHeight,
   );
 
-  return canvas.toDataURL("image/jpeg", 0.92);
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error("Canvas is empty"));
+          return;
+        }
+        const reader = new FileReader();
+        reader.readAsDataURL(blob);
+        reader.onloadend = () => {
+          resolve(reader.result);
+        };
+      },
+      "image/jpeg",
+      0.88,
+    );
+  });
 }

@@ -23,6 +23,25 @@ const messageSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    reactions: [
+      {
+        emoji: { type: String, required: true },
+        users: [
+          {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+          },
+        ],
+      },
+    ],
+    isEdited: {
+      type: Boolean,
+      default: false,
+    },
+    editedAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true },
 );
