@@ -1,6 +1,7 @@
 import User from "../models/userModel.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import seedDatabase from "../config/seeder.js";
 
 export const register = async (req, res) => {
@@ -133,22 +134,35 @@ export const login = async (req, res) => {
 
 export const guestLogin = async (req, res) => {
   try {
-    let guestUser = await User.findOne({ email: "guest@example.com" });
+    const { guestDeviceId } = req.body;
+    const deviceId = guestDeviceId || crypto.randomUUID();
+
+    let guestUser = await User.findOne({ guestDeviceId: deviceId });
 
     if (!guestUser) {
-      console.log("Guest account not found. Re-seeding database...");
-      await seedDatabase();
-      guestUser = await User.findOne({ email: "guest@example.com" });
-    }
+      const uniqueSuffix = crypto.randomBytes(3).toString("hex");
+      const guestUsername = `guest_${uniqueSuffix}`;
+      const guestEmail = `guest_${uniqueSuffix}@ichgram.guest`;
 
-    if (!guestUser) {
-      return res
-        .status(404)
-        .json({ message: "Guest account could not be initialized." });
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash("GuestPassword123!", salt);
+
+      guestUser = new User({
+        email: guestEmail,
+        username: guestUsername,
+        fullName: `Guest Explorer`,
+        password: hashedPassword,
+        isGuest: true,
+        guestDeviceId: deviceId,
+        avatar:
+          "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
+        bio: "Hello! I am exploring ICHGRAM as a guest user.",
+      });
+
+      await guestUser.save();
     }
 
     const jwtSecret = process.env.JWT_SECRET;
-
     const token = jwt.sign(
       { userId: guestUser._id, username: guestUser.username },
       jwtSecret,
@@ -157,12 +171,14 @@ export const guestLogin = async (req, res) => {
 
     return res.status(200).json({
       token,
+      guestDeviceId: deviceId,
       user: {
         id: guestUser._id,
         email: guestUser.email,
         fullName: guestUser.fullName,
         username: guestUser.username,
         avatar: guestUser.avatar,
+        isGuest: guestUser.isGuest,
       },
     });
   } catch (error) {

@@ -29,6 +29,15 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    isGuest: {
+      type: Boolean,
+      default: false,
+    },
+    guestDeviceId: {
+      type: String,
+      default: null,
+      index: true,
+    },
     postsCount: { type: Number, default: 0 },
     followers: [
       {

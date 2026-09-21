@@ -1,16 +1,17 @@
 import User from "../models/userModel.js";
 import { uploadToCloudinary } from "../middlewares/uploadMiddleware.js";
 import Post from "../models/postModel.js";
-import { resetGuestAccount } from "../config/seeder.js";
 import Notification from "../models/notificationModel.js";
-import { SEEDED_EMAILS, resetSeededAccount } from "../config/seeder.js";
+import {
+  SEEDED_EMAILS,
+  resetSeededAccount,
+  resetGuestAccount,
+} from "../config/seeder.js";
+import { v2 as cloudinary } from "cloudinary";
 
 export const getProfile = async (req, res) => {
   try {
     const userId = req.user?.userId || req.user?.id || req.user?._id;
-
-    console.log("=== GET PROFILE DEBUG ===");
-    console.log("Id extracted from token:", userId);
 
     if (!userId) {
       return res
@@ -64,7 +65,7 @@ export const editProfile = async (req, res) => {
           .status(400)
           .json({ message: "This username is already taken" });
       }
-      user.username = username;
+      user.username = username.toLowerCase();
     }
 
     if (website !== undefined) user.website = website;
@@ -86,15 +87,11 @@ export const editProfile = async (req, res) => {
     res.status(500).json({ message: "Server error during profile update" });
   }
 };
+
 export const getUserByUsername = async (req, res) => {
   try {
     const { username } = req.params;
     const currentUserId = req.user?.userId || req.user?.id || req.user?._id;
-
-    console.log(`=== GET USER BY USERNAME DEBUG ===`);
-    console.log(
-      `Searching for username: ${username}, Request by: ${currentUserId}`,
-    );
 
     const targetUser = await User.findOne({
       username: username.toLowerCase(),
@@ -277,6 +274,21 @@ export const getFollowing = async (req, res) => {
   }
 };
 
+const deleteCloudinaryImage = async (imageUrl) => {
+  if (!imageUrl || !imageUrl.includes("cloudinary.com")) return;
+  try {
+    const parts = imageUrl.split("/");
+    const filenameWithExt = parts.pop();
+    const folder = parts.pop();
+    const publicId = `${folder}/${filenameWithExt.split(".")[0]}`;
+
+    await cloudinary.uploader.destroy(publicId);
+    console.log(`Deleted Cloudinary asset: ${publicId}`);
+  } catch (err) {
+    console.error("Cloudinary cleanup error:", err);
+  }
+};
+
 export const deleteProfile = async (req, res) => {
   try {
     const userId = req.user?.userId || req.user?.id || req.user?._id;
@@ -293,9 +305,7 @@ export const deleteProfile = async (req, res) => {
     }
 
     if (user.email === "guest@example.com") {
-      console.log("=== GUEST PROFILE RESET TRIGGERED ===");
       await resetGuestAccount();
-
       return res.status(200).json({
         message: "Guest account reset to factory settings successfully",
         isGuestReset: true,
@@ -303,16 +313,27 @@ export const deleteProfile = async (req, res) => {
     }
 
     if (SEEDED_EMAILS.includes(user.email.toLowerCase())) {
-      console.log(`=== SEEDED ACCOUNT RESET TRIGGERED: ${user.email} ===`);
       await resetSeededAccount(user.email);
-
       return res.status(200).json({
         message: "Seed account reset to factory settings successfully",
         isSeededReset: true,
       });
     }
 
-    console.log(`=== DELETING REAL USER: ${user.username} ===`);
+    console.log(
+      `=== DELETING UNIQUE USER & CLEANING CLOUDINARY: ${user.username} ===`,
+    );
+
+    if (user.avatar) {
+      await deleteCloudinaryImage(user.avatar);
+    }
+
+    const userPosts = await Post.find({ user: userId });
+    for (const post of userPosts) {
+      if (post.image) {
+        await deleteCloudinaryImage(post.image);
+      }
+    }
 
     await Post.deleteMany({ user: userId });
     await Post.updateMany({}, { $pull: { comments: { user: userId } } });
@@ -327,10 +348,14 @@ export const deleteProfile = async (req, res) => {
       { $pull: { following: userId } },
     );
 
+    await Notification.deleteMany({
+      $or: [{ recipient: userId }, { sender: userId }],
+    });
+
     await User.findByIdAndDelete(userId);
 
     res.status(200).json({
-      message: "Profile deleted successfully",
+      message: "Profile and all associated data deleted successfully",
       isGuestReset: false,
       isSeededReset: false,
     });

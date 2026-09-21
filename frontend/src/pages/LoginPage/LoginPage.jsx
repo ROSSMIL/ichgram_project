@@ -71,11 +71,23 @@ const LoginPage = () => {
     setError("");
     try {
       setIsGuestLoading(true);
+      let guestDeviceId = localStorage.getItem("guest_device_id");
+      if (!guestDeviceId) {
+        guestDeviceId = crypto.randomUUID
+          ? crypto.randomUUID()
+          : `device_${Math.random().toString(36).substring(2, 11)}_${Date.now()}`;
+        localStorage.setItem("guest_device_id", guestDeviceId);
+      }
 
-      const response = await API.post("/api/auth/guest-login");
+      const response = await API.post("/api/auth/guest-login", {
+        guestDeviceId,
+      });
 
       if (response.status === 200) {
         localStorage.setItem("token", response.data.token);
+        if (response.data.guestDeviceId) {
+          localStorage.setItem("guest_device_id", response.data.guestDeviceId);
+        }
         navigate("/dashboard");
       }
     } catch (err) {
