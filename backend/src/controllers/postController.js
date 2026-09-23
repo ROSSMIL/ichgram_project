@@ -119,6 +119,8 @@ export const updatePost = async (req, res) => {
       post.caption = caption;
     }
 
+    post.isEdited = true;
+
     await post.save();
 
     const populatedPost = await Post.findById(post._id)

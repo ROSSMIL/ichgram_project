@@ -26,6 +26,7 @@ import useAutoLogout from "./hooks/useAutoLogout";
 import MessagesPage from "./pages/MessagesPage/MessagesPage";
 import { SocketProvider } from "./context/SocketContext.jsx";
 import AppSplashScreen from "./components/AppSplashScreen/AppSplashScreen";
+import ScrollToTopButton from "./components/ScrollToTopButton/ScrollToTopButton";
 import API from "./api/axios";
 import "./App.css";
 
@@ -36,7 +37,17 @@ const ScrollToTop = () => {
     if ("scrollRestoration" in window.history) {
       window.history.scrollRestoration = "manual";
     }
+
     window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+
+    const mainContent =
+      document.querySelector(".app-content") || document.querySelector("main");
+
+    if (mainContent) {
+      mainContent.scrollTop = 0;
+    }
   }, [pathname]);
 
   return null;
@@ -54,10 +65,12 @@ const ProtectedRoute = ({ children }) => {
   useEffect(() => {
     const handleOpenEdit = (e) => {
       setEditingPost(e.detail);
+
       setIsCreateModalOpen(true);
     };
 
     window.addEventListener("openEditPost", handleOpenEdit);
+
     return () => {
       window.removeEventListener("openEditPost", handleOpenEdit);
     };
@@ -65,11 +78,13 @@ const ProtectedRoute = ({ children }) => {
 
   const openCreateModal = () => {
     setEditingPost(null);
+
     setIsCreateModalOpen(true);
   };
 
   const closeCreateModal = () => {
     setIsCreateModalOpen(false);
+
     setEditingPost(null);
   };
 
@@ -81,11 +96,13 @@ const ProtectedRoute = ({ children }) => {
 
   const toggleSearch = () => {
     setIsNotificationsOpen(false);
+
     setIsSearchOpen((prev) => !prev);
   };
 
   const toggleNotifications = () => {
     setIsSearchOpen(false);
+
     setIsNotificationsOpen((prev) => !prev);
   };
 
@@ -103,6 +120,7 @@ const ProtectedRoute = ({ children }) => {
           isNotificationsOpen={isNotificationsOpen}
           openCreateModal={openCreateModal}
         />
+
         <ActivityWidget />
       </div>
 
@@ -134,15 +152,18 @@ const ProtectedRoute = ({ children }) => {
         editingPost={editingPost}
         onPostUpdated={handlePostUpdated}
       />
+      <ScrollToTopButton />
     </div>
   );
 };
 
 const PublicOnlyRoute = ({ children }) => {
   const token = localStorage.getItem("token");
+
   if (token) {
     return <Navigate to="/dashboard" replace />;
   }
+
   return children;
 };
 
@@ -152,6 +173,7 @@ function App() {
   useEffect(() => {
     const checkServerHealth = async () => {
       const token = localStorage.getItem("token");
+
       const minDisplayTime = new Promise((resolve) =>
         setTimeout(resolve, 1200),
       );
@@ -166,6 +188,7 @@ function App() {
         console.warn("Server warmup check finished or unauthenticated:", e);
       } finally {
         await minDisplayTime;
+
         setIsAppReady(true);
       }
     };
@@ -179,6 +202,7 @@ function App() {
         <AppSplashScreen isFinished={isAppReady} />
 
         <ScrollToTop />
+
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
@@ -190,6 +214,7 @@ function App() {
               </PublicOnlyRoute>
             }
           />
+
           <Route
             path="/register"
             element={

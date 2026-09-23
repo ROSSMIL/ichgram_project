@@ -44,6 +44,7 @@
   max-width: 580px;
   margin: 48px auto 20px auto;
   position: relative;
+  z-index: 10;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -61,6 +62,7 @@
   opacity: 0;
   filter: blur(10px);
   transform: translateY(32px) scale(0.96);
+  pointer-events: none;
 
   will-change: opacity, filter, transform, border-color, box-shadow;
   transition:
@@ -75,6 +77,7 @@
   opacity: 1;
   filter: blur(0px);
   transform: translateY(0) scale(1);
+  pointer-events: auto !important;
 }
 
 .allCaughtUp.caughtUpVisible:hover {
@@ -134,6 +137,9 @@
 }
 
 .caughtUpScrollBtn {
+  position: relative;
+  z-index: 15;
+  pointer-events: auto !important;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -324,7 +330,8 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 900;
+  z-index: 9999;
+  pointer-events: none;
 
   backface-visibility: hidden;
   -webkit-font-smoothing: subpixel-antialiased;
@@ -356,9 +363,10 @@
 }
 
 .showScrollBtn {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0) translateZ(0);
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: translateY(0) translateZ(0) !important;
 }
 
 @media (max-width: 768px) {
@@ -368,4 +376,107 @@
     width: 42px;
     height: 42px;
   }
+}
+
+.serverErrorCard {
+  width: 100%;
+  max-width: 470px;
+  margin: 40px auto;
+  padding: 36px 28px;
+  background: var(--bg-card, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+  animation: cardFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.serverErrorIconWrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: rgba(255, 149, 0, 0.12);
+  color: #ff9500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(255, 149, 0, 0.15);
+  animation: pulseWrench 3s ease-in-out infinite alternate;
+}
+
+@keyframes pulseWrench {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(-10deg) scale(1.05);
+  }
+  100% {
+    transform: rotate(10deg) scale(1);
+  }
+}
+
+.serverErrorTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary, #ffffff);
+  margin-bottom: 10px;
+  letter-spacing: -0.3px;
+}
+
+.serverErrorSubtitle {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-secondary, #a0a0a0);
+  margin-bottom: 24px;
+  max-width: 380px;
+}
+
+.retryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  background: var(--text-primary, #ffffff);
+  color: var(--bg-main, #0f0f11);
+  border: none;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.retryBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.25);
+  opacity: 0.95;
+}
+
+.retryBtn:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.retryBtn svg {
+  transition: transform 0.4s ease;
+}
+
+.retryBtn:hover svg {
+  transform: rotate(180deg);
 }

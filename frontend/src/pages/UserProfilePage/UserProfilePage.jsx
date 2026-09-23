@@ -17,6 +17,8 @@ import Avatar from "../../components/Avatar/Avatar";
 import AvatarViewModal from "../../components/AvatarViewModal/AvatarViewModal";
 import PageHeader from "../../components/PageHeader/PageHeader";
 
+import { saveToRecentlyViewed } from "../../utils/recentlyViewed.js";
+
 const renderActivityStatus = (statusKey) => {
   const iconProps = {
     width: 13,
@@ -428,6 +430,8 @@ const UserProfilePage = () => {
         }
 
         setUser(userData);
+        saveToRecentlyViewed(userData);
+
         setIsFollowing(userData.isFollowing || false);
         setFollowersCount(userData.followersCount || 0);
         setFollowingCount(userData.followingCount || 0);
@@ -455,12 +459,18 @@ const UserProfilePage = () => {
       const token = localStorage.getItem("token");
       if (!token) return navigate("/login");
 
-      await API.post(
+      const { data } = await API.post(
         "/api/chat",
         { userId: user._id },
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      navigate("/messages");
+
+      navigate("/messages", {
+        state: {
+          openChatId: data._id,
+          partnerId: user._id,
+        },
+      });
     } catch (err) {
       console.error("Error opening chat with user:", err);
     }

@@ -2,7 +2,7 @@ import axios from "axios";
 
 const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:3333",
-  timeout: 60000, // 60s timeout for Render cold start
+  timeout: 60000, 
 });
 
 API.interceptors.request.use((config) => {
@@ -19,7 +19,9 @@ API.interceptors.response.use(
     const originalRequest = error.config;
 
     if (
-      (error.code === "ECONNABORTED" || !error.response) &&
+      (error.code === "ECONNABORTED" ||
+        !error.response ||
+        error.code === "ERR_NETWORK") &&
       !originalRequest._retry
     ) {
       originalRequest._retry = true;
@@ -37,6 +39,7 @@ API.interceptors.response.use(
         window.location.href = "/login";
       }
     }
+
     return Promise.reject(error);
   },
 );

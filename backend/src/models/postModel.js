@@ -46,6 +46,11 @@ const postSchema = new mongoose.Schema(
       },
     ],
     comments: [commentSchema],
+
+    isEdited: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

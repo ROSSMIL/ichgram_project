@@ -11,6 +11,7 @@ import {
 import PropTypes from "prop-types";
 import { Link, useLocation } from "react-router-dom";
 import { useSocket } from "../../context/useSocket.js";
+import { createPortal } from "react-dom";
 import API from "../../api/axios.js";
 import Avatar from "../../components/Avatar/Avatar";
 import PageHeader from "../../components/PageHeader/PageHeader";
@@ -22,9 +23,7 @@ const formatMessageDateDivider = (dateString) => {
   if (!dateString) return "";
   const msgDate = new Date(dateString);
   const now = new Date();
-
   const isToday = msgDate.toDateString() === now.toDateString();
-
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
   const isYesterday = msgDate.toDateString() === yesterday.toDateString();
@@ -121,6 +120,7 @@ const InlineMessageMenu = memo(
     isMyMessage,
     msg,
     isClosing,
+    triggerRef,
     onToggleReaction,
     onStartEdit,
     onDeleteMessage,
@@ -129,11 +129,41 @@ const InlineMessageMenu = memo(
     const [activeTab, setActiveTab] = useState(
       isMyMessage ? "actions" : "reactions",
     );
+    const [coords, setCoords] = useState({ top: 0, left: 0, showAbove: true });
+    const menuRef = useRef(null);
 
-    return (
+    useLayoutEffect(() => {
+      if (!triggerRef?.current) return;
+
+      const triggerRect = triggerRef.current.getBoundingClientRect();
+      const menuHeight = menuRef.current?.offsetHeight || 110;
+      const menuWidth = menuRef.current?.offsetWidth || 250;
+
+      const spaceAbove = triggerRect.top;
+      const showAbove = spaceAbove > menuHeight + 30;
+
+      let top = showAbove
+        ? triggerRect.top - menuHeight - 10
+        : triggerRect.bottom + 10;
+
+      let left = isMyMessage ? triggerRect.right - menuWidth : triggerRect.left;
+
+      left = Math.max(12, Math.min(left, window.innerWidth - menuWidth - 12));
+
+      setCoords({ top, left, showAbove });
+    }, [triggerRef, isMyMessage]);
+
+    const menuContent = (
       <div
+        ref={menuRef}
+        style={{
+          position: "fixed",
+          top: `${coords.top}px`,
+          left: `${coords.left}px`,
+          zIndex: 9999,
+        }}
         className={`${styles.inlineMenuPopover} ${
-          isMyMessage ? styles.menuRight : styles.menuLeft
+          coords.showAbove ? styles.popAbove : styles.popBelow
         } ${isClosing ? styles.menuClosing : ""}`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -151,14 +181,18 @@ const InlineMessageMenu = memo(
               />
               <button
                 type="button"
-                className={`${styles.switchTab} ${activeTab === "actions" ? styles.activeTab : ""}`}
+                className={`${styles.switchTab} ${
+                  activeTab === "actions" ? styles.activeTab : ""
+                }`}
                 onClick={() => setActiveTab("actions")}
               >
                 Actions
               </button>
               <button
                 type="button"
-                className={`${styles.switchTab} ${activeTab === "reactions" ? styles.activeTab : ""}`}
+                className={`${styles.switchTab} ${
+                  activeTab === "reactions" ? styles.activeTab : ""
+                }`}
                 onClick={() => setActiveTab("reactions")}
               >
                 Reactions
@@ -177,11 +211,14 @@ const InlineMessageMenu = memo(
                         (uId) => (uId._id || uId).toString() === msg.myIdStr,
                       ),
                   );
+
                   return (
                     <button
                       key={emoji}
                       type="button"
-                      className={`${styles.emojiPickerBtn} ${hasReacted ? styles.activeEmojiBtn : ""}`}
+                      className={`${styles.emojiPickerBtn} ${
+                        hasReacted ? styles.activeEmojiBtn : ""
+                      }`}
                       style={{ "--emoji-idx": idx }}
                       onClick={() =>
                         onCloseAnimated(() => onToggleReaction(msg._id, emoji))
@@ -223,9 +260,7 @@ const InlineMessageMenu = memo(
                 <button
                   type="button"
                   className={`${styles.actionBtnWithLabel} ${styles.deleteActionBtn}`}
-                  onClick={() =>
-                    onCloseAnimated(() => onDeleteMessage(msg._id))
-                  }
+                  onClick={() => onCloseAnimated(() => onDeleteMessage(msg))}
                 >
                   <svg viewBox="0 0 24 24" className={styles.actionIconSvg}>
                     <polyline
@@ -253,6 +288,8 @@ const InlineMessageMenu = memo(
         </div>
       </div>
     );
+
+    return createPortal(menuContent, document.body);
   },
 );
 
@@ -261,6 +298,7 @@ InlineMessageMenu.propTypes = {
   isMyMessage: PropTypes.bool,
   msg: PropTypes.object,
   isClosing: PropTypes.bool,
+  triggerRef: PropTypes.object,
   onToggleReaction: PropTypes.func,
   onStartEdit: PropTypes.func,
   onDeleteMessage: PropTypes.func,
@@ -270,7 +308,6 @@ InlineMessageMenu.propTypes = {
 const HeaderStatusTextSwitcher = memo(({ statusKey, isUserOnline }) => {
   const containerRef = useRef(null);
   const measureRef = useRef(null);
-
   const [delayedStatus, setDelayedStatus] = useState(null);
   const [bubbleWidth, setBubbleWidth] = useState("auto");
 
@@ -399,6 +436,7 @@ HeaderStatusTextSwitcher.propTypes = {
 const getLoggedInUsername = () => {
   const token = localStorage.getItem("token");
   if (!token) return null;
+
   try {
     const payload = JSON.parse(atob(token.split(".")[1]));
     return payload.username;
@@ -429,6 +467,8 @@ const MessageItem = memo(
     selectedChat,
   }) => {
     const itemRef = useRef(null);
+    const textareaRef = useRef(null);
+    const triggerBtnRef = useRef(null);
 
     const formatTime = (dateString) => {
       if (!dateString) return "";
@@ -440,16 +480,32 @@ const MessageItem = memo(
       });
     };
 
+    useEffect(() => {
+      if (isEditing && textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+        textareaRef.current.style.height = `${Math.min(
+          textareaRef.current.scrollHeight,
+          160,
+        )}px`;
+      }
+    }, [isEditing, editingContent]);
+
     return (
       <div
-        className={`${styles.messageOuterContainer} ${isMyMessage ? styles.myOuter : styles.theirOuter}`}
+        className={`${styles.messageOuterContainer} ${
+          isMyMessage ? styles.myOuter : styles.theirOuter
+        }`}
       >
         <div
           ref={itemRef}
-          className={`${styles.messageBubble} ${isMyMessage ? styles.myMessage : styles.theirMessage} ${msg.isSending ? styles.sending : ""} ${isDeleted ? styles.deletedMessage : ""} ${styles.msgPopIn}`}
+          className={`${styles.messageBubble} ${
+            isMyMessage ? styles.myMessage : styles.theirMessage
+          } ${msg.isSending ? styles.sending : ""} ${
+            isDeleted ? styles.deletedMessage : ""
+          } ${isEditing ? styles.editingBubble : ""} ${styles.msgPopIn}`}
           onDoubleClick={(e) => {
             e.stopPropagation();
-            if (!isDeleted) {
+            if (!isDeleted && !isEditing) {
               onToggleReaction(msg._id, "❤️");
             }
           }}
@@ -460,51 +516,127 @@ const MessageItem = memo(
             )}
 
             {isEditing ? (
-              <div className={styles.editForm}>
-                <input
-                  type="text"
+              <div className={styles.luxuryEditContainer}>
+                <div className={styles.editHeaderLabel}>
+                  <svg
+                    viewBox="0 0 24 24"
+                    className={styles.editHeaderIcon}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                  <span>Edit message</span>
+                </div>
+
+                <textarea
+                  ref={textareaRef}
                   value={editingContent}
                   onChange={(e) => setEditingContent(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       onSaveEdit(msg._id);
                     }
-                    if (e.key === "Escape") onCancelEdit();
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      onCancelEdit();
+                    }
                   }}
-                  className={styles.editInput}
+                  className={styles.luxuryEditTextarea}
+                  rows={1}
                   autoFocus
                 />
-                <div className={styles.editActions}>
-                  <button
-                    type="button"
-                    onClick={() => onSaveEdit(msg._id)}
-                    className={styles.saveEditBtn}
-                  >
-                    Save
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onCancelEdit}
-                    className={styles.cancelEditBtn}
-                  >
-                    Cancel
-                  </button>
+
+                <div className={styles.luxuryEditFooter}>
+                  <span className={styles.editHintText}>
+                    Enter to save • Esc to cancel
+                  </span>
+
+                  <div className={styles.luxuryEditActions}>
+                    <button
+                      type="button"
+                      onClick={onCancelEdit}
+                      className={styles.luxuryCancelBtn}
+                      title="Cancel"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="14"
+                        height="14"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => onSaveEdit(msg._id)}
+                      disabled={!editingContent.trim()}
+                      className={styles.luxurySaveBtn}
+                      title="Save changes"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="14"
+                        height="14"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
               <div className={styles.bubbleBody}>
                 <p className={styles.messageContent}>
-                  {isDeleted ? <i>🚫 {msg.content}</i> : msg.content}
+                  {isDeleted ? (
+                    <span className={styles.deletedContentInner}>
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="13"
+                        height="13"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className={styles.deletedIconSvg}
+                      >
+                        <path d="M3 6h18" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                      This message was deleted
+                    </span>
+                  ) : (
+                    msg.content
+                  )}
                 </p>
 
                 <div className={styles.metaWrapper}>
                   {msg.isEdited && !isDeleted && (
                     <span className={styles.editedTag}>(edited)</span>
                   )}
+
                   <span className={styles.messageTime}>
                     {formatTime(msg.createdAt)}
                   </span>
+
                   {isMyMessage && (
                     <CheckmarkIcon isRead={isRead} isSending={msg.isSending} />
                   )}
@@ -512,45 +644,53 @@ const MessageItem = memo(
               </div>
             )}
 
-            {msg.reactions && msg.reactions.length > 0 && !isDeleted && (
-              <div className={styles.reactionsList}>
-                {msg.reactions.map((r) => {
-                  const hasMyReaction = r.users?.some(
-                    (uId) => (uId._id || uId).toString() === msg.myIdStr,
-                  );
-                  const count = r.users?.length || 0;
+            {msg.reactions &&
+              msg.reactions.length > 0 &&
+              !isDeleted &&
+              !isEditing && (
+                <div className={styles.reactionsList}>
+                  {msg.reactions.map((r) => {
+                    const hasMyReaction = r.users?.some(
+                      (uId) => (uId._id || uId).toString() === msg.myIdStr,
+                    );
+                    const count = r.users?.length || 0;
 
-                  return (
-                    <button
-                      key={r.emoji}
-                      type="button"
-                      className={`${styles.reactionBadge} ${hasMyReaction ? styles.myReactionBadge : ""} ${styles.reactionBadgeAnimated}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onToggleReaction(msg._id, r.emoji);
-                      }}
-                      title={`${count} reactions`}
-                    >
-                      <span className={styles.reactionEmoji}>{r.emoji}</span>
-                      <span
-                        key={count}
-                        className={styles.reactionCountAnimated}
+                    return (
+                      <button
+                        key={r.emoji}
+                        type="button"
+                        className={`${styles.reactionBadge} ${
+                          hasMyReaction ? styles.myReactionBadge : ""
+                        } ${styles.reactionBadgeAnimated}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onToggleReaction(msg._id, r.emoji);
+                        }}
+                        title={`${count} reactions`}
                       >
-                        {count}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+                        <span className={styles.reactionEmoji}>{r.emoji}</span>
+                        <span
+                          key={count}
+                          className={styles.reactionCountAnimated}
+                        >
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
           </div>
         </div>
 
-        {!isDeleted && (
+        {!isDeleted && !isEditing && (
           <div className={styles.actionTriggerWrapper}>
             <button
+              ref={triggerBtnRef}
               type="button"
-              className={`${styles.threeDotsCircleBtn} ${isActive ? styles.threeDotsActive : ""}`}
+              className={`${styles.threeDotsCircleBtn} ${
+                isActive ? styles.threeDotsActive : ""
+              }`}
               onClick={(e) => {
                 e.stopPropagation();
                 onTriggerClick(msg._id);
@@ -571,6 +711,7 @@ const MessageItem = memo(
             isMyMessage={isMyMessage}
             msg={msg}
             isClosing={isClosing}
+            triggerRef={triggerBtnRef}
             onToggleReaction={onToggleReaction}
             onStartEdit={onStartEdit}
             onDeleteMessage={onDeleteMessage}
@@ -581,7 +722,6 @@ const MessageItem = memo(
     );
   },
 );
-
 MessageItem.displayName = "MessageItem";
 MessageItem.propTypes = {
   msg: PropTypes.object,
@@ -615,40 +755,56 @@ const MessagesPage = () => {
   const [loadingChats, setLoadingChats] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
-
   const [unreadCounts, setUnreadCounts] = useState({});
   const [socketDeletedChatId, setSocketDeletedChatId] = useState(null);
-
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editingContent, setEditingContent] = useState("");
-
+  const [deletingMessageTarget, setDeletingMessageTarget] = useState(null);
   const [activeActionId, setActiveActionId] = useState(null);
   const [closingActionId, setClosingActionId] = useState(null);
-
   const [sidebarSearch, setSidebarSearch] = useState("");
   const [allGlobalUsers, setAllGlobalUsers] = useState([]);
   const [isSearchingUsers, setIsSearchingUsers] = useState(false);
-
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [groupName, setGroupName] = useState("");
   const [allUsers, setAllUsers] = useState([]);
   const [selectedGroupUsers, setSelectedGroupUsers] = useState([]);
   const [searchUserQuery, setSearchUserQuery] = useState("");
-
   const [isDeleteChatModalOpen, setIsDeleteChatModalOpen] = useState(false);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const [unreadScrollCount, setUnreadScrollCount] = useState(0);
 
   const messagesContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const selectedChatRef = useRef(selectedChat);
   const handledLocationStateRef = useRef(false);
+  const showScrollBottomRef = useRef(showScrollBottom);
+  const messagesEndRef = useRef(null);
+
+  const [isOlderThan15Min, setIsOlderThan15Min] = useState(false);
+
+  useEffect(() => {
+    showScrollBottomRef.current = showScrollBottom;
+  }, [showScrollBottom]);
+
+  const pendingScrollRef = useRef({
+    isMyOwn: false,
+    smooth: false,
+    force: false,
+  });
+
+  const [sessionLastReadMessage, setSessionLastReadMessage] = useState(null);
+  const [isHidingNewMessages, setIsHidingNewMessages] = useState(false);
 
   useEffect(() => {
     selectedChatRef.current = selectedChat;
+
     window.dispatchEvent(
       new CustomEvent("activeChatChanged", {
         detail: { chatId: selectedChat?._id || null },
       }),
     );
+
     return () => {
       window.dispatchEvent(
         new CustomEvent("activeChatChanged", {
@@ -663,6 +819,10 @@ const MessagesPage = () => {
     setIsTyping(false);
     setEditingMessageId(null);
     setEditingContent("");
+    setSessionLastReadMessage(null);
+    setIsHidingNewMessages(false);
+    setShowScrollBottom(false);
+    setUnreadScrollCount(0);
 
     if (chat?._id) {
       setUnreadCounts((prev) => ({
@@ -677,12 +837,14 @@ const MessagesPage = () => {
       try {
         setIsSearchingUsers(true);
         const { data } = await API.post("/api/chat", { userId: targetUserId });
+
         setChats((prev) => {
           if (!prev.some((c) => c._id === data._id)) {
             return [data, ...prev];
           }
           return prev;
         });
+
         handleSelectChat(data);
         setSidebarSearch("");
       } catch (err) {
@@ -700,33 +862,70 @@ const MessagesPage = () => {
         if (actionCallback) actionCallback();
         return null;
       }
+
       setClosingActionId(prevActiveId);
+
       setTimeout(() => {
         if (actionCallback) actionCallback();
         setClosingActionId(null);
       }, 180);
+
       return null;
     });
   }, []);
 
   const scrollToBottom = useCallback(
-    (isMyOwnMessage = false, forceAuto = false) => {
+    (isMyOwnMessage = false, smooth = false, force = false) => {
       if (!messagesContainerRef.current) return;
+
       const container = messagesContainerRef.current;
       const { scrollHeight, clientHeight, scrollTop } = container;
-      const isNearBottom = scrollHeight - scrollTop - clientHeight < 180;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 200;
 
-      if (isMyOwnMessage || isNearBottom || forceAuto) {
-        requestAnimationFrame(() => {
+      if (force || isMyOwnMessage || isNearBottom) {
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({
+            behavior: smooth ? "smooth" : "auto",
+            block: "end",
+          });
+        } else {
           container.scrollTo({
             top: container.scrollHeight,
-            behavior: forceAuto ? "auto" : "smooth",
+            behavior: smooth ? "smooth" : "auto",
           });
-        });
+        }
       }
     },
     [],
   );
+
+  const handleContainerScroll = useCallback(() => {
+    if (!messagesContainerRef.current) return;
+
+    const container = messagesContainerRef.current;
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+
+    if (distanceFromBottom > 220) {
+      setShowScrollBottom(true);
+    } else {
+      setShowScrollBottom(false);
+      setUnreadScrollCount(0);
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    if (messages.length > 0 && !loadingMessages) {
+      const { isMyOwn, smooth, force } = pendingScrollRef.current;
+      scrollToBottom(isMyOwn, smooth, force);
+
+      pendingScrollRef.current = {
+        isMyOwn: false,
+        smooth: false,
+        force: false,
+      };
+    }
+  }, [messages, loadingMessages, scrollToBottom]);
 
   const refreshChats = async () => {
     try {
@@ -756,15 +955,21 @@ const MessagesPage = () => {
 
   useEffect(() => {
     let isMounted = true;
+
     const loadChatsAndUsers = async () => {
       try {
-        const [chatsRes, usersRes] = await Promise.all([
+        const [chatsRes, usersRes, unreadRes] = await Promise.all([
           API.get("/api/chat"),
           API.get("/api/users/search/all"),
+          API.get("/api/notifications/unread-by-chat"),
         ]);
+
         if (isMounted) {
           setChats(chatsRes.data);
           setAllGlobalUsers(usersRes.data);
+          if (unreadRes.data) {
+            setUnreadCounts(unreadRes.data);
+          }
         }
       } catch (err) {
         console.error("Error fetching initial chats or users:", err);
@@ -772,29 +977,45 @@ const MessagesPage = () => {
         if (isMounted) setLoadingChats(false);
       }
     };
+
     loadChatsAndUsers();
+
     return () => {
       isMounted = false;
     };
   }, []);
 
   useEffect(() => {
+    handledLocationStateRef.current = false;
+  }, [location.state]);
+
+  useEffect(() => {
     if (!loadingChats && location.state && !handledLocationStateRef.current) {
       const { openChatId, partnerId } = location.state;
 
-      if (openChatId && chats.length > 0) {
+      const activateAndJoin = (targetChat) => {
+        handledLocationStateRef.current = true;
+        handleSelectChat(targetChat);
+
+        if (socket && targetChat?._id) {
+          socket.emit("join chat", targetChat._id);
+        }
+      };
+
+      if (openChatId) {
         const targetChat = chats.find(
           (c) => c._id.toString() === openChatId.toString(),
         );
+
         if (targetChat) {
-          handledLocationStateRef.current = true;
-          queueMicrotask(() => {
-            handleSelectChat(targetChat);
-          });
+          queueMicrotask(() => activateAndJoin(targetChat));
+          return;
         }
-      } else if (partnerId) {
-        handledLocationStateRef.current = true;
+      }
+
+      if (partnerId) {
         queueMicrotask(() => {
+          handledLocationStateRef.current = true;
           handleStartDirectChat(partnerId);
         });
       }
@@ -805,6 +1026,7 @@ const MessagesPage = () => {
     chats,
     handleSelectChat,
     handleStartDirectChat,
+    socket,
   ]);
 
   useEffect(() => {
@@ -814,10 +1036,11 @@ const MessagesPage = () => {
 
     const loadMessages = async () => {
       setLoadingMessages(true);
+
       try {
         const { data } = await API.get(`/api/message/${selectedChat._id}`);
-        await API.put(`/api/message/mark-read/${selectedChat._id}`);
         const myId = currentUser?._id || currentUser?.id || currentUser?.userId;
+        const myIdStr = myId?.toString();
 
         if (isMounted) {
           setUnreadCounts((prev) => ({
@@ -825,18 +1048,48 @@ const MessagesPage = () => {
             [selectedChat._id]: 0,
           }));
 
+          const firstUnread = data.find((msg) => {
+            const senderId = (msg.sender?._id || msg.sender)?.toString();
+            const isIncoming = senderId !== myIdStr;
+            const isReadByMe = msg.readBy?.some(
+              (id) => (id._id || id).toString() === myIdStr,
+            );
+            return isIncoming && !isReadByMe;
+          });
+
+          if (firstUnread) {
+            setSessionLastReadMessage({
+              id: firstUnread._id,
+              createdAt: new Date(
+                new Date(firstUnread.createdAt).getTime() - 1,
+              ).toISOString(),
+            });
+          } else {
+            setSessionLastReadMessage(null);
+          }
+
           const updatedData = data.map((msg) => {
             const hasMyId = msg.readBy?.some(
               (id) => (id._id || id).toString() === myId?.toString(),
             );
+
             if (!hasMyId && myId) {
               return { ...msg, readBy: [...(msg.readBy || []), myId] };
             }
+
             return msg;
           });
+
+          pendingScrollRef.current = {
+            isMyOwn: false,
+            smooth: false,
+            force: true,
+          };
+
           setMessages(updatedData);
-          requestAnimationFrame(() => scrollToBottom(false, true));
         }
+
+        await API.put(`/api/message/mark-read/${selectedChat._id}`);
 
         if (socket) {
           socket.emit("join chat", selectedChat._id);
@@ -855,10 +1108,11 @@ const MessagesPage = () => {
     };
 
     loadMessages();
+
     return () => {
       isMounted = false;
     };
-  }, [selectedChat, currentUser, socket, scrollToBottom]);
+  }, [selectedChat, currentUser, socket]);
 
   useEffect(() => {
     if (!socket) return;
@@ -876,14 +1130,37 @@ const MessagesPage = () => {
       )?.toString();
 
       if (activeChat && activeChat._id.toString() === incomingChatId) {
+        const container = messagesContainerRef.current;
+        let isUserAtBottom = true;
+
+        if (container) {
+          const { scrollHeight, clientHeight, scrollTop } = container;
+          isUserAtBottom = scrollHeight - scrollTop - clientHeight < 150;
+        }
+
+        if (!isUserAtBottom || showScrollBottomRef.current) {
+          setUnreadScrollCount((prev) => prev + 1);
+        }
+
+        pendingScrollRef.current = {
+          isMyOwn: false,
+          smooth: false,
+          force: false,
+        };
+
         setMessages((prev) => {
           if (prev.some((msg) => msg._id === newMessageReceived._id))
             return prev;
           return [...prev, newMessageReceived];
         });
-        requestAnimationFrame(() => scrollToBottom(false));
+
+        setSessionLastReadMessage({
+          id: newMessageReceived._id,
+          createdAt: newMessageReceived.createdAt,
+        });
 
         API.put(`/api/message/mark-read/${activeChat._id}`);
+
         const myId = currentUser?._id || currentUser?.id || currentUser?.userId;
         if (myId) {
           socket.emit("messages read", {
@@ -931,6 +1208,41 @@ const MessagesPage = () => {
           ),
         );
       }
+
+      refreshChats();
+    };
+
+    const handleMessageDeleted = (deletedData) => {
+      const activeChat = selectedChatRef.current;
+      const deletedMsgId =
+        deletedData.messageId || deletedData._id || deletedData.message?._id;
+      const incomingChatId = (
+        deletedData.chatId ||
+        deletedData.chat?._id ||
+        deletedData.chat
+      )?.toString();
+
+      if (activeChat && activeChat._id.toString() === incomingChatId) {
+        if (deletedData.isHardDelete) {
+          setMessages((prev) => prev.filter((msg) => msg._id !== deletedMsgId));
+        } else {
+          const updatedMsg = deletedData.message || deletedData;
+
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg._id === deletedMsgId
+                ? {
+                    ...msg,
+                    ...updatedMsg,
+                    isDeleted: true,
+                    content: "This message was deleted",
+                  }
+                : msg,
+            ),
+          );
+        }
+      }
+
       refreshChats();
     };
 
@@ -940,14 +1252,17 @@ const MessagesPage = () => {
 
       if (targetChatId === chatId?.toString()) {
         const userIdStr = userId?.toString();
+
         setMessages((prev) =>
           prev.map((msg) => {
             const alreadyRead = msg.readBy?.some(
               (id) => (id._id || id).toString() === userIdStr,
             );
+
             if (!alreadyRead) {
               return { ...msg, readBy: [...(msg.readBy || []), userId] };
             }
+
             return msg;
           }),
         );
@@ -984,6 +1299,7 @@ const MessagesPage = () => {
     socket.on("message received", handleMessageReceived);
     socket.on("message reaction", handleMessageReaction);
     socket.on("message edited", handleMessageEdited);
+    socket.on("message deleted", handleMessageDeleted);
     socket.on("messages read", handleMessagesRead);
     socket.on("chat deleted", handleChatDeleted);
     socket.on("typing", handleTyping);
@@ -993,12 +1309,13 @@ const MessagesPage = () => {
       socket.off("message received", handleMessageReceived);
       socket.off("message reaction", handleMessageReaction);
       socket.off("message edited", handleMessageEdited);
+      socket.off("message deleted", handleMessageDeleted);
       socket.off("messages read", handleMessagesRead);
       socket.off("chat deleted", handleChatDeleted);
       socket.off("typing", handleTyping);
       socket.off("stop typing", handleStopTyping);
     };
-  }, [socket, currentUser, scrollToBottom]);
+  }, [socket, currentUser]);
 
   const handleConfirmDeleteChat = async () => {
     if (!selectedChat) return;
@@ -1018,6 +1335,7 @@ const MessagesPage = () => {
         });
       } else {
         const { data } = await API.delete(`/api/chat/${selectedChat._id}`);
+
         if (socket) {
           socket.emit("chat deleted", {
             chatId: selectedChat._id,
@@ -1037,11 +1355,13 @@ const MessagesPage = () => {
 
   const getChatSender = (users) => {
     if (!users || users.length === 0) return null;
+
     const myId = currentUser?._id || currentUser?.id || currentUser?.userId;
     const partner = users.find((u) => {
       const uId = u._id || u.id || u;
       return uId?.toString() !== myId?.toString();
     });
+
     return partner || users[0];
   };
 
@@ -1049,14 +1369,17 @@ const MessagesPage = () => {
     selectedChat && !selectedChat.isGroupChat
       ? getChatSender(selectedChat.users)
       : null;
-  const partnerUsername = partnerUser?.username || "user";
+
+  const partnerUsername = partnerUser?.username || "Deleted User";
   const partnerIdStr = (
     partnerUser?._id ||
     partnerUser?.id ||
     partnerUser
   )?.toString();
+
   const rawPresence = onlineUsers?.[partnerIdStr];
   const isUserOnline = Boolean(rawPresence);
+
   const myId = currentUser?._id || currentUser?.id || currentUser?.userId;
   const myIdStr = myId?.toString();
 
@@ -1097,6 +1420,7 @@ const MessagesPage = () => {
     }
 
     const tempId = "temp-" + Date.now();
+    const nowIso = new Date().toISOString();
 
     const optimisticMessage = {
       _id: tempId,
@@ -1108,14 +1432,31 @@ const MessagesPage = () => {
         avatar: currentUser?.avatar,
       },
       chat: selectedChat,
-      createdAt: new Date().toISOString(),
+      createdAt: nowIso,
       readBy: [myId],
       reactions: [],
       isSending: true,
     };
 
+    pendingScrollRef.current = { isMyOwn: true, smooth: false, force: true };
     setMessages((prev) => [...prev, optimisticMessage]);
-    requestAnimationFrame(() => scrollToBottom(true));
+
+    if (sessionLastReadMessage) {
+      setIsHidingNewMessages(true);
+
+      setTimeout(() => {
+        setSessionLastReadMessage({
+          id: tempId,
+          createdAt: nowIso,
+        });
+        setIsHidingNewMessages(false);
+      }, 350);
+    } else {
+      setSessionLastReadMessage({
+        id: tempId,
+        createdAt: nowIso,
+      });
+    }
 
     try {
       const { data } = await API.post("/api/message", {
@@ -1169,6 +1510,7 @@ const MessagesPage = () => {
       if (!newText) return;
 
       let previousMessage = null;
+
       setMessages((prev) =>
         prev.map((msg) => {
           if (msg._id === msgId) {
@@ -1178,15 +1520,18 @@ const MessagesPage = () => {
           return msg;
         }),
       );
+
       setEditingMessageId(null);
 
       try {
         const { data } = await API.put(`/api/message/${msgId}`, {
           content: newText,
         });
+
         setMessages((prev) =>
           prev.map((msg) => (msg._id === msgId ? data : msg)),
         );
+
         if (socket) socket.emit("message edited", data);
         refreshChats();
       } catch (err) {
@@ -1201,55 +1546,88 @@ const MessagesPage = () => {
     [editingContent, socket],
   );
 
-  const handleDeleteMessage = useCallback(
-    async (msgId) => {
-      let previousMessagesState = [];
-      setMessages((prev) => {
-        previousMessagesState = prev;
-        return prev.map((msg) => {
-          if (msg._id === msgId) {
-            return {
-              ...msg,
-              isDeleted: true,
-              content: "This message was deleted",
-            };
-          }
-          return msg;
-        });
-      });
+  const handleRequestDeleteMessage = useCallback((msg) => {
+    setDeletingMessageTarget(msg);
 
-      try {
-        const { data } = await API.delete(`/api/message/${msgId}`);
-        if (data.isHardDelete) {
-          setMessages((prev) => prev.filter((msg) => msg._id !== msgId));
-        } else {
-          setMessages((prev) =>
-            prev.map((msg) => (msg._id === msgId ? data.message : msg)),
-          );
+    if (msg?.createdAt) {
+      const isOld =
+        Date.now() - new Date(msg.createdAt).getTime() > 15 * 60 * 1000;
+      setIsOlderThan15Min(isOld);
+    } else {
+      setIsOlderThan15Min(false);
+    }
+  }, []);
+
+  const handleConfirmDeleteSingleMessage = useCallback(async () => {
+    if (!deletingMessageTarget) return;
+
+    const msgId = deletingMessageTarget._id;
+    setDeletingMessageTarget(null);
+
+    let previousMessagesState = [];
+
+    setMessages((prev) => {
+      previousMessagesState = prev;
+
+      return prev.map((msg) => {
+        if (msg._id === msgId) {
+          return {
+            ...msg,
+            isDeleted: true,
+            content: "This message was deleted",
+          };
         }
-        if (socket) socket.emit("message deleted", data);
-        refreshChats();
-      } catch (err) {
-        console.error("Error deleting message:", err);
-        setMessages(previousMessagesState);
+        return msg;
+      });
+    });
+
+    try {
+      const { data } = await API.delete(`/api/message/${msgId}`);
+
+      if (data.isHardDelete) {
+        setMessages((prev) => prev.filter((msg) => msg._id !== msgId));
+      } else {
+        const updatedMsg = data.message || data;
+
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg._id === msgId
+              ? {
+                  ...msg,
+                  ...updatedMsg,
+                  isDeleted: true,
+                  content: "This message was deleted",
+                }
+              : msg,
+          ),
+        );
       }
-    },
-    [socket],
-  );
+
+      if (socket) socket.emit("message deleted", data);
+      refreshChats();
+    } catch (err) {
+      console.error("Error deleting message:", err);
+      setMessages(previousMessagesState);
+    }
+  }, [deletingMessageTarget, socket]);
 
   const handleToggleReaction = useCallback(
     async (msgId, emoji) => {
       const currentMyIdStr =
         currentUser?._id || currentUser?.id || currentUser?.userId;
+
       if (!currentMyIdStr) return;
 
       setMessages((prevMessages) =>
         prevMessages.map((msg) => {
           if (msg._id !== msgId) return msg;
+
           let reactions = msg.reactions
             ? JSON.parse(JSON.stringify(msg.reactions))
             : [];
+
           const targetGroup = reactions.find((r) => r.emoji === emoji);
+
           const hasMyReaction = targetGroup?.users?.some(
             (uId) => (uId._id || uId).toString() === currentMyIdStr.toString(),
           );
@@ -1266,6 +1644,7 @@ const MessagesPage = () => {
 
           if (!hasMyReaction) {
             const existingGroup = reactions.find((r) => r.emoji === emoji);
+
             if (existingGroup) {
               existingGroup.users.push(currentMyIdStr);
             } else {
@@ -1281,9 +1660,11 @@ const MessagesPage = () => {
         const { data } = await API.put(`/api/message/react/${msgId}`, {
           emoji,
         });
+
         setMessages((prev) =>
           prev.map((msg) => (msg._id === msgId ? data : msg)),
         );
+
         if (socket) socket.emit("message reaction", data);
       } catch (err) {
         console.error("Error toggling reaction:", err);
@@ -1295,11 +1676,13 @@ const MessagesPage = () => {
 
   const handleTypingInput = (e) => {
     setNewMessage(e.target.value);
+
     if (!socket || !selectedChat || !myIdStr) return;
 
     socket.emit("typing", { chatId: selectedChat._id, userId: myIdStr });
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
     typingTimeoutRef.current = setTimeout(() => {
       if (socket && selectedChat) {
         socket.emit("stop typing", {
@@ -1312,6 +1695,7 @@ const MessagesPage = () => {
 
   const handleOpenGroupModal = async () => {
     setIsGroupModalOpen(true);
+
     try {
       const { data } = await API.get("/api/users/search/all");
       setAllUsers(data.filter((u) => u._id?.toString() !== myIdStr));
@@ -1330,11 +1714,13 @@ const MessagesPage = () => {
 
   const handleCreateGroup = async () => {
     if (!groupName.trim() || selectedGroupUsers.length < 2) return;
+
     try {
       const { data } = await API.post("/api/chat/group", {
         name: groupName,
         users: JSON.stringify(selectedGroupUsers),
       });
+
       setChats((prev) => [data, ...prev]);
       handleSelectChat(data);
       setIsGroupModalOpen(false);
@@ -1346,14 +1732,17 @@ const MessagesPage = () => {
   };
 
   const getProfileLink = (targetUsername) => {
+    if (!targetUsername || targetUsername === "Deleted User") return "#";
+
     const myUsername = currentUser?.username || getLoggedInUsername();
-    if (!targetUsername) return "/profile";
+
     if (
       myUsername &&
       myUsername.toLowerCase() === targetUsername.toLowerCase()
     ) {
       return "/profile";
     }
+
     return `/user/${targetUsername}`;
   };
 
@@ -1365,7 +1754,9 @@ const MessagesPage = () => {
 
   const filteredChats = chats.filter((chat) => {
     if (!sidebarSearch.trim()) return true;
+
     const query = sidebarSearch.toLowerCase();
+
     if (chat.isGroupChat) {
       return chat.chatName?.toLowerCase().includes(query);
     } else {
@@ -1380,6 +1771,7 @@ const MessagesPage = () => {
   const filteredGlobalUsers = allGlobalUsers.filter((u) => {
     if (!sidebarSearch.trim()) return false;
     if (u._id?.toString() === myIdStr) return false;
+
     const query = sidebarSearch.toLowerCase();
     const matchesQuery =
       u.username?.toLowerCase().includes(query) ||
@@ -1399,6 +1791,7 @@ const MessagesPage = () => {
 
   const recipientIdsSet = useMemo(() => {
     if (!selectedChat?.users || !myIdStr) return new Set();
+
     const set = new Set();
     selectedChat.users.forEach((u) => {
       const idStr = (u._id || u.id || u).toString();
@@ -1406,8 +1799,25 @@ const MessagesPage = () => {
         set.add(idStr);
       }
     });
+
     return set;
   }, [selectedChat, myIdStr]);
+
+  const firstNewMessageId = useMemo(() => {
+    if (!sessionLastReadMessage || messages.length === 0 || !myIdStr)
+      return null;
+
+    const lastReadTime = new Date(sessionLastReadMessage.createdAt).getTime();
+
+    const firstNew = messages.find((m) => {
+      const senderId = (m.sender?._id || m.sender)?.toString();
+      const isIncoming = senderId !== myIdStr;
+      const isAfterLastRead = new Date(m.createdAt).getTime() > lastReadTime;
+      return isIncoming && isAfterLastRead;
+    });
+
+    return firstNew ? firstNew._id : null;
+  }, [messages, sessionLastReadMessage, myIdStr]);
 
   return (
     <div className={styles.container}>
@@ -1418,6 +1828,7 @@ const MessagesPage = () => {
       >
         <div className={styles.sidebarHeader}>
           <h2>Messages</h2>
+
           <button
             type="button"
             className={styles.newGroupBtn}
@@ -1442,6 +1853,7 @@ const MessagesPage = () => {
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
+
             <input
               type="text"
               placeholder="Search chats or users..."
@@ -1449,6 +1861,7 @@ const MessagesPage = () => {
               onChange={(e) => setSidebarSearch(e.target.value)}
               className={styles.sidebarSearchInput}
             />
+
             {sidebarSearch && (
               <button
                 type="button"
@@ -1494,6 +1907,7 @@ const MessagesPage = () => {
                 >
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
+
                 <span>
                   {sidebarSearch
                     ? "No matching chats or users"
@@ -1506,6 +1920,7 @@ const MessagesPage = () => {
                   const partner = !chat.isGroupChat
                     ? getChatSender(chat.users)
                     : null;
+
                   const partnerId = (
                     partner?._id ||
                     partner?.id ||
@@ -1536,7 +1951,22 @@ const MessagesPage = () => {
                     >
                       <div className={styles.avatarWrapper}>
                         {chat.isGroupChat ? (
-                          <div className={styles.groupAvatar}>👥</div>
+                          <div className={styles.groupAvatar}>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              strokeWidth={1.5}
+                              stroke="currentColor"
+                              className="size-6"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"
+                              />
+                            </svg>
+                          </div>
                         ) : (
                           <Avatar user={partner} size={42} />
                         )}
@@ -1547,8 +1977,9 @@ const MessagesPage = () => {
                           <span className={styles.chatName}>
                             {chat.isGroupChat
                               ? chat.chatName
-                              : partner?.username}
+                              : partner?.username || "Deleted User"}
                           </span>
+
                           {isPartnerDeleted && (
                             <span
                               className={styles.closedBadge}
@@ -1558,6 +1989,7 @@ const MessagesPage = () => {
                             </span>
                           )}
                         </div>
+
                         <span className={styles.latestMsg}>
                           {chat.latestMessage
                             ? `${chat.latestMessage.sender?.username || "User"}: ${chat.latestMessage.content}`
@@ -1579,6 +2011,7 @@ const MessagesPage = () => {
                     <span className={styles.globalSearchTitle}>
                       New Contacts
                     </span>
+
                     {filteredGlobalUsers.map((u) => (
                       <div
                         key={u._id}
@@ -1586,16 +2019,19 @@ const MessagesPage = () => {
                         onClick={() => handleStartDirectChat(u._id)}
                       >
                         <Avatar user={u} size={38} />
+
                         <div className={styles.globalUserInfo}>
                           <span className={styles.globalUsername}>
                             {u.username}
                           </span>
+
                           {u.fullName && (
                             <span className={styles.globalFullName}>
                               {u.fullName}
                             </span>
                           )}
                         </div>
+
                         <span className={styles.startChatPill}>Chat</span>
                       </div>
                     ))}
@@ -1640,7 +2076,23 @@ const MessagesPage = () => {
               <div className={styles.userInfo}>
                 {selectedChat.isGroupChat ? (
                   <div className={styles.authorBadgeStatic}>
-                    <div className={styles.groupAvatarHeader}>👥</div>
+                    <div className={styles.groupAvatarHeader}>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={1.5}
+                        stroke="currentColor"
+                        className="size-6"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"
+                        />
+                      </svg>
+                    </div>
+
                     <span className={styles.username}>
                       {selectedChat.chatName}
                     </span>
@@ -1657,6 +2109,7 @@ const MessagesPage = () => {
 
                 <div className={styles.userMeta}>
                   <span className={styles.dot}>•</span>
+
                   {isTyping ? (
                     <div className={styles.avatarTypingBadge}>
                       <span className={styles.typingBadgeText}>typing</span>
@@ -1667,9 +2120,9 @@ const MessagesPage = () => {
                       </div>
                     </div>
                   ) : selectedChat.isGroupChat ? (
-                    <span
-                      className={styles.statusText}
-                    >{`${selectedChat.users.length} members`}</span>
+                    <span className={styles.statusText}>
+                      {`${selectedChat.users.length} members`}
+                    </span>
                   ) : (
                     <HeaderStatusTextSwitcher
                       statusKey={
@@ -1714,6 +2167,7 @@ const MessagesPage = () => {
             <div
               ref={messagesContainerRef}
               className={styles.messagesContainer}
+              onScroll={handleContainerScroll}
               onClick={() => handleClosePortalAnimated()}
             >
               {loadingMessages ? (
@@ -1747,85 +2201,165 @@ const MessagesPage = () => {
                       />
                     </svg>
                   </div>
+
                   <h4>No messages here yet</h4>
                   <p>Send a message to start the conversation!</p>
                 </div>
               ) : (
-                messages.map((msg, index) => {
-                  const msgSenderId = msg.sender?._id || msg.sender;
-                  const isMyMessage = msgSenderId?.toString() === myIdStr;
-                  const isEditing = editingMessageId === msg._id;
-                  const isDeleted = msg.isDeleted;
+                <>
+                  {messages.map((msg, index) => {
+                    const msgSenderId = msg.sender?._id || msg.sender;
+                    const isMyMessage = msgSenderId?.toString() === myIdStr;
+                    const isEditing = editingMessageId === msg._id;
+                    const isDeleted = msg.isDeleted;
+                    const isRead =
+                      msg.readBy?.some((readId) =>
+                        recipientIdsSet.has((readId._id || readId).toString()),
+                      ) || false;
 
-                  const isRead =
-                    msg.readBy?.some((readId) =>
-                      recipientIdsSet.has((readId._id || readId).toString()),
-                    ) || false;
+                    const isActive = activeActionId === msg._id;
+                    const isClosing = closingActionId === msg._id;
+                    const itemKey = msg.stableKey || msg._id;
 
-                  const isActive = activeActionId === msg._id;
-                  const isClosing = closingActionId === msg._id;
-                  const itemKey = msg.stableKey || msg._id;
+                    const currentDateFormatted = formatMessageDateDivider(
+                      msg.createdAt,
+                    );
+                    const prevMsgDateFormatted =
+                      index > 0
+                        ? formatMessageDateDivider(
+                            messages[index - 1].createdAt,
+                          )
+                        : null;
 
-                  const currentDateFormatted = formatMessageDateDivider(
-                    msg.createdAt,
-                  );
-                  const prevMsgDateFormatted =
-                    index > 0
-                      ? formatMessageDateDivider(messages[index - 1].createdAt)
-                      : null;
+                    const showDateDivider =
+                      currentDateFormatted &&
+                      currentDateFormatted !== prevMsgDateFormatted;
 
-                  const showDateDivider =
-                    currentDateFormatted &&
-                    currentDateFormatted !== prevMsgDateFormatted;
+                    const showNewMessagesDivider =
+                      firstNewMessageId && msg._id === firstNewMessageId;
 
-                  return (
-                    <Fragment key={itemKey}>
-                      {showDateDivider && (
-                        <div className={styles.dateDividerWrapper}>
-                          <span className={styles.dateDividerBubble}>
-                            {currentDateFormatted}
-                          </span>
+                    return (
+                      <Fragment key={itemKey}>
+                        {showDateDivider && (
+                          <div className={styles.dateDividerWrapper}>
+                            <span className={styles.dateDividerBubble}>
+                              {currentDateFormatted}
+                            </span>
+                          </div>
+                        )}
+
+                        {showNewMessagesDivider && (
+                          <div
+                            className={`${styles.newMessagesDividerWrapper} ${
+                              isHidingNewMessages
+                                ? styles.newMessagesHiding
+                                : ""
+                            }`}
+                          >
+                            <div className={styles.newMessagesGridInner}>
+                              <div className={styles.newMessagesContent}>
+                                <div className={styles.newMessagesLine} />
+                                <span className={styles.newMessagesBubble}>
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    strokeWidth={1.5}
+                                    stroke="currentColor"
+                                    className={styles.newMessagesIcon}
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"
+                                    />
+                                  </svg>
+                                  New Messages
+                                </span>
+                                <div className={styles.newMessagesLine} />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div
+                          className={`${styles.messageRow} ${isMyMessage ? styles.myRow : styles.theirRow}`}
+                        >
+                          <MessageItem
+                            msg={{ ...msg, myIdStr }}
+                            isMyMessage={isMyMessage}
+                            isEditing={isEditing}
+                            isDeleted={isDeleted}
+                            isRead={isRead}
+                            isActive={isActive}
+                            isClosing={isClosing}
+                            editingContent={editingContent}
+                            setEditingContent={setEditingContent}
+                            onSaveEdit={handleSaveEdit}
+                            onCancelEdit={handleCancelEdit}
+                            onStartEdit={handleStartEdit}
+                            onDeleteMessage={handleRequestDeleteMessage}
+                            onToggleReaction={handleToggleReaction}
+                            onTriggerClick={(id) => {
+                              if (activeActionId === id) {
+                                handleClosePortalAnimated();
+                              } else if (activeActionId) {
+                                handleClosePortalAnimated(() =>
+                                  setActiveActionId(id),
+                                );
+                              } else {
+                                setActiveActionId(id);
+                              }
+                            }}
+                            onClosePortalAnimated={handleClosePortalAnimated}
+                            selectedChat={selectedChat}
+                          />
                         </div>
-                      )}
+                      </Fragment>
+                    );
+                  })}
 
-                      <div
-                        className={`${styles.messageRow} ${isMyMessage ? styles.myRow : styles.theirRow}`}
-                      >
-                        <MessageItem
-                          msg={{ ...msg, myIdStr }}
-                          isMyMessage={isMyMessage}
-                          isEditing={isEditing}
-                          isDeleted={isDeleted}
-                          isRead={isRead}
-                          isActive={isActive}
-                          isClosing={isClosing}
-                          editingContent={editingContent}
-                          setEditingContent={setEditingContent}
-                          onSaveEdit={handleSaveEdit}
-                          onCancelEdit={handleCancelEdit}
-                          onStartEdit={handleStartEdit}
-                          onDeleteMessage={handleDeleteMessage}
-                          onToggleReaction={handleToggleReaction}
-                          onTriggerClick={(id) => {
-                            if (activeActionId === id) {
-                              handleClosePortalAnimated();
-                            } else if (activeActionId) {
-                              handleClosePortalAnimated(() =>
-                                setActiveActionId(id),
-                              );
-                            } else {
-                              setActiveActionId(id);
-                            }
-                          }}
-                          onClosePortalAnimated={handleClosePortalAnimated}
-                          selectedChat={selectedChat}
-                        />
-                      </div>
-                    </Fragment>
-                  );
-                })
+                  <div
+                    ref={messagesEndRef}
+                    style={{ float: "left", clear: "both" }}
+                  />
+                </>
               )}
             </div>
+
+            <button
+              type="button"
+              className={`${styles.scrollBottomBtn} ${
+                showScrollBottom ? styles.showScrollBottomBtn : ""
+              }`}
+              onClick={() => {
+                setUnreadScrollCount(0);
+                scrollToBottom(false, true, true);
+              }}
+              aria-label="Scroll to bottom"
+            >
+              {unreadScrollCount > 0 && (
+                <span
+                  key={unreadScrollCount}
+                  className={styles.scrollUnreadBadge}
+                >
+                  {unreadScrollCount > 99 ? "99+" : unreadScrollCount}
+                </span>
+              )}
+
+              <svg
+                viewBox="0 0 24 24"
+                width="20"
+                height="20"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
 
             {isChatDeletedByPartner ? (
               <div className={styles.deletedNoticeBanner}>
@@ -1843,6 +2377,7 @@ const MessagesPage = () => {
                   <line x1="12" y1="8" x2="12" y2="12" />
                   <line x1="12" y1="16" x2="12.01" y2="16" />
                 </svg>
+
                 <span>
                   The other user has deleted this chat. Messages are kept for
                   your safety.
@@ -1859,6 +2394,7 @@ const MessagesPage = () => {
                     onKeyDown={handleInputKeyDown}
                     className={styles.commentInput}
                   />
+
                   <button
                     type="submit"
                     className={styles.sendBtn}
@@ -1889,6 +2425,7 @@ const MessagesPage = () => {
                 <circle cx="15" cy="12" r="1" fill="currentColor" />
               </svg>
             </div>
+
             <h3>Your Messages</h3>
             <p>Send private messages or create a group chat with friends.</p>
           </div>
@@ -1906,6 +2443,7 @@ const MessagesPage = () => {
           >
             <div className={styles.modalHeader}>
               <h3>Create Group Chat</h3>
+
               <button
                 type="button"
                 className={styles.closeModalBtn}
@@ -1923,6 +2461,7 @@ const MessagesPage = () => {
                 onChange={(e) => setGroupName(e.target.value)}
                 className={styles.modalInput}
               />
+
               <input
                 type="text"
                 placeholder="Search users..."
@@ -1934,6 +2473,7 @@ const MessagesPage = () => {
 
             <div className={styles.userSelectionContainer}>
               <span className={styles.selectTitle}>Select Members</span>
+
               <div className={styles.userSelectionList}>
                 {allUsers
                   .filter((u) =>
@@ -1943,6 +2483,7 @@ const MessagesPage = () => {
                   )
                   .map((u, idx) => {
                     const isSelected = selectedGroupUsers.includes(u._id);
+
                     return (
                       <div
                         key={u._id}
@@ -1951,9 +2492,11 @@ const MessagesPage = () => {
                         onClick={() => toggleSelectUserForGroup(u._id)}
                       >
                         <Avatar user={u} size={36} />
+
                         <span className={styles.selectUsername}>
                           {u.username}
                         </span>
+
                         <div
                           className={`${styles.customCheckbox} ${isSelected ? styles.checkboxChecked : ""}`}
                         >
@@ -1978,6 +2521,7 @@ const MessagesPage = () => {
               >
                 Cancel
               </button>
+
               <button
                 type="button"
                 className={styles.createBtn}
@@ -2008,6 +2552,7 @@ const MessagesPage = () => {
                     : "Leave Group Chat"
                   : "Delete Chat"}
               </h3>
+
               <button
                 type="button"
                 className={styles.closeModalBtn}
@@ -2039,6 +2584,7 @@ const MessagesPage = () => {
               >
                 Cancel
               </button>
+
               <button
                 type="button"
                 className={styles.createBtn}
@@ -2046,6 +2592,86 @@ const MessagesPage = () => {
                 onClick={handleConfirmDeleteChat}
               >
                 {isGroup ? (isGroupAdmin ? "Delete" : "Leave") : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deletingMessageTarget && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setDeletingMessageTarget(null)}
+        >
+          <div
+            className={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <h3>Delete Message</h3>
+              <button
+                type="button"
+                className={styles.closeModalBtn}
+                onClick={() => setDeletingMessageTarget(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className={styles.deletePreviewBubble}>
+              <span className={styles.deletePreviewText}>
+                "{deletingMessageTarget.content}"
+              </span>
+            </div>
+
+            {isOlderThan15Min ? (
+              <div className={styles.timeWarningBox}>
+                <svg
+                  viewBox="0 0 24 24"
+                  width="20"
+                  height="20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={styles.warningIcon}
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                <div>
+                  <strong>Older than 15 minutes</strong>
+                  <p>
+                    This message was sent more than 15 minutes ago. It will be
+                    removed from your view, but may still be visible to other
+                    members.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p className={styles.deleteConfirmNotice}>
+                Are you sure you want to delete this message? This action will
+                remove it for everyone.
+              </p>
+            )}
+
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.cancelBtn}
+                onClick={() => setDeletingMessageTarget(null)}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className={styles.createBtn}
+                style={{ backgroundColor: "#ef4444" }}
+                onClick={handleConfirmDeleteSingleMessage}
+              >
+                Delete
               </button>
             </div>
           </div>

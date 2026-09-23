@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import PropTypes from "prop-types";
-import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import API from "../../api/axios";
 import PostModal from "../../components/PostModal/PostModal";
 import PostCard from "../../components/PostCard/PostCard";
 import FeedFilterPill from "../../components/FeedFilterPill/FeedFilterPill";
 import styles from "./DashboardPage.module.css";
+import { useSocket } from "../../context/useSocket";
 import logoImg from "../../assets/logo.png";
 
 const AllCaughtUpCard = ({ onScrollToTop }) => {
@@ -70,7 +70,15 @@ const AllCaughtUpCard = ({ onScrollToTop }) => {
         You&apos;ve explored all the recent moments from creators you follow.
       </p>
 
-      <button className={styles.caughtUpScrollBtn} onClick={onScrollToTop}>
+      <button
+        type="button"
+        className={styles.caughtUpScrollBtn}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onScrollToTop();
+        }}
+      >
         <span>Back to top</span>
         <svg
           viewBox="0 0 24 24"
@@ -96,16 +104,17 @@ AllCaughtUpCard.propTypes = {
 
 const DashboardPage = () => {
   const navigate = useNavigate();
+  const { isDisconnected } = useSocket() || {};
+
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isServerError, setIsServerError] = useState(false);
   const [currentUserFollowing, setCurrentUserFollowing] = useState([]);
   const [selectedPost, setSelectedPost] = useState(null);
 
   const [activeFilter, setActiveFilter] = useState("all");
-
   const [exploreHiddenUserIds, setExploreHiddenUserIds] = useState(new Set());
 
-  const [showScrollTop, setShowScrollTop] = useState(false);
   const [autoFocusComment, setAutoFocusComment] = useState(false);
 
   const token = localStorage.getItem("token");
@@ -141,6 +150,7 @@ const DashboardPage = () => {
         if (!isRefreshing) {
           setLoading(true);
         }
+        setIsServerError(false);
 
         const postsRes = await API.get("/api/posts", {
           headers: { Authorization: `Bearer ${token}` },
@@ -162,16 +172,27 @@ const DashboardPage = () => {
             .filter(Boolean) || [];
 
         setCurrentUserFollowing(followingIds);
-
         setExploreHiddenUserIds(new Set(followingIds));
       } catch (error) {
         console.error("Error loading feed data:", error);
+        if (!error.response || error.response.status >= 500) {
+          setIsServerError(true);
+        }
       } finally {
         setLoading(false);
       }
     },
     [token],
   );
+
+  const prevDisconnectedRef = useRef(isDisconnected);
+
+  useEffect(() => {
+    if (prevDisconnectedRef.current && !isDisconnected) {
+      fetchFeedData(true);
+    }
+    prevDisconnectedRef.current = isDisconnected;
+  }, [isDisconnected, fetchFeedData]);
 
   useEffect(() => {
     if (token) {
@@ -183,9 +204,41 @@ const DashboardPage = () => {
     }
   }, [fetchFeedData, token]);
 
+  const handlePostUpdate = useCallback((updatedPost) => {
+    setPosts((prevPosts) =>
+      prevPosts.map((p) => (p._id === updatedPost._id ? updatedPost : p)),
+    );
+
+    setSelectedPost((prevSelected) => {
+      if (prevSelected && prevSelected._id === updatedPost._id) {
+        return updatedPost;
+      }
+      return prevSelected;
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleGlobalPostUpdate = (event) => {
+      if (event.detail) {
+        handlePostUpdate(event.detail);
+      }
+    };
+
+    window.addEventListener("postUpdated", handleGlobalPostUpdate);
+    return () => {
+      window.removeEventListener("postUpdated", handleGlobalPostUpdate);
+    };
+  }, [handlePostUpdate]);
+
+  const scrollToTop = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    document.documentElement.scrollTo({ top: 0, behavior: "smooth" });
+    document.body.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
   useEffect(() => {
     const handleRefresh = () => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      scrollToTop();
 
       if (token) {
         fetchFeedData(true);
@@ -197,26 +250,7 @@ const DashboardPage = () => {
     return () => {
       window.removeEventListener("refreshDashboard", handleRefresh);
     };
-  }, [fetchFeedData, token]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 150) {
-        setShowScrollTop(true);
-      } else {
-        setShowScrollTop(false);
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll();
-
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  }, [fetchFeedData, token, scrollToTop]);
 
   const handleFilterChange = (newFilter) => {
     setActiveFilter(newFilter);
@@ -288,19 +322,6 @@ const DashboardPage = () => {
     }
   };
 
-  const handlePostUpdate = (updatedPost) => {
-    setPosts((prevPosts) =>
-      prevPosts.map((p) => (p._id === updatedPost._id ? updatedPost : p)),
-    );
-
-    setSelectedPost((prevSelected) => {
-      if (prevSelected && prevSelected._id === updatedPost._id) {
-        return updatedPost;
-      }
-      return prevSelected;
-    });
-  };
-
   const handleOpenModal = (post, focusComment = false) => {
     const isMobile = window.innerWidth <= 768;
 
@@ -318,7 +339,7 @@ const DashboardPage = () => {
   };
 
   const handleLogoClick = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollToTop();
     fetchFeedData(true);
   };
 
@@ -380,6 +401,49 @@ const DashboardPage = () => {
             </div>
           ))}
         </div>
+      ) : isServerError || isDisconnected ? (
+        <div className={styles.serverErrorCard}>
+          <div className={styles.serverErrorIconWrapper}>
+            <svg
+              viewBox="0 0 24 24"
+              width="32"
+              height="32"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+            </svg>
+          </div>
+          <h2 className={styles.serverErrorTitle}>Backend Under Maintenance</h2>
+          <p className={styles.serverErrorSubtitle}>
+            Our admin is currently updating system modules. Don’t worry,
+            everything is safe! Please check back shortly.
+          </p>
+
+          <button
+            type="button"
+            className={styles.retryBtn}
+            onClick={() => fetchFeedData(true)}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="23 4 23 10 17 10" />
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+            </svg>
+            <span>Try again</span>
+          </button>
+        </div>
       ) : (
         <div className={styles.feedList}>
           {filteredPosts.length > 0 ? (
@@ -412,30 +476,6 @@ const DashboardPage = () => {
             <AllCaughtUpCard onScrollToTop={scrollToTop} />
           )}
         </div>
-      )}
-
-      {createPortal(
-        <button
-          className={`${styles.scrollTopBtn} ${
-            showScrollTop ? styles.showScrollBtn : ""
-          }`}
-          onClick={scrollToTop}
-          aria-label="Back to top"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            width="22"
-            height="22"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polyline points="18 15 12 9 6 15" />
-          </svg>
-        </button>,
-        document.body,
       )}
 
       {selectedPost && (

@@ -1,0 +1,106 @@
+.scrollTopBtn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 99999;
+  pointer-events: none;
+
+  backface-visibility: hidden;
+  -webkit-font-smoothing: subpixel-antialiased;
+
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(16px) scale(0.9);
+  transition:
+    opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0.3s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.arrowIcon {
+  display: block;
+  margin: auto;
+  pointer-events: none;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.scrollTopBtn:hover {
+  background-color: var(--bg-hover, var(--bg-main));
+  border-color: var(--text-secondary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  transform: translateY(-3px) scale(1.05) !important;
+}
+
+.scrollTopBtn:hover .arrowIcon {
+  transform: translateY(-2px);
+}
+
+.scrollTopBtn:active {
+  transform: translateY(1px) scale(0.92) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.showScrollBtn {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: translateY(0) scale(1) !important;
+}
+
+.clicked {
+  animation: bounceSpring 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+}
+
+.clicked .arrowIcon {
+  animation: arrowUpFly 0.4s ease-out forwards;
+}
+
+@keyframes bounceSpring {
+  0% {
+    transform: scale(0.88) translateY(2px);
+  }
+  40% {
+    transform: scale(1.18) translateY(-6px);
+  }
+  70% {
+    transform: scale(0.95) translateY(1px);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes arrowUpFly {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .scrollTopBtn {
+    bottom: 80px;
+    right: 16px;
+    width: 42px;
+    height: 42px;
+  }
+}

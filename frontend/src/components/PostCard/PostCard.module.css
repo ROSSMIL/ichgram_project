@@ -431,3 +431,16 @@
     transform: scale(1);
   }
 }
+.editedBadge {
+  font-size: 12px;
+  color: var(--text-secondary, #8e8e8e);
+  font-weight: 400;
+  user-select: none;
+  cursor: help;
+  transition: opacity 0.2s ease;
+}
+
+.editedBadge:hover {
+  opacity: 1;
+  text-decoration: underline;
+}

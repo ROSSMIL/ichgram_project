@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import API from "../../api/axios";
@@ -25,12 +25,106 @@ const getUserFromToken = () => {
     return {
       _id: payload.userId || payload.id || payload._id,
       username: payload.username,
-      avatar: payload.avatar || "",
+      avatar: payload.avatar || payload.profilePicture || "",
     };
   } catch (e) {
     console.error("Error parsing JWT token:", e);
     return null;
   }
+};
+
+const ExplorePreviewCard = memo(({ post }) => {
+  const itemRef = useRef(null);
+  const requestRef = useRef(null);
+
+  const handleMouseMove = (e) => {
+    if (!itemRef.current) return;
+    const card = itemRef.current;
+    const rect = card.getBoundingClientRect();
+
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    const rotateX = ((y - centerY) / centerY) * -10;
+    const rotateY = ((x - centerX) / centerX) * 10;
+
+    const glossX = (x / rect.width) * 100;
+    const glossY = (y / rect.height) * 100;
+
+    if (requestRef.current) cancelAnimationFrame(requestRef.current);
+
+    requestRef.current = requestAnimationFrame(() => {
+      card.style.setProperty("--rotate-x", `${rotateX.toFixed(2)}deg`);
+      card.style.setProperty("--rotate-y", `${rotateY.toFixed(2)}deg`);
+      card.style.setProperty("--gloss-x", `${glossX.toFixed(1)}%`);
+      card.style.setProperty("--gloss-y", `${glossY.toFixed(1)}%`);
+      card.style.setProperty("--gloss-opacity", "1");
+    });
+  };
+
+  const handleMouseLeave = () => {
+    if (!itemRef.current) return;
+    if (requestRef.current) cancelAnimationFrame(requestRef.current);
+
+    const card = itemRef.current;
+    card.style.setProperty("--rotate-x", "0deg");
+    card.style.setProperty("--rotate-y", "0deg");
+    card.style.setProperty("--gloss-opacity", "0");
+  };
+
+  return (
+    <div
+      ref={itemRef}
+      className={`${styles.exploreGridItem} ${styles.exploreItemVisible}`}
+      style={{
+        "--post-bg": `url(${post.url})`,
+        "--i": 0,
+      }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+    >
+      <div className={styles.exploreFloatWrapper}>
+        <img
+          src={post.url}
+          alt={post.caption || "Post preview"}
+          className={styles.explorePostImage}
+        />
+
+        <div className={styles.exploreGlossOverlay} />
+
+        <div className={styles.exploreStatsBadge}>
+          <div className={styles.exploreBadgeStat}>
+            <svg
+              className={styles.exploreBadgeIcon}
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+            </svg>
+            <span>{post.likesCount || 0}</span>
+          </div>
+          <div className={styles.exploreBadgeStat}>
+            <svg
+              className={styles.exploreBadgeIcon}
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z" />
+            </svg>
+            <span>0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+ExplorePreviewCard.displayName = "ExplorePreviewCard";
+
+ExplorePreviewCard.propTypes = {
+  post: PropTypes.object.isRequired,
 };
 
 const CreatePostModal = ({
@@ -67,12 +161,43 @@ const CreatePostModal = ({
     setUser(initialUser || getUserFromToken());
   }
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let isMounted = true;
+
+    const loadProfile = async () => {
+      try {
+        const { data } = await API.get("/api/users/profile");
+        if (isMounted && data) {
+          setUser(data);
+        }
+      } catch (err) {
+        console.error("Failed to load user profile in CreatePostModal:", err);
+      }
+    };
+
+    loadProfile();
+
+    const handleProfileUpdate = () => {
+      loadProfile();
+    };
+
+    window.addEventListener("profileUpdated", handleProfileUpdate);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("profileUpdated", handleProfileUpdate);
+    };
+  }, [isOpen]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isDragOver, setIsDragOver] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const [viewMode, setViewMode] = useState("edit");
+  const [previewStyle, setPreviewStyle] = useState("feed");
   const [isClosing, setIsClosing] = useState(false);
   const [currentTheme, setCurrentTheme] = useState("light");
   const [showConfirmDiscard, setShowConfirmDiscard] = useState(false);
@@ -82,6 +207,8 @@ const CreatePostModal = ({
   const [aspect, setAspect] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [isCroppingActive, setIsCroppingActive] = useState(false);
+
+  const [isCroppingLoading, setIsCroppingLoading] = useState(false);
 
   const fileInputRef = useRef(null);
   const emojiPickerRef = useRef(null);
@@ -122,7 +249,9 @@ const CreatePostModal = ({
       setIsDragOver(false);
       setShowEmojiPicker(false);
       setViewMode("edit");
+      setPreviewStyle("feed");
       setIsCroppingActive(false);
+      setIsCroppingLoading(false);
       setIsClosing(false);
       onClose();
     }, 150);
@@ -141,6 +270,7 @@ const CreatePostModal = ({
     setCroppedImage(null);
     setError("");
     setIsCroppingActive(false);
+    setIsCroppingLoading(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -286,12 +416,16 @@ const CreatePostModal = ({
   };
 
   const applyCrop = async () => {
+    if (isCroppingLoading) return;
+    setIsCroppingLoading(true);
     try {
       const croppedResult = await getCroppedImg(rawImage, croppedAreaPixels);
       setCroppedImage(croppedResult);
       setIsCroppingActive(false);
     } catch (e) {
       console.error("Error cropping image:", e);
+    } finally {
+      setIsCroppingLoading(false);
     }
   };
 
@@ -344,6 +478,7 @@ const CreatePostModal = ({
     createdAt: editingPost ? editingPost.createdAt : new Date().toISOString(),
     likes: editingPost ? editingPost.likes : [],
     likesCount: editingPost ? editingPost.likesCount : 0,
+    isEdited: editingPost ? true : false,
     user: user || {
       username: "username",
       avatar: "",
@@ -360,9 +495,13 @@ const CreatePostModal = ({
       onClick={handleAttemptClose}
     >
       <div
-        className={`${styles.modal} ${isPreview ? styles.previewModeModal : ""} ${
-          isClosing ? styles.scaleDown : ""
-        }`}
+        className={`${styles.modal} ${
+          isPreview
+            ? previewStyle === "explore"
+              ? styles.previewExploreModeModal
+              : styles.previewModeModal
+            : ""
+        } ${isClosing ? styles.scaleDown : ""}`}
         onClick={(e) => e.stopPropagation()}
       >
         <input
@@ -557,8 +696,27 @@ const CreatePostModal = ({
                       type="button"
                       className={styles.applyCropBtn}
                       onClick={applyCrop}
+                      disabled={isCroppingLoading}
                     >
-                      Save Crop
+                      {isCroppingLoading ? (
+                        <span className={styles.cropLoadingWrapper}>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            className={styles.spinningCropSvg}
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M4.755 10.059a7.5 7.5 0 0 1 12.548-3.364l1.903 1.903h-3.183a.75.75 0 1 0 0 1.5h4.992a.75.75 0 0 0 .75-.75V4.356a.75.75 0 0 0-1.5 0v3.18l-1.9-1.9A9 9 0 0 0 3.306 9.67a.75.75 0 1 0 1.45.388Zm15.408 3.352a.75.75 0 0 0-.919.53 7.5 7.5 0 0 1-12.548 3.364l-1.902-1.903h3.183a.75.75 0 0 0 0-1.5H2.984a.75.75 0 0 0-.75.75v4.992a.75.75 0 0 0 1.5 0v-3.18l1.9 1.9a9 9 0 0 0 15.059-4.035.75.75 0 0 0-.53-.918Z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          <span>Cropping...</span>
+                        </span>
+                      ) : (
+                        "Save Crop"
+                      )}
                     </button>
                   </div>
                 </div>
@@ -725,14 +883,43 @@ const CreatePostModal = ({
               isPreview ? styles.previewVisible : styles.previewHidden
             }`}
           >
-            <div className={styles.previewCardContainer}>
-              <PostCard
-                post={previewPostData}
-                currentUserId={user?._id || user?.id}
-                currentUsername={user?.username}
-                onOpenModal={() => {}}
-              />
+            <div className={styles.previewSubHeader}>
+              <div className={styles.previewStylePill}>
+                <button
+                  type="button"
+                  className={`${styles.styleSubBtn} ${
+                    previewStyle === "feed" ? styles.activeStyleSubBtn : ""
+                  }`}
+                  onClick={() => setPreviewStyle("feed")}
+                >
+                  Feed Card
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.styleSubBtn} ${
+                    previewStyle === "explore" ? styles.activeStyleSubBtn : ""
+                  }`}
+                  onClick={() => setPreviewStyle("explore")}
+                >
+                  Explore Card
+                </button>
+              </div>
             </div>
+
+            {previewStyle === "feed" ? (
+              <div className={styles.previewCardContainer}>
+                <PostCard
+                  post={previewPostData}
+                  currentUserId={user?._id || user?.id}
+                  currentUsername={user?.username}
+                  onOpenModal={() => {}}
+                />
+              </div>
+            ) : (
+              <div className={styles.explorePreviewWrapper}>
+                <ExplorePreviewCard post={previewPostData} />
+              </div>
+            )}
           </div>
         </div>
       </div>

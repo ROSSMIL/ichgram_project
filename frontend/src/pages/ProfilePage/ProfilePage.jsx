@@ -224,7 +224,11 @@ const ProfilePage = () => {
         post._id === updatedPost._id ? updatedPost : post,
       ),
     );
-    setSelectedPost(updatedPost);
+    setSelectedPost((prevSelected) =>
+      prevSelected && prevSelected._id === updatedPost._id
+        ? updatedPost
+        : prevSelected,
+    );
   }, []);
 
   const handlePostDelete = useCallback((deletedPostId) => {
@@ -233,6 +237,28 @@ const ProfilePage = () => {
     );
     setSelectedPost(null);
   }, []);
+
+  useEffect(() => {
+    const handleGlobalPostUpdate = (event) => {
+      if (event.detail) {
+        handlePostUpdate(event.detail);
+      }
+    };
+
+    const handleGlobalPostDelete = (event) => {
+      if (event.detail) {
+        handlePostDelete(event.detail);
+      }
+    };
+
+    window.addEventListener("postUpdated", handleGlobalPostUpdate);
+    window.addEventListener("postDeleted", handleGlobalPostDelete);
+
+    return () => {
+      window.removeEventListener("postUpdated", handleGlobalPostUpdate);
+      window.removeEventListener("postDeleted", handleGlobalPostDelete);
+    };
+  }, [handlePostUpdate, handlePostDelete]);
 
   useEffect(() => {
     const handleGlobalPostCreated = (event) => {
@@ -503,7 +529,7 @@ const ProfilePage = () => {
             onClick={() => setIsAvatarModalOpen(true)}
           >
             <div className={styles.avatarFrame}>
-              <Avatar user={user} size={150} />
+              <Avatar user={user} size={150} showStatus={false} />
             </div>
           </div>
 
@@ -766,7 +792,7 @@ const ProfilePage = () => {
       {selectedPost && (
         <PostModal
           key={selectedPost._id}
-          post={selectedPost}
+          post={posts.find((p) => p._id === selectedPost._id) || selectedPost}
           onClose={() => setSelectedPost(null)}
           onPostUpdate={handlePostUpdate}
           onPostDelete={handlePostDelete}

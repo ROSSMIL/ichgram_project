@@ -1,6 +1,8 @@
 import User from "../models/userModel.js";
 import { uploadToCloudinary } from "../middlewares/uploadMiddleware.js";
 import Post from "../models/postModel.js";
+import Chat from "../models/chatModel.js";
+import Message from "../models/messageModel.js";
 import Notification from "../models/notificationModel.js";
 import {
   SEEDED_EMAILS,
@@ -72,8 +74,14 @@ export const editProfile = async (req, res) => {
     if (bio !== undefined) user.bio = bio;
 
     if (deleteAvatar === "true") {
+      if (user.avatar) {
+        await deleteCloudinaryImage(user.avatar);
+      }
       user.avatar = "";
     } else if (req.file) {
+      if (user.avatar) {
+        await deleteCloudinaryImage(user.avatar);
+      }
       const uploadResult = await uploadToCloudinary(req.file.buffer, "avatars");
       user.avatar = uploadResult.secure_url;
     }
@@ -321,7 +329,7 @@ export const deleteProfile = async (req, res) => {
     }
 
     console.log(
-      `=== DELETING UNIQUE USER & CLEANING CLOUDINARY: ${user.username} ===`,
+      `=== DELETING USER, MESSAGES & CLEANING CLOUDINARY: ${user.username} ===`,
     );
 
     if (user.avatar) {
@@ -330,8 +338,8 @@ export const deleteProfile = async (req, res) => {
 
     const userPosts = await Post.find({ user: userId });
     for (const post of userPosts) {
-      if (post.image) {
-        await deleteCloudinaryImage(post.image);
+      if (post.url) {
+        await deleteCloudinaryImage(post.url);
       }
     }
 
@@ -351,6 +359,42 @@ export const deleteProfile = async (req, res) => {
     await Notification.deleteMany({
       $or: [{ recipient: userId }, { sender: userId }],
     });
+
+    const io = req.app.get("io");
+
+    await Message.updateMany(
+      { "reactions.users": userId },
+      { $pull: { "reactions.$.users": userId } },
+    );
+
+    const personalChats = await Chat.find({
+      isGroupChat: false,
+      users: userId,
+    });
+
+    for (const chat of personalChats) {
+      if (!chat.deletedFor.includes(userId)) {
+        chat.deletedFor.push(userId);
+      }
+      chat.users = chat.users.filter(
+        (id) => id.toString() !== userId.toString(),
+      );
+      await chat.save();
+
+      if (io) {
+        io.to(chat._id.toString()).emit("chat deleted", {
+          chatId: chat._id,
+          userDeletedAccount: true,
+        });
+      }
+    }
+
+    await Chat.updateMany(
+      { isGroupChat: true, users: userId },
+      { $pull: { users: userId } },
+    );
+
+    await Chat.deleteMany({ users: { $size: 0 } });
 
     await User.findByIdAndDelete(userId);
 

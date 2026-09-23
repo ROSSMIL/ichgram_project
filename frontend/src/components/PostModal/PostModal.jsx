@@ -55,6 +55,10 @@ const formatTimeAgo = (dateInput) => {
   return diffInYears === 1 ? "1 year" : `${diffInYears} years`;
 };
 
+const isPostEdited = (post) => {
+  return Boolean(post?.isEdited);
+};
+
 const checkIsLiked = (postObj, userId) => {
   if (!postObj || !userId || !postObj.likes) return false;
   return postObj.likes.some((like) => {
@@ -510,6 +514,8 @@ const PostModal = ({
     (currentUsername &&
       currentUsername.toLowerCase() === authorUsername.toLowerCase());
 
+  const edited = isPostEdited(post);
+
   return createPortal(
     <div
       className={`${styles.overlay} ${isClosing ? styles.overlayLeaving : ""}`}
@@ -614,6 +620,22 @@ const PostModal = ({
                     {formatTimeAgo(post.createdAt)}
                   </span>
 
+                  {edited && (
+                    <>
+                      <span className={styles.dot}>•</span>
+                      <span
+                        className={styles.editedBadge}
+                        title={
+                          post.updatedAt
+                            ? `Edited ${formatTimeAgo(post.updatedAt)} ago`
+                            : "Edited"
+                        }
+                      >
+                        edited
+                      </span>
+                    </>
+                  )}
+
                   {!isAuthor && (
                     <>
                       <span className={styles.dot}>•</span>
@@ -672,6 +694,9 @@ const PostModal = ({
                     </p>
                     <span className={styles.commentTime}>
                       {formatTimeAgo(post.createdAt)}
+                      {edited && (
+                        <span className={styles.editedText}> • edited</span>
+                      )}
                     </span>
                   </div>
                 </div>

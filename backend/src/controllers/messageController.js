@@ -148,13 +148,13 @@ export const deleteMessage = async (req, res) => {
         .json({ message: "You can only delete your own messages" });
     }
 
-    const tenMinutesInMs = 10 * 60 * 1000;
+    const fifteenMinutesInMs = 15 * 60 * 1000;
     const timePassed = Date.now() - new Date(message.createdAt).getTime();
-
+    const chatId = message.chat._id || message.chat;
     const io = req.app.get("io");
 
     const deletedNotif = await Notification.findOneAndDelete({
-      chat: message.chat._id || message.chat,
+      chat: chatId,
       sender: userId,
       type: "message",
       messageText: message.content,
@@ -168,19 +168,30 @@ export const deleteMessage = async (req, res) => {
             notificationId: deletedNotif?._id,
             type: "message",
             senderId: userId,
-            chatId: message.chat._id || message.chat,
+            chatId: chatId,
           });
         }
       });
     }
 
-    if (timePassed <= tenMinutesInMs) {
+    let payload;
+
+    if (timePassed <= fifteenMinutesInMs) {
       await Message.findByIdAndDelete(messageId);
-      return res.status(200).json({
-        messageId,
-        chatId: message.chat._id || message.chat,
-        isHardDelete: true,
+
+      const latestRemainingMsg = await Message.findOne({ chat: chatId }).sort({
+        createdAt: -1,
       });
+
+      await Chat.findByIdAndUpdate(chatId, {
+        latestMessage: latestRemainingMsg ? latestRemainingMsg._id : null,
+      });
+
+      payload = {
+        messageId,
+        chatId,
+        isHardDelete: true,
+      };
     } else {
       message.content = "This message was deleted";
       message.isDeleted = true;
@@ -193,18 +204,28 @@ export const deleteMessage = async (req, res) => {
           populate: { path: "users", select: "username avatar fullName email" },
         });
 
-      return res.status(200).json({
+      payload = {
         messageId,
-        chatId: message.chat._id || message.chat,
+        chatId,
         isHardDelete: false,
         message: updatedMessage,
+      };
+    }
+
+    if (io && message.chat?.users) {
+      message.chat.users.forEach((user) => {
+        const targetUserId = (user._id || user).toString();
+        io.to(targetUserId).emit("message deleted", payload);
       });
     }
+
+    return res.status(200).json(payload);
   } catch (error) {
     console.error("Error in deleteMessage:", error);
     res.status(500).json({ message: error.message });
   }
 };
+
 export const markAsRead = async (req, res) => {
   const { chatId } = req.params;
   const userId = req.user?.userId || req.user?._id || req.user?.id;

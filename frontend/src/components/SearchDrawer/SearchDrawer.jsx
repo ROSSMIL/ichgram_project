@@ -5,29 +5,12 @@ import styles from "./SearchDrawer.module.css";
 import Avatar from "../Avatar/Avatar";
 import Input from "../Input/Input";
 import API from "../../api/axios";
-
-const getLoggedInUsername = () => {
-  const token = localStorage.getItem("token");
-  if (!token) return null;
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.username;
-  } catch (e) {
-    console.error("Failed to decode token inside SearchDrawer helper:", e);
-    return null;
-  }
-};
-
-const getStorageKey = () => {
-  const username = getLoggedInUsername();
-  return username ? `recentlyViewed_${username}` : "recentlyViewed_guest";
-};
-
-const getSavedRecentlyViewed = () => {
-  const key = getStorageKey();
-  const saved = localStorage.getItem(key);
-  return saved ? JSON.parse(saved) : [];
-};
+import {
+  getLoggedInUsername,
+  getSavedRecentlyViewed,
+  saveToRecentlyViewed,
+  clearRecentlyViewedStorage,
+} from "../../utils/recentlyViewed";
 
 const SearchDrawer = ({ isOpen, onClose }) => {
   const [users, setUsers] = useState([]);
@@ -198,20 +181,10 @@ const SearchDrawer = ({ isOpen, onClose }) => {
     };
   }, []);
 
-  const saveToRecentlyViewedQuietly = (user) => {
-    const currentList = getSavedRecentlyViewed();
-    const filtered = currentList.filter((item) => item._id !== user._id);
-    const updated = [user, ...filtered].slice(0, 5);
-
-    const key = getStorageKey();
-    localStorage.setItem(key, JSON.stringify(updated));
-  };
-
   const clearRecentlyViewed = () => {
     setIsClearing(true);
     setTimeout(() => {
-      const key = getStorageKey();
-      localStorage.removeItem(key);
+      clearRecentlyViewedStorage();
       setRecentlyViewed([]);
       setTabDirection("right");
       setActiveTab("suggestions");
@@ -415,7 +388,7 @@ const SearchDrawer = ({ isOpen, onClose }) => {
                       className={styles.userItem}
                       style={{ "--stagger-index": idx }}
                       onClick={() => {
-                        saveToRecentlyViewedQuietly(user);
+                        saveToRecentlyViewed(user);
                         onClose();
                       }}
                     >
@@ -462,7 +435,7 @@ const SearchDrawer = ({ isOpen, onClose }) => {
                         className={styles.userItem}
                         style={{ "--stagger-index": idx }}
                         onClick={() => {
-                          saveToRecentlyViewedQuietly(user);
+                          saveToRecentlyViewed(user);
                           onClose();
                         }}
                       >
@@ -506,7 +479,7 @@ const SearchDrawer = ({ isOpen, onClose }) => {
                         className={styles.userItem}
                         style={{ "--stagger-index": idx }}
                         onClick={() => {
-                          saveToRecentlyViewedQuietly(user);
+                          saveToRecentlyViewed(user);
                           onClose();
                         }}
                       >

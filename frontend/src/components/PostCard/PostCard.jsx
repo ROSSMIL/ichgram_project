@@ -35,6 +35,23 @@ const formatTimeAgo = (dateInput) => {
   return diffInYears <= 1 ? "1 year" : `${diffInYears} years`;
 };
 
+const isPostEdited = (post) => {
+  if (post?.isEdited) return true;
+
+  if (post?.updatedAt && post?.createdAt) {
+    const created = new Date(post.createdAt).getTime();
+    const updated = new Date(post.updatedAt).getTime();
+    const hasInteractions =
+      (post.likes?.length || 0) > 0 || (post.comments?.length || 0) > 0;
+
+    if (!hasInteractions && updated - created > 5000) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 const PostCard = ({
   post,
   index = 0,
@@ -302,6 +319,7 @@ const PostCard = ({
   };
 
   const colDelay = (index % 2) * 90;
+  const edited = isPostEdited(post);
 
   return (
     <article
@@ -324,6 +342,22 @@ const PostCard = ({
           <div className={styles.userMeta}>
             <span className={styles.dot}>•</span>
             <span className={styles.time}>{formatTimeAgo(post.createdAt)}</span>
+
+            {edited && (
+              <>
+                <span className={styles.dot}>•</span>
+                <span
+                  className={styles.editedBadge}
+                  title={
+                    post.updatedAt
+                      ? `Edited ${formatTimeAgo(post.updatedAt)} ago`
+                      : "Edited"
+                  }
+                >
+                  edited
+                </span>
+              </>
+            )}
 
             {!isAuthor && (
               <>

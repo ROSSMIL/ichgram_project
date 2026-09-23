@@ -242,6 +242,32 @@ const ExplorePage = () => {
     };
   }, [fetchExploreData, token]);
 
+  const handlePostUpdate = useCallback((updatedPost) => {
+    setPosts((prevPosts) =>
+      prevPosts.map((p) => (p._id === updatedPost._id ? updatedPost : p)),
+    );
+
+    setSelectedPost((prevSelected) => {
+      if (prevSelected && prevSelected._id === updatedPost._id) {
+        return updatedPost;
+      }
+      return prevSelected;
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleGlobalPostUpdate = (event) => {
+      if (event.detail) {
+        handlePostUpdate(event.detail);
+      }
+    };
+
+    window.addEventListener("postUpdated", handleGlobalPostUpdate);
+    return () => {
+      window.removeEventListener("postUpdated", handleGlobalPostUpdate);
+    };
+  }, [handlePostUpdate]);
+
   useEffect(() => {
     const handleRefresh = () => {
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -320,19 +346,6 @@ const ExplorePage = () => {
     },
     [token, currentUserFollowing, currentUserId],
   );
-
-  const handlePostUpdate = useCallback((updatedPost) => {
-    setPosts((prevPosts) =>
-      prevPosts.map((p) => (p._id === updatedPost._id ? updatedPost : p)),
-    );
-
-    setSelectedPost((prevSelected) => {
-      if (prevSelected && prevSelected._id === updatedPost._id) {
-        return updatedPost;
-      }
-      return prevSelected;
-    });
-  }, []);
 
   const handleOpenModal = useCallback((post, focusComment = false) => {
     setSelectedPost(post);

@@ -15,9 +15,8 @@
   flex-direction: column;
   gap: 10px;
   box-sizing: border-box;
-  overflow: hidden;
 
-  will-change: max-height, opacity, transform;
+  overflow: visible;
 
   transition:
     max-height 0.35s cubic-bezier(0.22, 1, 0.36, 1),
@@ -41,11 +40,11 @@
 .outerParticle {
   position: absolute;
   border-radius: 50%;
-  background-color: var(--link-color, #0095f6);
-  box-shadow: 0 0 8px var(--link-color, #0095f6);
+  background-color: hsl(var(--part-hue, 195deg), 100%, 60%);
+  box-shadow: 0 0 6px hsl(var(--part-hue, 195deg), 100%, 65%);
   pointer-events: none;
-  z-index: 10;
-  animation: flyOuter 0.65s cubic-bezier(0.12, 0.8, 0.32, 1) forwards;
+  z-index: 99;
+  animation: flyOuter 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .widgetHeader {
@@ -147,26 +146,6 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  will-change: opacity, transform;
-  transition:
-    opacity 0.2s ease-out,
-    transform 0.2s ease-out;
-}
-
-.clearingList {
-  opacity: 0 !important;
-  transform: translateY(-6px) scale(0.98) !important;
-  pointer-events: none;
-}
-
-.cardWrapper {
-  display: grid;
-  grid-template-rows: 1fr;
-  transition: grid-template-rows 0.45s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.animateExpansion {
-  animation: expandSlot 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .activityCard {
@@ -179,23 +158,16 @@
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
   cursor: pointer;
-  opacity: 0;
-
-  animation: softFadeIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  animation-delay: calc(var(--stagger-index, 0) * 0.03s);
-
-  will-change: transform, opacity, background-color, border-color;
+  position: relative;
   transition:
     background-color 0.2s ease,
     border-color 0.2s ease,
-    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow 0.2s ease;
 }
 
 .activityCard:hover {
   background-color: var(--bg-hover, rgba(255, 255, 255, 0.08));
   border-color: var(--text-secondary);
-  transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
@@ -209,25 +181,87 @@
   flex-shrink: 0;
 }
 
+.avatarStack {
+  position: relative;
+  width: 34px;
+  height: 34px;
+}
+
+.avatarPrimary {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+}
+
+.avatarSecondary {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  z-index: 1;
+  border: 2px solid var(--bg-card);
+  border-radius: 50%;
+}
+
 .badge {
   position: absolute;
   bottom: -3px;
   right: -3px;
-  font-size: 9px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 50%;
   width: 15px;
   height: 15px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-card);
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  box-sizing: content-box;
+  z-index: 5;
+}
+
+.badge svg {
+  width: 9px;
+  height: 9px;
+  display: block;
+}
+
+.badgeLike {
+  background: linear-gradient(135deg, #ff3040, #fd1d1d);
+  color: #ffffff;
+}
+
+.badgeComment {
+  background: linear-gradient(135deg, #0095f6, #0066ff);
+  color: #ffffff;
+}
+
+.badgeFollow {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+}
+
+.badgeMessage {
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  color: #ffffff;
+}
+
+.countPill {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--link-color, #0095f6);
+  padding: 2px 6px;
+  border-radius: 10px;
+  flex-shrink: 0;
 }
 
 .textContent {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  gap: 2px;
+  flex: 1;
 }
 
 .messageText {
@@ -243,6 +277,12 @@
   text-overflow: ellipsis;
 }
 
+.timeAgo {
+  font-size: 10px;
+  color: var(--text-secondary);
+  opacity: 0.75;
+}
+
 .emptyState {
   margin: auto;
   display: flex;
@@ -252,7 +292,6 @@
   gap: 8px;
   opacity: 0.6;
   height: 100%;
-  animation: fadeIn 0.3s ease-out forwards;
 }
 
 .emptyIconSvg {
@@ -282,40 +321,19 @@
   animation: pulseSkeleton 1.5s infinite ease-in-out;
 }
 
-@keyframes expandSlot {
-  0% {
-    grid-template-rows: 0fr;
-    margin-bottom: -6px;
-  }
-  100% {
-    grid-template-rows: 1fr;
-    margin-bottom: 0px;
-  }
-}
-
-@keyframes softFadeIn {
-  0% {
-    opacity: 0;
-    transform: translateY(-4px) scale(0.93);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
 @keyframes flyOuter {
   0% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3);
   }
-  70% {
-    opacity: 0.8;
+  20% {
+    opacity: var(--part-opacity, 0.8);
+    transform: translate(-50%, -50%) scale(1);
   }
   100% {
     opacity: 0;
     transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty)))
-      scale(0.2);
+      scale(0.1);
   }
 }
 
@@ -326,7 +344,7 @@
   }
   30% {
     border-color: var(--link-color, #0095f6);
-    box-shadow: 0 0 20px rgba(0, 149, 246, 0.35);
+    box-shadow: 0 0 18px rgba(0, 149, 246, 0.3);
   }
   100% {
     border-color: var(--border-color);
@@ -358,15 +376,6 @@
   }
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 0.6;
-  }
-}
-
 @keyframes pulseSkeleton {
   0%,
   100% {
@@ -377,17 +386,24 @@
   }
 }
 
-@media (max-height: 580px) {
+@media (max-height: 620px) {
+  .widgetBox {
+    height: auto;
+    max-height: 220px;
+  }
+}
+
+@media (max-height: 520px) {
   .widgetBox {
     opacity: 0;
     pointer-events: none;
-    max-height: 0px;
-    padding-top: 0px;
-    padding-bottom: 0px;
-    margin-top: 0px;
-    margin-bottom: 0px;
-    border-color: transparent;
-    transform: translateY(10px) scale(0.95);
+    max-height: 0px !important;
+    padding-top: 0px !important;
+    padding-bottom: 0px !important;
+    margin-top: 0px !important;
+    margin-bottom: 0px !important;
+    border-color: transparent !important;
+    transform: translateY(12px) scale(0.92);
   }
 }
 

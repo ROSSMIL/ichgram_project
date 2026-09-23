@@ -64,6 +64,11 @@
   height: min(88vh, 680px);
 }
 
+.previewExploreModeModal {
+  max-width: 480px;
+  height: min(85vh, 560px);
+}
+
 .header {
   display: flex;
   justify-content: space-between;
@@ -285,8 +290,9 @@
   width: 100%;
   height: 100%;
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
   overflow-y: auto;
   padding: 8px 16px 20px 16px;
   box-sizing: border-box;
@@ -312,11 +318,214 @@
   left: 0;
 }
 
+.previewSubHeader {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+  width: 100%;
+}
+
+.previewStylePill {
+  display: flex;
+  background-color: var(--bg-hover, var(--border-color));
+  padding: 3px;
+  border-radius: 12px;
+  gap: 2px;
+}
+
+.styleSubBtn {
+  background: transparent;
+  border: none;
+  padding: 5px 14px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.styleSubBtn:hover {
+  color: var(--text-primary);
+}
+
+.styleSubBtn.activeStyleSubBtn {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
 .previewCardContainer {
   width: 100%;
   max-width: 450px;
   pointer-events: none;
   user-select: none;
+}
+
+.explorePreviewWrapper {
+  width: 100%;
+  max-width: 320px;
+  margin-top: 18px;
+  padding: 20px 10px;
+  perspective: 1000px;
+  box-sizing: border-box;
+}
+
+.exploreGridItem {
+  position: relative;
+  width: 100%;
+  padding-top: 100%;
+  background-color: var(--bg-card, #121212);
+  border-radius: 20px;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  box-sizing: border-box;
+  overflow: visible;
+
+  --rotate-x: 0deg;
+  --rotate-y: 0deg;
+  --gloss-x: 50%;
+  --gloss-y: 50%;
+  --gloss-opacity: 0;
+
+  opacity: 1;
+  filter: blur(0px);
+  transform: translate3d(0, 0, 0) scale(1);
+  transform-style: preserve-3d;
+  will-change: transform;
+
+  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.exploreGridItem:hover {
+  transform: rotateX(var(--rotate-x)) rotateY(var(--rotate-y))
+    translate3d(0, -5px, 10px) scale(1.025);
+  transition: transform 0.08s ease-out !important;
+  z-index: 10;
+}
+
+.exploreFloatWrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 20px;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.exploreGridItem:hover .exploreFloatWrapper {
+  animation: minecraftFloat 6s ease-in-out infinite alternate;
+}
+
+.exploreGlossOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 20px;
+  background: radial-gradient(
+    circle at var(--gloss-x) var(--gloss-y),
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(255, 255, 255, 0.05) 35%,
+    transparent 70%
+  );
+  opacity: var(--gloss-opacity);
+  pointer-events: none;
+  z-index: 3;
+  mix-blend-mode: overlay;
+  transition: opacity 0.3s ease;
+}
+
+.exploreGridItem::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: var(--post-bg);
+  background-size: cover;
+  background-position: center;
+  border-radius: 24px;
+  filter: blur(24px) saturate(160%) brightness(0.95);
+  opacity: 0;
+  transform: scale(0.92) translate3d(0, 0, -20px);
+  pointer-events: none;
+  will-change: opacity, transform;
+  transition:
+    opacity 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 0;
+}
+
+.exploreGridItem:hover::before {
+  opacity: 0.75;
+  transform: scale(1.04) translate3d(0, 2px, -20px);
+}
+.explorePostImage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 20px;
+  border: none !important;
+  outline: none !important;
+  z-index: 1;
+}
+
+.exploreStatsBadge {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  color: #ffffff;
+  opacity: 0;
+  transform: translate3d(0, 6px, 16px) scale(0.95);
+  pointer-events: none;
+  will-change: opacity, transform;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.exploreGridItem:hover .exploreStatsBadge {
+  opacity: 1;
+  transform: translate3d(0, 0, 20px) scale(1);
+}
+
+.exploreBadgeStat {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+.exploreBadgeIcon {
+  width: 15px;
+  height: 15px;
+  display: block;
 }
 
 .leftColumn {
@@ -757,6 +966,142 @@
   transform: scale(0.96);
 }
 
+.cropperWrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background-color: #000000;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.cropperContainer {
+  position: relative;
+  width: 100%;
+  flex-grow: 1;
+}
+
+.cropToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background-color: rgba(0, 0, 0, 0.85);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  gap: 12px;
+  z-index: 10;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.aspectRatios {
+  display: flex;
+  gap: 4px;
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 2px;
+  border-radius: 8px;
+}
+
+.aspectBtn {
+  background: transparent;
+  border: none;
+  color: #a8a8a8;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.aspectBtn:hover {
+  color: #ffffff;
+}
+
+.aspectBtn.activeAspect {
+  background-color: var(--bg-card, #262626);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.zoomControl {
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+  max-width: 120px;
+}
+
+.zoomSlider {
+  width: 100%;
+  accent-color: var(--link-color, #0095f6);
+  cursor: pointer;
+}
+
+.applyCropBtn {
+  background-color: var(--link-color, #0095f6);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    transform 0.12s ease;
+}
+
+.applyCropBtn:hover {
+  background-color: var(--link-hover, #1877f2);
+  transform: translateY(-1px);
+}
+
+.applyCropBtn:active {
+  transform: scale(0.96);
+}
+
+.cropLoadingWrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.spinningCropSvg {
+  width: 15px;
+  height: 15px;
+  animation: spinCropSvg 0.8s linear infinite;
+  will-change: transform;
+}
+
+@keyframes spinCropSvg {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.applyCropBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+@keyframes minecraftFloat {
+  0% {
+    transform: translate3d(0, 0px, 0px) rotateZ(0deg);
+  }
+  50% {
+    transform: translate3d(0, -4px, 4px) rotateZ(0.6deg);
+  }
+  100% {
+    transform: translate3d(0, -1px, 1px) rotateZ(-0.4deg);
+  }
+}
+
 @keyframes modalFadeIn {
   from {
     opacity: 0;
@@ -854,100 +1199,4 @@
     width: 280px !important;
     height: 240px !important;
   }
-}
-
-.cropperWrapper {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  background-color: #000000;
-  border-radius: 18px;
-  overflow: hidden;
-}
-
-.cropperContainer {
-  position: relative;
-  width: 100%;
-  flex-grow: 1;
-}
-
-.cropToolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  background-color: rgba(0, 0, 0, 0.85);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  gap: 12px;
-  z-index: 10;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.aspectRatios {
-  display: flex;
-  gap: 4px;
-  background-color: rgba(255, 255, 255, 0.1);
-  padding: 2px;
-  border-radius: 8px;
-}
-
-.aspectBtn {
-  background: transparent;
-  border: none;
-  color: #a8a8a8;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.aspectBtn:hover {
-  color: #ffffff;
-}
-
-.aspectBtn.activeAspect {
-  background-color: var(--bg-card, #262626);
-  color: #ffffff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-}
-
-.zoomControl {
-  display: flex;
-  align-items: center;
-  flex-grow: 1;
-  max-width: 120px;
-}
-
-.zoomSlider {
-  width: 100%;
-  accent-color: var(--link-color, #0095f6);
-  cursor: pointer;
-}
-
-.applyCropBtn {
-  background-color: var(--link-color, #0095f6);
-  color: #ffffff;
-  border: none;
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background-color 0.2s ease,
-    transform 0.12s ease;
-}
-
-.applyCropBtn:hover {
-  background-color: var(--link-hover, #1877f2);
-  transform: translateY(-1px);
-}
-
-.applyCropBtn:active {
-  transform: scale(0.96);
 }

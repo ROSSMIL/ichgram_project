@@ -1,47 +1,101 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import PropTypes from "prop-types";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import API from "../../api/axios";
 import styles from "./Sidebar.module.css";
 import Avatar from "../Avatar/Avatar";
 import Logo from "../Logo/Logo";
+import { useSocket } from "../../context/useSocket";
 
 const Sidebar = ({
   onSearchToggle,
-  isSearchOpen,
+  isSearchOpen = false,
   onNotificationsToggle,
-  isNotificationsOpen,
+  isNotificationsOpen = false,
   openCreateModal,
 }) => {
   const [currentUser, setCurrentUser] = useState(null);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+  const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
 
   const location = useLocation();
   const navigate = useNavigate();
+  const socketContext = useSocket();
+  const socket = socketContext?.socket;
+
+  const fetchUnreadCounts = useCallback(async () => {
+    try {
+      const { data } = await API.get("/api/notifications/unread-count");
+      setUnreadMessagesCount(data.unreadMessages || 0);
+      setUnreadNotifsCount(data.unreadNotifications || 0);
+    } catch (e) {
+      console.error("Failed to fetch unread counts:", e);
+    }
+  }, []);
+
+  const fetchUser = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        setCurrentUser(payload);
+
+        const { data: userData } = await API.get("/api/users/profile", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setCurrentUser(userData);
+      } catch (e) {
+        console.error("Failed to load user inside Sidebar:", e);
+      }
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchUser = async () => {
-      const token = localStorage.getItem("token");
-      if (token) {
-        try {
-          const payload = JSON.parse(atob(token.split(".")[1]));
-          setCurrentUser(payload);
+    queueMicrotask(() => {
+      fetchUser();
+      fetchUnreadCounts();
+    });
 
-          const { data: userData } = await API.get("/api/users/profile", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          setCurrentUser(userData);
-        } catch (e) {
-          console.error("Failed to load user inside Sidebar:", e);
+    window.addEventListener("profileUpdated", fetchUser);
+    window.addEventListener("unreadCountsUpdated", fetchUnreadCounts);
+
+    return () => {
+      window.removeEventListener("profileUpdated", fetchUser);
+      window.removeEventListener("unreadCountsUpdated", fetchUnreadCounts);
+    };
+  }, [fetchUser, fetchUnreadCounts]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewNotif = (newNotif) => {
+      if (newNotif.type === "message") {
+        if (!location.pathname.startsWith("/messages")) {
+          setUnreadMessagesCount((prev) => prev + 1);
+        }
+      } else {
+        if (!isNotificationsOpen) {
+          setUnreadNotifsCount((prev) => prev + 1);
         }
       }
     };
 
-    fetchUser();
-    window.addEventListener("profileUpdated", fetchUser);
+    socket.on("new notification", handleNewNotif);
 
     return () => {
-      window.removeEventListener("profileUpdated", fetchUser);
+      socket.off("new notification", handleNewNotif);
     };
-  }, []);
+  }, [socket, location.pathname, isNotificationsOpen]);
+
+  const handleNotificationsClick = () => {
+    setUnreadNotifsCount(0);
+    onNotificationsToggle();
+  };
+
+  const handleMessagesClick = () => {
+    setUnreadMessagesCount(0);
+    window.dispatchEvent(new CustomEvent("clearAllMessageNotifications"));
+  };
 
   const triggerDashboardRefresh = () => {
     window.dispatchEvent(new CustomEvent("refreshDashboard"));
@@ -213,40 +267,48 @@ const Sidebar = ({
         <NavLink
           to="/messages"
           data-nav="messages"
+          onClick={handleMessagesClick}
           className={({ isActive }) =>
             isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
           }
         >
           {({ isActive }) => (
             <>
-              <span className={styles.icon}>
-                <svg
-                  aria-label="Direct"
-                  color="currentColor"
-                  fill="currentColor"
-                  height="24"
-                  role="img"
-                  viewBox="0 0 24 24"
-                  width="24"
-                >
-                  <line
-                    fill="none"
-                    stroke="currentColor"
-                    strokeLinejoin="round"
-                    strokeWidth={isActive ? "2.5" : "2"}
-                    x1="22"
-                    x2="9.218"
-                    y1="2"
-                    y2="10.083"
-                  />
-                  <polygon
-                    fill={isActive ? "currentColor" : "none"}
-                    points="22 2 1.93 9.312 8.781 12.656 12.125 19.507 22 2"
-                    stroke="currentColor"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                  />
-                </svg>
+              <span className={styles.iconWrapper}>
+                <span className={styles.icon}>
+                  <svg
+                    aria-label="Direct"
+                    color="currentColor"
+                    fill="currentColor"
+                    height="24"
+                    role="img"
+                    viewBox="0 0 24 24"
+                    width="24"
+                  >
+                    <line
+                      fill="none"
+                      stroke="currentColor"
+                      strokeLinejoin="round"
+                      strokeWidth={isActive ? "2.5" : "2"}
+                      x1="22"
+                      x2="9.218"
+                      y1="2"
+                      y2="10.083"
+                    />
+                    <polygon
+                      fill={isActive ? "currentColor" : "none"}
+                      points="22 2 1.93 9.312 8.781 12.656 12.125 19.507 22 2"
+                      stroke="currentColor"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                    />
+                  </svg>
+                </span>
+                {unreadMessagesCount > 0 && (
+                  <span className={styles.badgeCounter}>
+                    {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
+                  </span>
+                )}
               </span>
               <span className={styles.text}>Messages</span>
             </>
@@ -256,7 +318,7 @@ const Sidebar = ({
         {/* Notifications */}
         <div
           data-nav="notifications"
-          onClick={onNotificationsToggle}
+          onClick={handleNotificationsClick}
           className={
             isNotificationsOpen
               ? `${styles.navItem} ${styles.active}`
@@ -264,24 +326,31 @@ const Sidebar = ({
           }
           style={{ cursor: "pointer" }}
         >
-          <span className={styles.icon}>
-            <svg
-              aria-label="Notifications"
-              color="currentColor"
-              fill="currentColor"
-              height="24"
-              role="img"
-              viewBox="0 0 24 24"
-              width="24"
-            >
-              <path
-                d="M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.65 5.618-5.91 8.526L12 21l-3.59-3.352C5.15 14.74 2.5 12.194 2.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941L12 7.428l1.117-1.775a4.21 4.21 0 0 1 3.675-1.949Z"
-                fill={isNotificationsOpen ? "currentColor" : "none"}
-                stroke="currentColor"
-                strokeLinejoin="round"
-                strokeWidth="2"
-              />
-            </svg>
+          <span className={styles.iconWrapper}>
+            <span className={styles.icon}>
+              <svg
+                aria-label="Notifications"
+                color="currentColor"
+                fill="currentColor"
+                height="24"
+                role="img"
+                viewBox="0 0 24 24"
+                width="24"
+              >
+                <path
+                  d="M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.65 5.618-5.91 8.526L12 21l-3.59-3.352C5.15 14.74 2.5 12.194 2.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941L12 7.428l1.117-1.775a4.21 4.21 0 0 1 3.675-1.949Z"
+                  fill={isNotificationsOpen ? "currentColor" : "none"}
+                  stroke="currentColor"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                />
+              </svg>
+            </span>
+            {unreadNotifsCount > 0 && (
+              <span className={styles.badgeCounter}>
+                {unreadNotifsCount > 99 ? "99+" : unreadNotifsCount}
+              </span>
+            )}
           </span>
           <span className={styles.text}>Notifications</span>
         </div>
@@ -348,13 +417,21 @@ const Sidebar = ({
           id={styles.profile}
         >
           <div className={styles.avatarWrapper}>
-            <Avatar user={currentUser} size={24} />
+            <Avatar user={currentUser} size={24} showStatus={false} />
           </div>
           <span className={styles.text}>Profile</span>
         </NavLink>
       </nav>
     </div>
   );
+};
+
+Sidebar.propTypes = {
+  onSearchToggle: PropTypes.func,
+  isSearchOpen: PropTypes.bool,
+  onNotificationsToggle: PropTypes.func,
+  isNotificationsOpen: PropTypes.bool,
+  openCreateModal: PropTypes.func,
 };
 
 export default Sidebar;
