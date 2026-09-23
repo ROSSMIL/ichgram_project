@@ -17,10 +17,6 @@ export const SEEDED_EMAILS = [
   "volley@example.com",
 ];
 
-const GUEST_MUTUAL_TARGETS = ["pixel_architect", "cyber_ninja"];
-const GUEST_FOLLOWING_ONLY = ["itcareerhub", "coach.tonia"];
-const GUEST_FOLLOWER_ONLY = ["fsssociety", "gamer_pro", "foodie_travel"];
-
 const FIXED_FOLLOWS_MAP = {
   itcareerhub: ["coach.tonia", "fsssociety", "pixel_architect", "cyber_ninja"],
   "coach.tonia": ["itcareerhub", "nature_wild", "foodie_travel"],
@@ -50,16 +46,6 @@ const seedDatabase = async () => {
     const hashedPassword = await bcrypt.hash("password123", 10);
 
     const usersData = [
-      {
-        username: "guest_user",
-        email: "guest@example.com",
-        password: hashedPassword,
-        fullName: "Guest Recruiter",
-        avatar:
-          "https://api.dicebear.com/7.x/initials/svg?seed=Guest&backgroundColor=ffc107",
-        bio: "Welcome to my demo profile! I am exploring this app as a guest recruiter.",
-        website: "github.com",
-      },
       {
         username: "itcareerhub",
         email: "hub@itcareer.com",
@@ -150,40 +136,9 @@ const seedDatabase = async () => {
 
     const createdUsers = await User.insertMany(usersData);
 
-    const guestUser = createdUsers.find((u) => u.username === "guest_user");
-    const otherUsers = createdUsers.filter((u) => u.username !== "guest_user");
-
-    const mutualUsers = otherUsers.filter((u) =>
-      GUEST_MUTUAL_TARGETS.includes(u.username),
-    );
-    const onlyFollowingUsers = otherUsers.filter((u) =>
-      GUEST_FOLLOWING_ONLY.includes(u.username),
-    );
-    const onlyFollowerUsers = otherUsers.filter((u) =>
-      GUEST_FOLLOWER_ONLY.includes(u.username),
-    );
-
-    const mutualIds = mutualUsers.map((u) => u._id);
-    const onlyFollowingIds = onlyFollowingUsers.map((u) => u._id);
-    const onlyFollowerIds = onlyFollowerUsers.map((u) => u._id);
-
-    guestUser.following = [...mutualIds, ...onlyFollowingIds];
-    guestUser.followers = [...mutualIds, ...onlyFollowerIds];
-
-    for (const u of mutualUsers) {
-      u.followers.push(guestUser._id);
-      u.following.push(guestUser._id);
-    }
-    for (const u of onlyFollowingUsers) {
-      u.followers.push(guestUser._id);
-    }
-    for (const u of onlyFollowerUsers) {
-      u.following.push(guestUser._id);
-    }
-
-    for (const user of otherUsers) {
+    for (const user of createdUsers) {
       const targetUsernames = FIXED_FOLLOWS_MAP[user.username] || [];
-      const targetUsers = otherUsers.filter((u) =>
+      const targetUsers = createdUsers.filter((u) =>
         targetUsernames.includes(u.username),
       );
 
@@ -217,13 +172,6 @@ const seedDatabase = async () => {
     const now = Date.now();
 
     const postsData = [
-      {
-        user: guestUser._id,
-        url: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=600&h=600&q=80",
-        caption: "Testing this cool app! The interface and UX are top-notch.",
-        createdAt: new Date(now - 1 * 60 * 60 * 1000),
-        comments: [],
-      },
       {
         user: hub._id,
         url: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&h=600&q=80",
@@ -423,86 +371,6 @@ const seedDatabase = async () => {
     );
   } catch (error) {
     console.error("Seeding database failed:", error);
-  }
-};
-
-export const resetGuestAccount = async () => {
-  try {
-    const guestUser = await User.findOne({ email: "guest@example.com" });
-    if (!guestUser) return false;
-
-    const guestId = guestUser._id;
-
-    await Post.deleteMany({ user: guestId });
-    await Post.updateMany({}, { $pull: { comments: { user: guestId } } });
-    await Post.updateMany({ likes: guestId }, { $pull: { likes: guestId } });
-
-    await User.updateMany(
-      { followers: guestId },
-      { $pull: { followers: guestId } },
-    );
-    await User.updateMany(
-      { following: guestId },
-      { $pull: { following: guestId } },
-    );
-
-    const mutualUsers = await User.find({
-      username: { $in: GUEST_MUTUAL_TARGETS },
-    });
-    const mutualIds = mutualUsers.map((u) => u._id);
-
-    const onlyFollowingUsers = await User.find({
-      username: { $in: GUEST_FOLLOWING_ONLY },
-    });
-    const onlyFollowingIds = onlyFollowingUsers.map((u) => u._id);
-
-    const onlyFollowerUsers = await User.find({
-      username: { $in: GUEST_FOLLOWER_ONLY },
-    });
-    const onlyFollowerIds = onlyFollowerUsers.map((u) => u._id);
-
-    const finalFollowingIds = [...mutualIds, ...onlyFollowingIds];
-    const finalFollowerIds = [...mutualIds, ...onlyFollowerIds];
-
-    await User.updateMany(
-      { _id: { $in: finalFollowingIds } },
-      { $addToSet: { followers: guestId } },
-    );
-
-    await User.updateMany(
-      { _id: { $in: finalFollowerIds } },
-      { $addToSet: { following: guestId } },
-    );
-
-    guestUser.username = "guest_user";
-    guestUser.fullName = "Guest Recruiter";
-    guestUser.avatar =
-      "https://api.dicebear.com/7.x/initials/svg?seed=Guest&backgroundColor=ffc107";
-    guestUser.bio =
-      "Welcome to my demo profile! I am exploring this app as a guest recruiter.";
-    guestUser.website = "github.com";
-    guestUser.following = finalFollowingIds;
-    guestUser.followers = finalFollowerIds;
-    guestUser.followingCount = finalFollowingIds.length;
-    guestUser.followersCount = finalFollowerIds.length;
-    guestUser.postsCount = 1;
-
-    await guestUser.save();
-
-    const defaultPost = new Post({
-      user: guestId,
-      url: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=600&h=600&q=80",
-      caption: "Testing this cool app! The interface and UX are top-notch.",
-      createdAt: new Date(),
-      comments: [],
-    });
-    await defaultPost.save();
-
-    console.log("=== GUEST RESET RESTORED PERFECTLY ===");
-    return true;
-  } catch (error) {
-    console.error("Failed to reset guest account:", error);
-    throw error;
   }
 };
 

@@ -7,6 +7,8 @@ import { Server } from "socket.io";
 import http from "http";
 import connectDB from "./src/config/db.js";
 import seedDatabase from "./src/config/seeder.js";
+import { apiLimiter, authLimiter } from "./src/middlewares/rateLimiter.js";
+
 import authRoutes from "./src/routes/authRoutes.js";
 import userRoutes from "./src/routes/userRoutes.js";
 import postRoutes from "./src/routes/postRoutes.js";
@@ -19,6 +21,8 @@ const PORT = process.env.PORT || 3333;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+app.use("/api", apiLimiter);
 
 const allowedOrigins = ["http://localhost:5173", process.env.CLIENT_URL].filter(
   Boolean,
@@ -45,8 +49,7 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/chat", chatRoutes);
@@ -58,8 +61,9 @@ app.get("/", (req, res) => {
 });
 
 const server = http.createServer(app);
-
 const io = new Server(server, {
+  pingTimeout: 20000,
+  pingInterval: 25000,
   cors: {
     origin: ["http://localhost:5173", process.env.CLIENT_URL].filter(Boolean),
     methods: ["GET", "POST"],

@@ -4,11 +4,7 @@ import Post from "../models/postModel.js";
 import Chat from "../models/chatModel.js";
 import Message from "../models/messageModel.js";
 import Notification from "../models/notificationModel.js";
-import {
-  SEEDED_EMAILS,
-  resetSeededAccount,
-  resetGuestAccount,
-} from "../config/seeder.js";
+import { SEEDED_EMAILS, resetSeededAccount } from "../config/seeder.js";
 import { v2 as cloudinary } from "cloudinary";
 
 export const getProfile = async (req, res) => {
@@ -310,14 +306,6 @@ export const deleteProfile = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found in database" });
-    }
-
-    if (user.email === "guest@example.com") {
-      await resetGuestAccount();
-      return res.status(200).json({
-        message: "Guest account reset to factory settings successfully",
-        isGuestReset: true,
-      });
     }
 
     if (SEEDED_EMAILS.includes(user.email.toLowerCase())) {
