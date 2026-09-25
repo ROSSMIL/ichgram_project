@@ -17,6 +17,12 @@ const chatSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    leftUsers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
     latestMessage: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Message",
@@ -34,5 +40,8 @@ const chatSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
+
+chatSchema.index({ users: 1 });
+chatSchema.index({ leftUsers: 1 });
 
 export default mongoose.model("Chat", chatSchema);

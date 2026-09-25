@@ -61,8 +61,9 @@ app.get("/", (req, res) => {
 });
 
 const server = http.createServer(app);
+
 const io = new Server(server, {
-  pingTimeout: 20000,
+  pingTimeout: 60000,
   pingInterval: 25000,
   cors: {
     origin: ["http://localhost:5173", process.env.CLIENT_URL].filter(Boolean),
@@ -75,6 +76,18 @@ app.set("io", io);
 
 const activeUsers = new Map();
 
+const broadcastPresence = () => {
+  const presenceMap = {};
+  activeUsers.forEach((data, userId) => {
+    presenceMap[userId] = {
+      username: data.username,
+      status: data.status,
+      updatedAt: data.updatedAt,
+    };
+  });
+  io.emit("presence update", presenceMap);
+};
+
 io.on("connection", (socket) => {
   console.log(`Connected to socket.io: ${socket.id}`);
 
@@ -84,16 +97,22 @@ io.on("connection", (socket) => {
       socket.join(userId);
       socket.userId = userId;
 
-      activeUsers.set(userId, {
-        socketId: socket.id,
-        username: userData.username,
-        status: "Online 🟢",
-        updatedAt: new Date(),
-      });
+      const existing = activeUsers.get(userId);
+      if (existing) {
+        existing.socketIds.add(socket.id);
+        existing.updatedAt = new Date();
+      } else {
+        activeUsers.set(userId, {
+          socketIds: new Set([socket.id]),
+          username: userData.username,
+          status: "Online 🟢",
+          updatedAt: new Date(),
+        });
+      }
 
-      io.emit("presence update", Object.fromEntries(activeUsers));
+      broadcastPresence();
       console.log(
-        `User ${userData.username} (${userId}) connected & marked online`,
+        `User ${userData.username} (${userId}) connected with socket ${socket.id}`,
       );
     }
     socket.emit("connected");
@@ -105,12 +124,9 @@ io.on("connection", (socket) => {
     const existing = activeUsers.get(key);
 
     if (existing) {
-      activeUsers.set(key, {
-        ...existing,
-        status: activity,
-        updatedAt: new Date(),
-      });
-      io.emit("presence update", Object.fromEntries(activeUsers));
+      existing.status = activity;
+      existing.updatedAt = new Date();
+      broadcastPresence();
     }
   });
 
@@ -146,15 +162,19 @@ io.on("connection", (socket) => {
     if (chat.users && Array.isArray(chat.users)) {
       chat.users.forEach((user) => {
         const userId = (user._id || user).toString();
-        const userSocket = io.sockets.sockets.get(
-          activeUsers.get(userId)?.socketId,
-        );
+        const userSession = activeUsers.get(userId);
+
         if (
           userId !== senderId &&
-          userSocket &&
-          !userSocket.rooms.has(chatId)
+          userSession &&
+          userSession.socketIds.size > 0
         ) {
-          socket.in(userId).emit("message received", newMessageReceived);
+          userSession.socketIds.forEach((sId) => {
+            const userSocket = io.sockets.sockets.get(sId);
+            if (userSocket && !userSocket.rooms.has(chatId)) {
+              socket.in(userId).emit("message received", newMessageReceived);
+            }
+          });
         }
       });
     }
@@ -197,9 +217,37 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     if (socket.userId && activeUsers.has(socket.userId)) {
-      activeUsers.delete(socket.userId);
-      io.emit("presence update", Object.fromEntries(activeUsers));
-      console.log(`User ${socket.userId} disconnected & removed from presence`);
+      const userSession = activeUsers.get(socket.userId);
+      userSession.socketIds.delete(socket.id);
+
+      if (userSession.socketIds.size === 0) {
+        activeUsers.delete(socket.userId);
+        console.log(`User ${socket.userId} fully disconnected & removed`);
+      } else {
+        console.log(
+          `User ${socket.userId} closed tab ${socket.id}, but remains online in another tab`,
+        );
+      }
+      broadcastPresence();
+    }
+  });
+  socket.on("group updated", (updatedGroup) => {
+    if (updatedGroup?._id) {
+      io.in(updatedGroup._id.toString()).emit("group updated", updatedGroup);
+    }
+  });
+  socket.on("create group", (newGroupChat) => {
+    if (newGroupChat?.users && Array.isArray(newGroupChat.users)) {
+      newGroupChat.users.forEach((user) => {
+        const userId = (user._id || user).toString();
+        io.to(userId).emit("chat created", newGroupChat);
+      });
+    }
+  });
+  socket.on("leave chat", (room) => {
+    if (room) {
+      socket.leave(room.toString());
+      console.log(`Socket ${socket.id} left room ${room}`);
     }
   });
 });

@@ -114,7 +114,6 @@ const DashboardPage = () => {
 
   const [activeFilter, setActiveFilter] = useState("all");
   const [exploreHiddenUserIds, setExploreHiddenUserIds] = useState(new Set());
-
   const [autoFocusComment, setAutoFocusComment] = useState(false);
 
   const token = localStorage.getItem("token");
@@ -152,16 +151,17 @@ const DashboardPage = () => {
         }
         setIsServerError(false);
 
-        const postsRes = await API.get("/api/posts", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const [postsRes, profileRes] = await Promise.all([
+          API.get("/api/posts", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          API.get("/api/users/profile", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
 
         const randomizedPosts = shuffleArray(postsRes.data);
         setPosts(randomizedPosts);
-
-        const profileRes = await API.get("/api/users/profile", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
 
         const followingIds =
           profileRes.data.following
@@ -175,9 +175,15 @@ const DashboardPage = () => {
         setExploreHiddenUserIds(new Set(followingIds));
       } catch (error) {
         console.error("Error loading feed data:", error);
-        if (!error.response || error.response.status >= 500) {
-          setIsServerError(true);
-        }
+        setPosts((prevPosts) => {
+          if (
+            prevPosts.length === 0 &&
+            (!error.response || error.response.status >= 500)
+          ) {
+            setIsServerError(true);
+          }
+          return prevPosts;
+        });
       } finally {
         setLoading(false);
       }
@@ -195,13 +201,20 @@ const DashboardPage = () => {
   }, [isDisconnected, fetchFeedData]);
 
   useEffect(() => {
-    if (token) {
-      const timer = setTimeout(() => {
-        fetchFeedData();
-      }, 0);
+    let isMounted = true;
 
-      return () => clearTimeout(timer);
+    if (token) {
+      const loadInitialData = async () => {
+        if (isMounted) {
+          await fetchFeedData();
+        }
+      };
+      loadInitialData();
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [fetchFeedData, token]);
 
   const handlePostUpdate = useCallback((updatedPost) => {
@@ -239,7 +252,6 @@ const DashboardPage = () => {
   useEffect(() => {
     const handleRefresh = () => {
       scrollToTop();
-
       if (token) {
         fetchFeedData(true);
       }
@@ -318,7 +330,6 @@ const DashboardPage = () => {
       );
     } catch (error) {
       console.error("Follow error:", error);
-      alert("Could not update follow status.");
     }
   };
 
@@ -341,6 +352,10 @@ const DashboardPage = () => {
   const handleLogoClick = () => {
     scrollToTop();
     fetchFeedData(true);
+  };
+
+  const handleFullReload = () => {
+    window.location.reload();
   };
 
   const filteredPosts = posts.filter((post) => {
@@ -378,30 +393,88 @@ const DashboardPage = () => {
         />
       </header>
 
-      {loading ? (
+      {loading && posts.length === 0 ? (
         <div className={styles.feedList}>
           {[1, 2, 3, 4].map((n) => (
-            <div
-              key={n}
-              className={`${styles.skeletonCard} ${styles.skeletonPulse}`}
-            >
-              <div className={styles.skeletonHeader}>
-                <div className={styles.skeletonAvatar} />
-                <div className={styles.skeletonUsername} />
-              </div>
-              <div className={styles.skeletonImage} />
-              <div className={styles.skeletonFooter}>
+            <div key={n} className={styles.skeletonCard}>
+              <div className={styles.skeletonLeftSection}>
+                <div className={styles.skeletonHeader}>
+                  <div
+                    className={`${styles.skeletonAvatar} ${styles.skeletonShimmer}`}
+                  />
+                  <div className={styles.skeletonHeaderMeta}>
+                    <div
+                      className={`${styles.skeletonUsername} ${styles.skeletonShimmer}`}
+                    />
+                    <div
+                      className={`${styles.skeletonTime} ${styles.skeletonShimmer}`}
+                    />
+                  </div>
+                </div>
+
                 <div
-                  className={`${styles.skeletonLine} ${styles.skeletonLineShort}`}
+                  className={`${styles.skeletonImage} ${styles.skeletonShimmer}`}
                 />
+
+                <div className={styles.skeletonFooter}>
+                  <div className={styles.skeletonActions}>
+                    <div
+                      className={`${styles.skeletonIcon} ${styles.skeletonShimmer}`}
+                    />
+                    <div
+                      className={`${styles.skeletonIcon} ${styles.skeletonShimmer}`}
+                    />
+                  </div>
+                  <div
+                    className={`${styles.skeletonLine} ${styles.skeletonLineShort} ${styles.skeletonShimmer}`}
+                  />
+                  <div
+                    className={`${styles.skeletonLine} ${styles.skeletonLineMedium} ${styles.skeletonShimmer}`}
+                  />
+                </div>
+              </div>
+
+              <div className={styles.skeletonRightSection}>
+                <div className={styles.skeletonAuthorCaptionBox}>
+                  <div
+                    className={`${styles.skeletonAvatarSmall} ${styles.skeletonShimmer}`}
+                  />
+                  <div className={styles.skeletonCaptionLines}>
+                    <div
+                      className={`${styles.skeletonLine} ${styles.skeletonLineMedium} ${styles.skeletonShimmer}`}
+                    />
+                    <div
+                      className={`${styles.skeletonLine} ${styles.skeletonLineLong} ${styles.skeletonShimmer}`}
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.skeletonCommentsList}>
+                  {[1, 2, 3].map((item) => (
+                    <div key={item} className={styles.skeletonCommentItem}>
+                      <div
+                        className={`${styles.skeletonAvatarSmall} ${styles.skeletonShimmer}`}
+                      />
+                      <div className={styles.skeletonCommentLines}>
+                        <div
+                          className={`${styles.skeletonLine} ${styles.skeletonLineShort} ${styles.skeletonShimmer}`}
+                        />
+                        <div
+                          className={`${styles.skeletonLine} ${styles.skeletonLineMedium} ${styles.skeletonShimmer}`}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
                 <div
-                  className={`${styles.skeletonLine} ${styles.skeletonLineMedium}`}
+                  className={`${styles.skeletonQuickInput} ${styles.skeletonShimmer}`}
                 />
               </div>
             </div>
           ))}
         </div>
-      ) : isServerError || isDisconnected ? (
+      ) : isServerError && posts.length === 0 ? (
         <div className={styles.serverErrorCard}>
           <div className={styles.serverErrorIconWrapper}>
             <svg
@@ -426,7 +499,7 @@ const DashboardPage = () => {
           <button
             type="button"
             className={styles.retryBtn}
-            onClick={() => fetchFeedData(true)}
+            onClick={handleFullReload}
           >
             <svg
               viewBox="0 0 24 24"
@@ -441,7 +514,7 @@ const DashboardPage = () => {
               <polyline points="23 4 23 10 17 10" />
               <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
             </svg>
-            <span>Try again</span>
+            <span>Reload Application</span>
           </button>
         </div>
       ) : (

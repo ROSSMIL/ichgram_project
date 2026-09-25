@@ -141,7 +141,7 @@ export const getAllUsers = async (req, res) => {
 
     const users = await User.find({ _id: { $ne: currentUserId } })
       .select("-password")
-      .sort({ username: 1 });
+      .sort({ username: -1 });
 
     return res.status(200).json(users);
   } catch (error) {
@@ -151,7 +151,6 @@ export const getAllUsers = async (req, res) => {
       .json({ message: "Server error while fetching users" });
   }
 };
-
 export const toggleFollow = async (req, res) => {
   try {
     const currentUserId = req.user?.userId || req.user?.id || req.user?._id;
@@ -183,6 +182,8 @@ export const toggleFollow = async (req, res) => {
       currentUserId.toString(),
     );
 
+    const io = req.app.get("io");
+
     if (isAlreadyFollowing) {
       targetUser.followers = cleanFollowers.filter(
         (id) => id !== currentUserId.toString(),
@@ -196,6 +197,13 @@ export const toggleFollow = async (req, res) => {
         sender: currentUserId,
         type: "follow",
       });
+
+      if (io) {
+        io.to(targetUserId.toString()).emit("notification deleted", {
+          type: "follow",
+          senderId: currentUserId,
+        });
+      }
     } else {
       cleanFollowers.push(currentUserId.toString());
       cleanFollowing.push(targetUserId.toString());
@@ -213,7 +221,6 @@ export const toggleFollow = async (req, res) => {
         "username avatar fullName",
       );
 
-      const io = req.app.get("io");
       if (io) {
         io.to(targetUserId.toString()).emit("new notification", populatedNotif);
       }

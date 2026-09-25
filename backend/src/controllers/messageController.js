@@ -22,6 +22,19 @@ export const sendMessage = async (req, res) => {
     return res.status(401).json({ message: "User not authenticated" });
   }
 
+  const targetChat = await Chat.findById(chatId);
+  if (!targetChat) {
+    return res.status(404).json({ message: "Chat not found" });
+  }
+
+  if (
+    targetChat.isGroupChat &&
+    !targetChat.users.some((u) => u.toString() === senderId.toString())
+  ) {
+    return res
+      .status(403)
+      .json({ message: "You are no longer a member of this group" });
+  }
   const newMessage = {
     sender: senderId,
     content: content,
@@ -82,7 +95,8 @@ export const allMessages = async (req, res) => {
   try {
     const messages = await Message.find({ chat: req.params.chatId })
       .populate("sender", "username avatar fullName email")
-      .populate("chat");
+      .populate("chat")
+      .sort({ createdAt: 1 });
 
     res.status(200).json(messages);
   } catch (error) {
@@ -131,6 +145,7 @@ export const editMessage = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 export const deleteMessage = async (req, res) => {
   const { messageId } = req.params;
   const userId = req.user?.userId || req.user?._id || req.user?.id;

@@ -56,12 +56,23 @@ const Sidebar = ({
       fetchUnreadCounts();
     });
 
+    const handleActiveChatChanged = (e) => {
+      const { unreadCountForChat } = e.detail || {};
+      if (unreadCountForChat && unreadCountForChat > 0) {
+        setUnreadMessagesCount((prev) =>
+          Math.max(0, prev - unreadCountForChat),
+        );
+      }
+    };
+
     window.addEventListener("profileUpdated", fetchUser);
     window.addEventListener("unreadCountsUpdated", fetchUnreadCounts);
+    window.addEventListener("activeChatChanged", handleActiveChatChanged);
 
     return () => {
       window.removeEventListener("profileUpdated", fetchUser);
       window.removeEventListener("unreadCountsUpdated", fetchUnreadCounts);
+      window.removeEventListener("activeChatChanged", handleActiveChatChanged);
     };
   }, [fetchUser, fetchUnreadCounts]);
 
@@ -93,7 +104,8 @@ const Sidebar = ({
   };
 
   const handleMessagesClick = () => {
-    setUnreadMessagesCount(0);
+    // Не скидаємо unreadMessagesCount повністю при кліку на вкладку Direct/Messages.
+    // Скидання відбувається помірно при відкритті чату.
     window.dispatchEvent(new CustomEvent("clearAllMessageNotifications"));
   };
 

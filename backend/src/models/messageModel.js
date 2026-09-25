@@ -46,8 +46,14 @@ const messageSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isSystem: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true },
 );
+
+messageSchema.index({ chat: 1, createdAt: -1 });
 
 export default mongoose.model("Message", messageSchema);

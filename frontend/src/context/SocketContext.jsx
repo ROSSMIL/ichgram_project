@@ -57,9 +57,10 @@ export const SocketProvider = ({ children }) => {
       transports: ["websocket"],
       withCredentials: true,
       reconnection: true,
-      reconnectionAttempts: 20,
-      reconnectionDelay: 2000,
-      timeout: 20000,
+      reconnectionAttempts: 30,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 30000,
     });
 
     s.on("connect", () => {
@@ -104,6 +105,22 @@ export const SocketProvider = ({ children }) => {
       setSocket(null);
     };
   }, [token, currentUser]);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      if (socket && !socket.connected) {
+        socket.connect();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleFocus);
+    };
+  }, [socket]);
 
   const getActivityTypeByPath = useCallback((path) => {
     if (path === "/dashboard") return "dashboard";

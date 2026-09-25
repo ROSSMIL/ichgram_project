@@ -1,24 +1,35 @@
 .container {
   margin-left: 245px;
+  width: calc(100% - 245px);
   max-width: calc(100% - 245px);
-  padding: 40px 24px;
+  padding: 32px 40px;
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
   box-sizing: border-box;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   background-color: var(--bg-main);
   transition: background-color 0.4s ease;
 }
 
 .feedList {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   justify-content: center;
-  gap: 32px;
+  gap: 28px;
   width: 100%;
-  max-width: 980px;
+  max-width: 1100px;
+  transition: all 0.3s ease;
+}
+
+@media (min-width: 1900px) {
+  .feedList {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    max-width: 1800px !important;
+    gap: 32px !important;
+  }
 }
 
 .centered {
@@ -31,17 +42,243 @@
 }
 
 .emptyFeed {
-  grid-column: span 2;
+  grid-column: 1 / -1;
   width: 100%;
   text-align: center;
   padding: 40px 20px;
   color: var(--text-secondary);
 }
 
-.allCaughtUp {
-  grid-column: span 2;
+.skeletonCard {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 12px;
+  padding-bottom: 16px;
   width: 100%;
-  max-width: 580px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.skeletonLeftSection {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.skeletonRightSection {
+  display: none;
+}
+
+@media (min-width: 1900px) {
+  .skeletonCard {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    padding: 18px;
+    gap: 20px;
+    border-radius: 26px;
+    height: 590px;
+    max-height: 590px;
+  }
+
+  .skeletonLeftSection {
+    flex: 0 0 460px;
+    min-width: 0;
+    height: 100%;
+  }
+
+  .skeletonRightSection {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background-color: var(--bg-main, rgba(255, 255, 255, 0.02));
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 16px;
+    min-width: 0;
+    height: 100%;
+    box-sizing: border-box;
+  }
+}
+
+@media (min-width: 2400px) {
+  .skeletonCard {
+    height: 640px;
+    max-height: 640px;
+    padding: 20px;
+    gap: 22px;
+  }
+
+  .skeletonLeftSection {
+    flex: 0 0 500px;
+  }
+}
+
+.skeletonHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px 12px 6px;
+}
+
+.skeletonAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.skeletonHeaderMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.skeletonUsername {
+  width: 90px;
+  height: 12px;
+  border-radius: 6px;
+}
+
+.skeletonTime {
+  width: 45px;
+  height: 10px;
+  border-radius: 5px;
+}
+
+.skeletonImage {
+  width: 100%;
+  flex: 1;
+  min-height: 280px;
+  border-radius: 18px;
+}
+
+.skeletonFooter {
+  padding: 12px 6px 0 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeletonActions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 2px;
+}
+
+.skeletonIcon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+
+.skeletonLine {
+  height: 12px;
+  border-radius: 6px;
+}
+
+.skeletonLineShort {
+  width: 28%;
+}
+
+.skeletonLineMedium {
+  width: 60%;
+}
+
+.skeletonLineLong {
+  width: 85%;
+}
+
+.skeletonAuthorCaptionBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  background-color: var(--bg-hover, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+}
+
+.skeletonAvatarSmall {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.skeletonCaptionLines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skeletonCommentsList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 16px 0;
+}
+
+.skeletonCommentItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.skeletonCommentLines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skeletonQuickInput {
+  width: 100%;
+  height: 42px;
+  border-radius: 26px;
+  margin-top: auto;
+}
+
+.skeletonShimmer {
+  position: relative;
+  background-color: var(--border-color, rgba(255, 255, 255, 0.08));
+  overflow: hidden;
+}
+
+.skeletonShimmer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    transparent 100%
+  );
+  animation: shimmerWave 1.6s infinite ease-in-out;
+}
+
+@keyframes shimmerWave {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.allCaughtUp {
+  grid-column: 1 / -1;
+  width: 100%;
+  max-width: 620px;
   margin: 48px auto 20px auto;
   position: relative;
   z-index: 10;
@@ -178,82 +415,6 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
-.skeletonCard {
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding-bottom: 16px;
-  width: 100%;
-  max-width: 470px;
-  display: flex;
-  flex-direction: column;
-  margin: 0 auto;
-}
-
-.skeletonHeader {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-}
-
-.skeletonAvatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: var(--border-color);
-}
-
-.skeletonUsername {
-  width: 110px;
-  height: 12px;
-  border-radius: 4px;
-  background-color: var(--border-color);
-}
-
-.skeletonImage {
-  width: 100%;
-  height: 380px;
-  background-color: var(--border-color);
-}
-
-.skeletonFooter {
-  padding: 12px 16px 0 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.skeletonLine {
-  height: 12px;
-  border-radius: 4px;
-  background-color: var(--border-color);
-}
-
-.skeletonLineShort {
-  width: 35%;
-}
-
-.skeletonLineMedium {
-  width: 65%;
-}
-
-.skeletonPulse {
-  animation: pulseShimmer 1.2s infinite ease-in-out;
-}
-
-@keyframes pulseShimmer {
-  0% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.5;
-  }
-}
-
 .mobileHeader {
   display: none;
 }
@@ -261,6 +422,7 @@
 @media (max-width: 1024px) {
   .container {
     margin-left: 72px;
+    width: calc(100% - 72px);
     max-width: calc(100% - 72px);
     padding: 30px 16px;
   }
@@ -292,6 +454,7 @@
 
   .container {
     margin-left: 0 !important;
+    width: 100% !important;
     max-width: 100% !important;
     padding: 20px 8px 80px 8px !important;
   }

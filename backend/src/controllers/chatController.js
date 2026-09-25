@@ -1,5 +1,6 @@
 import Chat from "../models/chatModel.js";
 import User from "../models/userModel.js";
+import Message from "../models/messageModel.js";
 
 const getUserId = (req) => {
   return (
@@ -8,6 +9,33 @@ const getUserId = (req) => {
     req.user?.id ||
     (typeof req.user === "string" ? req.user : null)
   );
+};
+
+const createAndSendSystemMessage = async (req, chatId, content) => {
+  const currentUserId = getUserId(req);
+
+  let systemMessage = await Message.create({
+    sender: currentUserId,
+    content,
+    chat: chatId,
+    readBy: [currentUserId],
+    isSystem: true,
+  });
+
+  systemMessage = await systemMessage.populate(
+    "sender",
+    "username avatar fullName",
+  );
+  systemMessage = await systemMessage.populate("chat");
+
+  await Chat.findByIdAndUpdate(chatId, { latestMessage: systemMessage });
+
+  const io = req.app.get("io");
+  if (io) {
+    io.in(chatId.toString()).emit("message received", systemMessage);
+  }
+
+  return systemMessage;
 };
 
 export const accessChat = async (req, res) => {
@@ -63,6 +91,14 @@ export const accessChat = async (req, res) => {
       "-password",
     );
 
+    const io = req.app.get("io");
+    if (io && fullChat.users) {
+      fullChat.users.forEach((u) => {
+        const uId = (u._id || u).toString();
+        io.to(uId).emit("chat created", fullChat);
+      });
+    }
+
     res.status(201).json(fullChat);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -78,10 +114,14 @@ export const fetchChats = async (req, res) => {
 
   try {
     let chats = await Chat.find({
-      users: { $elemMatch: { $eq: currentUserId } },
+      $or: [
+        { users: { $elemMatch: { $eq: currentUserId } } },
+        { leftUsers: { $elemMatch: { $eq: currentUserId } } },
+      ],
       deletedFor: { $ne: currentUserId },
     })
       .populate("users", "-password")
+      .populate("leftUsers", "-password")
       .populate("groupAdmin", "-password")
       .populate("latestMessage")
       .sort({ updatedAt: -1 });
@@ -126,9 +166,29 @@ export const createGroupChat = async (req, res) => {
       deletedFor: [],
     });
 
+    const creator = await User.findById(currentUserId);
+    const creatorName = creator ? creator.username : "User";
+
+    await createAndSendSystemMessage(
+      req,
+      groupChat._id,
+      `${creatorName} created group "${req.body.name}"`,
+    );
+
     const fullGroupChat = await Chat.findOne({ _id: groupChat._id })
       .populate("users", "-password")
-      .populate("groupAdmin", "-password");
+      .populate("groupAdmin", "-password")
+      .populate("latestMessage");
+
+    const io = req.app.get("io");
+    if (io && fullGroupChat.users) {
+      fullGroupChat.users.forEach((u) => {
+        const uId = (u._id || u).toString();
+        if (uId !== currentUserId.toString()) {
+          io.to(uId).emit("chat created", fullGroupChat);
+        }
+      });
+    }
 
     res.status(201).json(fullGroupChat);
   } catch (error) {
@@ -153,10 +213,28 @@ export const renameGroup = async (req, res) => {
     const updatedChat = await Chat.findByIdAndUpdate(
       chatId,
       { chatName: chatName },
-      { new: true },
+      { returnDocument: "after" },
     )
       .populate("users", "-password")
-      .populate("groupAdmin", "-password");
+      .populate("groupAdmin", "-password")
+      .populate("latestMessage");
+
+    const admin = await User.findById(currentUserId);
+    const adminName = admin ? admin.username : "Admin";
+
+    await createAndSendSystemMessage(
+      req,
+      chatId,
+      `${adminName} changed the group name to "${chatName}"`,
+    );
+
+    const io = req.app.get("io");
+    if (io && updatedChat.users) {
+      updatedChat.users.forEach((u) => {
+        const uId = (u._id || u).toString();
+        io.to(uId).emit("group updated", updatedChat);
+      });
+    }
 
     res.status(200).json(updatedChat);
   } catch (error) {
@@ -182,10 +260,32 @@ export const addToGroup = async (req, res) => {
         $addToSet: { users: userId },
         $pull: { deletedFor: userId },
       },
-      { new: true },
+      { returnDocument: "after" },
     )
       .populate("users", "-password")
-      .populate("groupAdmin", "-password");
+      .populate("groupAdmin", "-password")
+      .populate("latestMessage");
+
+    const addedUser = await User.findById(userId);
+    const addedName = addedUser ? addedUser.username : "a user";
+
+    await createAndSendSystemMessage(
+      req,
+      chatId,
+      `${addedName} was added to the group`,
+    );
+
+    const io = req.app.get("io");
+    if (io && added.users) {
+      added.users.forEach((u) => {
+        const uId = (u._id || u).toString();
+        if (uId === userId.toString()) {
+          io.to(uId).emit("chat created", added);
+        } else {
+          io.to(uId).emit("group updated", added);
+        }
+      });
+    }
 
     res.status(200).json(added);
   } catch (error) {
@@ -212,18 +312,44 @@ export const removeFromGroup = async (req, res) => {
 
     const removed = await Chat.findByIdAndUpdate(
       chatId,
-      { $pull: { users: userId } },
-      { new: true },
+      {
+        $pull: { users: userId },
+        $addToSet: { leftUsers: userId },
+      },
+      { returnDocument: "after" },
     )
       .populate("users", "-password")
-      .populate("groupAdmin", "-password");
+      .populate("leftUsers", "-password")
+      .populate("groupAdmin", "-password")
+      .populate("latestMessage");
+
+    const targetUser = await User.findById(userId);
+    const targetName = targetUser ? targetUser.username : "A user";
+
+    const isSelfLeave = userId === currentUserId.toString();
+    const systemText = isSelfLeave
+      ? `${targetName} left the group`
+      : `${targetName} was removed from the group`;
+
+    await createAndSendSystemMessage(req, chatId, systemText);
+
+    const io = req.app.get("io");
+    if (io) {
+      io.to(userId.toString()).emit("group updated", removed);
+
+      if (removed.users) {
+        removed.users.forEach((u) => {
+          const uId = (u._id || u).toString();
+          io.to(uId).emit("group updated", removed);
+        });
+      }
+    }
 
     res.status(200).json(removed);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
-
 export const deleteChat = async (req, res) => {
   const { chatId } = req.params;
   const currentUserId = getUserId(req);
@@ -234,14 +360,26 @@ export const deleteChat = async (req, res) => {
       return res.status(404).json({ message: "Chat not found" });
     }
 
-    if (chat.isGroupChat) {
-      if (chat.groupAdmin.toString() !== currentUserId.toString()) {
-        return res
-          .status(403)
-          .json({ message: "Only group admin can delete this group" });
-      }
+    const io = req.app.get("io");
+
+    if (
+      chat.isGroupChat &&
+      chat.groupAdmin.toString() === currentUserId.toString()
+    ) {
+      await Message.deleteMany({ chat: chatId });
       await Chat.findByIdAndDelete(chatId);
-      const usersToNotify = chat.users.map((u) => u.toString());
+
+      const usersToNotify = [
+        ...chat.users.map((u) => u.toString()),
+        ...(chat.leftUsers || []).map((u) => u.toString()),
+      ];
+
+      if (io) {
+        usersToNotify.forEach((uId) => {
+          io.to(uId).emit("chat deleted", { chatId });
+        });
+      }
+
       return res.status(200).json({
         message: "Group deleted successfully",
         chatId,
@@ -251,28 +389,30 @@ export const deleteChat = async (req, res) => {
 
     const updatedChat = await Chat.findByIdAndUpdate(
       chatId,
-      { $addToSet: { deletedFor: currentUserId } },
-      { new: true },
+      {
+        $addToSet: { deletedFor: currentUserId },
+        $pull: { users: currentUserId, leftUsers: currentUserId },
+      },
+      { returnDocument: "after" },
     );
 
-    const allUsersDeleted = chat.users.every((uId) =>
-      updatedChat.deletedFor.some(
-        (delId) => delId.toString() === uId.toString(),
-      ),
+    const allMembers = [
+      ...chat.users.map((u) => u.toString()),
+      ...(chat.leftUsers || []).map((u) => u.toString()),
+    ];
+
+    const allUsersDeleted = allMembers.every((uId) =>
+      updatedChat.deletedFor.some((delId) => delId.toString() === uId),
     );
 
     if (allUsersDeleted) {
+      await Message.deleteMany({ chat: chatId });
       await Chat.findByIdAndDelete(chatId);
     }
-
-    const usersToNotify = chat.users
-      .map((u) => u.toString())
-      .filter((uId) => uId !== currentUserId.toString());
 
     res.status(200).json({
       message: "Chat deleted for you successfully",
       chatId,
-      usersToNotify,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import PropTypes from "prop-types";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import API from "../../api/axios";
 import Avatar from "../Avatar/Avatar";
@@ -70,6 +72,12 @@ const PostCard = ({
   const [floatingHearts, setFloatingHearts] = useState([]);
 
   const [isVisible, setIsVisible] = useState(false);
+  const [quickCommentText, setQuickCommentText] = useState("");
+  const [isSubmittingQuickComment, setIsSubmittingQuickComment] =
+    useState(false);
+
+  const [activeCommentMenu, setActiveCommentMenu] = useState(null);
+  const [isMenuClosing, setIsMenuClosing] = useState(false);
 
   const cardRef = useRef(null);
   const likeBtnRef = useRef(null);
@@ -318,8 +326,111 @@ const PostCard = ({
     }
   };
 
+  const handleSendQuickComment = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!quickCommentText.trim() || isSubmittingQuickComment) return;
+
+    try {
+      setIsSubmittingQuickComment(true);
+      const token = localStorage.getItem("token");
+      const response = await API.post(
+        `/api/posts/${post._id}/comment`,
+        { text: quickCommentText },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      if (response.data && typeof onPostUpdate === "function") {
+        onPostUpdate(response.data);
+      }
+      setQuickCommentText("");
+    } catch (err) {
+      console.error("Error adding quick comment:", err);
+    } finally {
+      setIsSubmittingQuickComment(false);
+    }
+  };
+
+  const handleCloseCommentMenu = useCallback(() => {
+    if (!activeCommentMenu) return;
+    setIsMenuClosing(true);
+    setTimeout(() => {
+      setActiveCommentMenu(null);
+      setIsMenuClosing(false);
+    }, 180);
+  }, [activeCommentMenu]);
+
+  const handleOpenCommentMenu = useCallback(
+    (e, commentId) => {
+      e.stopPropagation();
+      if (activeCommentMenu && activeCommentMenu.id === commentId) {
+        handleCloseCommentMenu();
+        return;
+      }
+
+      const rect = e.currentTarget.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const popoverHeight = 50;
+
+      let position = "below";
+      let top = rect.bottom + 6;
+
+      if (spaceBelow < popoverHeight && rect.top > popoverHeight) {
+        position = "above";
+        top = rect.top - popoverHeight - 6;
+      }
+
+      setActiveCommentMenu({
+        id: commentId,
+        coords: {
+          top,
+          left: Math.min(rect.left - 120, window.innerWidth - 180),
+          position,
+        },
+      });
+    },
+    [activeCommentMenu, handleCloseCommentMenu],
+  );
+
+  const handleDeleteComment = useCallback(async () => {
+    if (!activeCommentMenu?.id) return;
+    const commentId = activeCommentMenu.id;
+    handleCloseCommentMenu();
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await API.delete(
+        `/api/posts/${post._id}/comment/${commentId}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      if (response.data && typeof onPostUpdate === "function") {
+        onPostUpdate(response.data);
+      }
+    } catch (error) {
+      console.error("Error during comment deletion in card:", error);
+    }
+  }, [activeCommentMenu, handleCloseCommentMenu, onPostUpdate, post._id]);
+
+  useEffect(() => {
+    if (!activeCommentMenu) return;
+
+    const handleScrollOrClickOutside = () => {
+      handleCloseCommentMenu();
+    };
+
+    window.addEventListener("scroll", handleScrollOrClickOutside, true);
+    window.addEventListener("click", handleScrollOrClickOutside);
+
+    return () => {
+      window.removeEventListener("scroll", handleScrollOrClickOutside, true);
+      window.removeEventListener("click", handleScrollOrClickOutside);
+    };
+  }, [activeCommentMenu, handleCloseCommentMenu]);
+
   const colDelay = (index % 2) * 90;
   const edited = isPostEdited(post);
+  const commentsList = post.comments || [];
 
   return (
     <article
@@ -329,179 +440,345 @@ const PostCard = ({
         transitionDelay: isVisible ? `${colDelay}ms` : "0ms",
       }}
     >
-      <header className={styles.header} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.userInfo}>
-          <Link
-            to={getProfileLink(authorUsername)}
-            className={styles.authorBadge}
-          >
-            <Avatar user={authorUser} size={32} />
-            <span className={styles.username}>{authorUsername}</span>
-          </Link>
+      <div className={styles.leftCardSection}>
+        <header className={styles.header} onClick={(e) => e.stopPropagation()}>
+          <div className={styles.userInfo}>
+            <Link
+              to={getProfileLink(authorUsername)}
+              className={styles.authorBadge}
+            >
+              <Avatar user={authorUser} size={32} />
+              <span className={styles.username}>{authorUsername}</span>
+            </Link>
 
-          <div className={styles.userMeta}>
-            <span className={styles.dot}>•</span>
-            <span className={styles.time}>{formatTimeAgo(post.createdAt)}</span>
+            <div className={styles.userMeta}>
+              <span className={styles.dot}>•</span>
+              <span className={styles.time}>
+                {formatTimeAgo(post.createdAt)}
+              </span>
 
-            {edited && (
-              <>
-                <span className={styles.dot}>•</span>
-                <span
-                  className={styles.editedBadge}
-                  title={
-                    post.updatedAt
-                      ? `Edited ${formatTimeAgo(post.updatedAt)} ago`
-                      : "Edited"
-                  }
+              {edited && (
+                <>
+                  <span className={styles.dot}>•</span>
+                  <span
+                    className={styles.editedBadge}
+                    title={
+                      post.updatedAt
+                        ? `Edited ${formatTimeAgo(post.updatedAt)} ago`
+                        : "Edited"
+                    }
+                  >
+                    edited
+                  </span>
+                </>
+              )}
+
+              {!isAuthor && (
+                <>
+                  <span className={styles.dot}>•</span>
+                  <button
+                    className={`${styles.followBtn} ${
+                      isFollowing ? styles.following : styles.follow
+                    }`}
+                    onClick={handleFollowClick}
+                    disabled={isFollowLoading}
+                  >
+                    {isFollowing ? (
+                      <>
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        <span>Following</span>
+                      </>
+                    ) : (
+                      "Follow"
+                    )}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </header>
+
+        <div className={styles.imageContainer} onClick={handleImageClick}>
+          <div
+            className={styles.blurredBg}
+            style={{ backgroundImage: `url(${post.url})` }}
+          />
+
+          <img src={post.url} alt="Post content" className={styles.postImg} />
+
+          {floatingHearts.map((heart) => (
+            <div
+              key={heart.id}
+              className={`${styles.heartPulseAura} ${
+                heart.isFlying ? styles.flyingHeartAura : ""
+              }`}
+              style={{
+                top: `${heart.y}%`,
+                left: `${heart.x}%`,
+                "--heart-rotate": `${heart.rotate}deg`,
+                "--fly-x": heart.flyX,
+                "--fly-y": heart.flyY,
+              }}
+            >
+              <div className={styles.glassHeartCircle}>
+                <svg viewBox="0 0 24 24" className={styles.modernHeartIcon}>
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                </svg>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div
+          className={styles.interactionArea}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className={styles.actionsRow}>
+            <button
+              ref={likeBtnRef}
+              className={styles.actionBtn}
+              onClick={handleLikeToggle}
+            >
+              <svg
+                aria-label="Like"
+                height="22"
+                viewBox="0 0 24 24"
+                width="22"
+                className={`${isLiked ? styles.likedHeart : styles.unlikedHeart} ${
+                  animateHeart ? styles.popActive : ""
+                }`}
+              >
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path>
+              </svg>
+            </button>
+
+            <button className={styles.actionBtn} onClick={handleCommentClick}>
+              <svg
+                aria-label="Comment"
+                height="22"
+                viewBox="0 0 24 24"
+                width="22"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div className={styles.likesCount}>
+            {likesCount.toLocaleString()} likes
+          </div>
+
+          {post.caption && (
+            <div
+              className={styles.captionSection}
+              onClick={handleCaptionClick}
+              style={{
+                cursor:
+                  isLongCaption && isCaptionExpanded ? "pointer" : "default",
+              }}
+            >
+              <span>
+                <Link
+                  to={getProfileLink(authorUsername)}
+                  className={styles.captionUsername}
                 >
-                  edited
+                  {authorUsername}
+                </Link>
+              </span>{" "}
+              <span className={styles.captionText}>
+                {isLongCaption && !isCaptionExpanded
+                  ? `${captionText.slice(0, CAPTION_LIMIT)}...`
+                  : captionText}
+
+                {isLongCaption && !isCaptionExpanded && (
+                  <button
+                    className={styles.moreButton}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsCaptionExpanded(true);
+                    }}
+                  >
+                    more
+                  </button>
+                )}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className={styles.rightCardSection}>
+        {post.caption && (
+          <div className={styles.desktopAuthorCaptionBox}>
+            <Avatar user={authorUser} size={30} />
+            <div className={styles.desktopCommentBody}>
+              <div className={styles.desktopCommentHeader}>
+                <Link
+                  to={getProfileLink(authorUsername)}
+                  className={styles.desktopCommentUser}
+                >
+                  {authorUsername}
+                </Link>
+                <span className={styles.commentTimeAgo}>
+                  {formatTimeAgo(post.createdAt)}
                 </span>
-              </>
-            )}
+              </div>
+              <span className={styles.desktopCaptionText}>{post.caption}</span>
+            </div>
+          </div>
+        )}
 
-            {!isAuthor && (
-              <>
-                <span className={styles.dot}>•</span>
-                <button
-                  className={`${styles.followBtn} ${
-                    isFollowing ? styles.following : styles.follow
-                  }`}
-                  onClick={handleFollowClick}
-                  disabled={isFollowLoading}
+        <div className={styles.desktopCommentsList}>
+          {commentsList.length > 0 ? (
+            commentsList.map((c) => {
+              const uName = c.user?.username || c.username || "user";
+              const uAvatar = c.user || { username: uName, avatar: c.avatar };
+              const commenterId = c.user?._id || c.user?.id || c.user;
+              const isMyComment =
+                currentUserId && commenterId === currentUserId;
+
+              return (
+                <div
+                  key={c._id || c.createdAt}
+                  className={styles.desktopCommentItem}
                 >
-                  {isFollowing ? (
-                    <>
+                  <Avatar user={uAvatar} size={26} />
+                  <div className={styles.desktopCommentBody}>
+                    <div className={styles.desktopCommentHeader}>
+                      <Link
+                        to={getProfileLink(uName)}
+                        className={styles.desktopCommentUser}
+                      >
+                        {uName}
+                      </Link>
+                      <span className={styles.commentTimeAgo}>
+                        {formatTimeAgo(c.createdAt)}
+                      </span>
+                    </div>
+                    <span className={styles.desktopCommentText}>{c.text}</span>
+                  </div>
+
+                  {isMyComment && (
+                    <button
+                      className={`${styles.threeDotsCircleBtn} ${
+                        activeCommentMenu?.id === c._id
+                          ? styles.threeDotsActive
+                          : ""
+                      }`}
+                      onClick={(e) => handleOpenCommentMenu(e, c._id)}
+                      title="Comment options"
+                    >
                       <svg
-                        width="12"
-                        height="12"
+                        className={styles.threeDotsSvg}
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
-                        strokeWidth="3"
+                        strokeWidth="2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       >
-                        <polyline points="20 6 9 17 4 12" />
+                        <circle cx="12" cy="12" r="1"></circle>
+                        <circle cx="19" cy="12" r="1"></circle>
+                        <circle cx="5" cy="12" r="1"></circle>
                       </svg>
-                      <span>Following</span>
-                    </>
-                  ) : (
-                    "Follow"
+                    </button>
                   )}
-                </button>
-              </>
-            )}
-          </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className={styles.desktopNoComments}>No comments yet...</div>
+          )}
         </div>
-      </header>
 
-      <div className={styles.imageContainer} onClick={handleImageClick}>
-        <img src={post.url} alt="Post content" className={styles.postImg} />
-
-        {floatingHearts.map((heart) => (
-          <div
-            key={heart.id}
-            className={`${styles.heartPulseAura} ${
-              heart.isFlying ? styles.flyingHeartAura : ""
-            }`}
-            style={{
-              top: `${heart.y}%`,
-              left: `${heart.x}%`,
-              "--heart-rotate": `${heart.rotate}deg`,
-              "--fly-x": heart.flyX,
-              "--fly-y": heart.flyY,
-            }}
-          >
-            <div className={styles.glassHeartCircle}>
-              <svg viewBox="0 0 24 24" className={styles.modernHeartIcon}>
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-              </svg>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div
-        className={styles.interactionArea}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className={styles.actionsRow}>
+        <form
+          className={styles.desktopQuickForm}
+          onSubmit={handleSendQuickComment}
+        >
+          <input
+            type="text"
+            placeholder="Add a comment..."
+            className={styles.desktopQuickInput}
+            value={quickCommentText}
+            onChange={(e) => setQuickCommentText(e.target.value)}
+            disabled={isSubmittingQuickComment}
+          />
           <button
-            ref={likeBtnRef}
-            className={styles.actionBtn}
-            onClick={handleLikeToggle}
+            type="submit"
+            className={styles.desktopQuickSendBtn}
+            disabled={!quickCommentText.trim() || isSubmittingQuickComment}
           >
-            <svg
-              aria-label="Like"
-              height="22"
-              viewBox="0 0 24 24"
-              width="22"
-              className={`${isLiked ? styles.likedHeart : styles.unlikedHeart} ${
-                animateHeart ? styles.popActive : ""
-              }`}
-            >
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path>
-            </svg>
+            {isSubmittingQuickComment ? "..." : "Send"}
           </button>
-
-          <button className={styles.actionBtn} onClick={handleCommentClick}>
-            <svg
-              aria-label="Comment"
-              height="22"
-              viewBox="0 0 24 24"
-              width="22"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-            </svg>
-          </button>
-        </div>
-
-        <div className={styles.likesCount}>
-          {likesCount.toLocaleString()} likes
-        </div>
-
-        {post.caption && (
-          <div
-            className={styles.captionSection}
-            onClick={handleCaptionClick}
-            style={{
-              cursor:
-                isLongCaption && isCaptionExpanded ? "pointer" : "default",
-            }}
-          >
-            <span>
-              <Link
-                to={getProfileLink(authorUsername)}
-                className={styles.captionUsername}
-              >
-                {authorUsername}
-              </Link>
-            </span>{" "}
-            <span className={styles.captionText}>
-              {isLongCaption && !isCaptionExpanded
-                ? `${captionText.slice(0, CAPTION_LIMIT)}...`
-                : captionText}
-
-              {isLongCaption && !isCaptionExpanded && (
-                <button
-                  className={styles.moreButton}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsCaptionExpanded(true);
-                  }}
-                >
-                  more
-                </button>
-              )}
-            </span>
-          </div>
-        )}
+        </form>
       </div>
+
+      {activeCommentMenu &&
+        createPortal(
+          <div
+            className={`${styles.inlineMenuPopover} ${
+              activeCommentMenu.coords.position === "above"
+                ? styles.popAbove
+                : styles.popBelow
+            } ${isMenuClosing ? styles.menuClosing : ""}`}
+            style={{
+              top: `${activeCommentMenu.coords.top}px`,
+              left: `${activeCommentMenu.coords.left}px`,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.actionModalContainer}>
+              <div className={styles.actionsGroupContent}>
+                <button
+                  className={`${styles.actionBtnWithLabel} ${styles.deleteActionBtn}`}
+                  onClick={handleDeleteComment}
+                >
+                  <svg
+                    className={styles.actionIconSvg}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                  <span>Delete comment</span>
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </article>
   );
+};
+
+PostCard.propTypes = {
+  post: PropTypes.object.isRequired,
+  index: PropTypes.number,
+  currentUserId: PropTypes.string,
+  currentUsername: PropTypes.string,
+  onOpenModal: PropTypes.func.isRequired,
+  onFollowToggle: PropTypes.func,
+  currentUserFollowing: PropTypes.array,
+  onPostUpdate: PropTypes.func,
 };
 
 export default PostCard;

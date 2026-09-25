@@ -19,6 +19,18 @@ import styles from "./MessagesPage.module.css";
 
 const QUICK_EMOJIS = ["❤️", "👍", "🔥", "😂", "😮", "😢"];
 
+const formatLatestMessage = (chat) => {
+  const msg = chat?.latestMessage;
+  if (!msg) return "No messages yet";
+
+  if (msg.isSystem) {
+    return msg.content;
+  }
+
+  const senderName = msg.sender?.username || "User";
+  return chat.isGroupChat ? `${senderName}: ${msg.content}` : msg.content;
+};
+
 const formatMessageDateDivider = (dateString) => {
   if (!dateString) return "";
   const msgDate = new Date(dateString);
@@ -490,6 +502,14 @@ const MessageItem = memo(
       }
     }, [isEditing, editingContent]);
 
+    if (msg.isSystem) {
+      return (
+        <div className={styles.systemMessageContainer}>
+          <span className={styles.systemMessageBubble}>{msg.content}</span>
+        </div>
+      );
+    }
+
     return (
       <div
         className={`${styles.messageOuterContainer} ${
@@ -771,8 +791,11 @@ const MessagesPage = () => {
   const [selectedGroupUsers, setSelectedGroupUsers] = useState([]);
   const [searchUserQuery, setSearchUserQuery] = useState("");
   const [isDeleteChatModalOpen, setIsDeleteChatModalOpen] = useState(false);
+  const [isGroupDetailsModalOpen, setIsGroupDetailsModalOpen] = useState(false);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [unreadScrollCount, setUnreadScrollCount] = useState(0);
+
+  const [cannotRemoveModalUser, setCannotRemoveModalUser] = useState(null);
 
   const messagesContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
@@ -782,6 +805,16 @@ const MessagesPage = () => {
   const messagesEndRef = useRef(null);
 
   const [isOlderThan15Min, setIsOlderThan15Min] = useState(false);
+
+  const myId = currentUser?._id || currentUser?.id || currentUser?.userId;
+  const myIdStr = myId?.toString();
+
+  const isCurrentUserMember = useMemo(() => {
+    if (!selectedChat || !selectedChat.isGroupChat || !myIdStr) return true;
+    return selectedChat.users?.some(
+      (u) => (u._id || u.id || u).toString() === myIdStr,
+    );
+  }, [selectedChat, myIdStr]);
 
   useEffect(() => {
     showScrollBottomRef.current = showScrollBottom;
@@ -796,23 +829,37 @@ const MessagesPage = () => {
   const [sessionLastReadMessage, setSessionLastReadMessage] = useState(null);
   const [isHidingNewMessages, setIsHidingNewMessages] = useState(false);
 
+  const sortedMessages = useMemo(() => {
+    if (!messages.length) return [];
+    return [...messages].sort(
+      (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+    );
+  }, [messages]);
+
   useEffect(() => {
     selectedChatRef.current = selectedChat;
 
+    const currentUnreadForThisChat = selectedChat?._id
+      ? unreadCounts[selectedChat._id] || 0
+      : 0;
+
     window.dispatchEvent(
       new CustomEvent("activeChatChanged", {
-        detail: { chatId: selectedChat?._id || null },
+        detail: {
+          chatId: selectedChat?._id || null,
+          unreadCountForChat: currentUnreadForThisChat,
+        },
       }),
     );
 
     return () => {
       window.dispatchEvent(
         new CustomEvent("activeChatChanged", {
-          detail: { chatId: null },
+          detail: { chatId: null, unreadCountForChat: 0 },
         }),
       );
     };
-  }, [selectedChat]);
+  }, [selectedChat, unreadCounts]);
 
   const handleSelectChat = useCallback((chat) => {
     setSelectedChat(chat);
@@ -931,6 +978,14 @@ const MessagesPage = () => {
     try {
       const { data } = await API.get("/api/chat");
       setChats(data);
+      if (selectedChatRef.current) {
+        const updatedSelected = data.find(
+          (c) => c._id === selectedChatRef.current._id,
+        );
+        if (updatedSelected) {
+          setSelectedChat(updatedSelected);
+        }
+      }
     } catch (err) {
       console.error("Error refreshing chats:", err);
     }
@@ -1039,8 +1094,6 @@ const MessagesPage = () => {
 
       try {
         const { data } = await API.get(`/api/message/${selectedChat._id}`);
-        const myId = currentUser?._id || currentUser?.id || currentUser?.userId;
-        const myIdStr = myId?.toString();
 
         if (isMounted) {
           setUnreadCounts((prev) => ({
@@ -1070,10 +1123,10 @@ const MessagesPage = () => {
 
           const updatedData = data.map((msg) => {
             const hasMyId = msg.readBy?.some(
-              (id) => (id._id || id).toString() === myId?.toString(),
+              (id) => (id._id || id).toString() === myIdStr,
             );
 
-            if (!hasMyId && myId) {
+            if (!hasMyId && myIdStr) {
               return { ...msg, readBy: [...(msg.readBy || []), myId] };
             }
 
@@ -1093,7 +1146,7 @@ const MessagesPage = () => {
 
         if (socket) {
           socket.emit("join chat", selectedChat._id);
-          if (myId) {
+          if (myIdStr) {
             socket.emit("messages read", {
               chatId: selectedChat._id,
               userId: myId,
@@ -1112,16 +1165,47 @@ const MessagesPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [selectedChat, currentUser, socket]);
+  }, [selectedChat, myId, myIdStr, socket]);
 
   useEffect(() => {
     if (!socket) return;
 
-    const myIdStr = (
-      currentUser?._id ||
-      currentUser?.id ||
-      currentUser?.userId
-    )?.toString();
+    const handleChatCreated = (newChat) => {
+      setChats((prev) => {
+        const exists = prev.some((c) => c._id === newChat._id);
+        if (exists) {
+          return prev.map((c) => (c._id === newChat._id ? newChat : c));
+        }
+        return [newChat, ...prev];
+      });
+
+      socket.emit("join chat", newChat._id);
+    };
+
+    const handleGroupUpdated = (updatedGroupChat) => {
+      const isStillMember = updatedGroupChat.users?.some(
+        (u) => (u._id || u.id || u).toString() === myIdStr,
+      );
+
+      if (!isStillMember) {
+        setChats((prev) => prev.filter((c) => c._id !== updatedGroupChat._id));
+
+        if (selectedChatRef.current?._id === updatedGroupChat._id) {
+          setSelectedChat(null);
+          setMessages([]);
+        }
+      } else {
+        setChats((prev) =>
+          prev.map((c) =>
+            c._id === updatedGroupChat._id ? updatedGroupChat : c,
+          ),
+        );
+
+        if (selectedChatRef.current?._id === updatedGroupChat._id) {
+          setSelectedChat(updatedGroupChat);
+        }
+      }
+    };
 
     const handleMessageReceived = (newMessageReceived) => {
       const activeChat = selectedChatRef.current;
@@ -1161,8 +1245,7 @@ const MessagesPage = () => {
 
         API.put(`/api/message/mark-read/${activeChat._id}`);
 
-        const myId = currentUser?._id || currentUser?.id || currentUser?.userId;
-        if (myId) {
+        if (myIdStr) {
           socket.emit("messages read", {
             chatId: activeChat._id,
             userId: myId,
@@ -1233,7 +1316,7 @@ const MessagesPage = () => {
               msg._id === deletedMsgId
                 ? {
                     ...msg,
-                    ...updatedMsg,
+                    ...(updatedMsg._id ? updatedMsg : {}),
                     isDeleted: true,
                     content: "This message was deleted",
                   }
@@ -1271,6 +1354,10 @@ const MessagesPage = () => {
 
     const handleChatDeleted = ({ chatId }) => {
       setSocketDeletedChatId(chatId);
+      setChats((prev) => prev.filter((c) => c._id !== chatId));
+      if (selectedChatRef.current?._id === chatId) {
+        setSelectedChat(null);
+      }
       refreshChats();
     };
 
@@ -1296,6 +1383,8 @@ const MessagesPage = () => {
       }
     };
 
+    socket.on("chat created", handleChatCreated);
+    socket.on("group updated", handleGroupUpdated);
     socket.on("message received", handleMessageReceived);
     socket.on("message reaction", handleMessageReaction);
     socket.on("message edited", handleMessageEdited);
@@ -1306,6 +1395,8 @@ const MessagesPage = () => {
     socket.on("stop typing", handleStopTyping);
 
     return () => {
+      socket.off("chat created", handleChatCreated);
+      socket.off("group updated", handleGroupUpdated);
       socket.off("message received", handleMessageReceived);
       socket.off("message reaction", handleMessageReaction);
       socket.off("message edited", handleMessageEdited);
@@ -1315,51 +1406,87 @@ const MessagesPage = () => {
       socket.off("typing", handleTyping);
       socket.off("stop typing", handleStopTyping);
     };
-  }, [socket, currentUser]);
+  }, [socket, myId, myIdStr]);
 
   const handleConfirmDeleteChat = async () => {
     if (!selectedChat) return;
 
-    const myId = currentUser?._id || currentUser?.id || currentUser?.userId;
     const isGroup = selectedChat.isGroupChat;
     const isAdmin =
       isGroup &&
       (selectedChat.groupAdmin?._id || selectedChat.groupAdmin)?.toString() ===
-        myId?.toString();
+        myIdStr;
+
+    const chatId = selectedChat._id;
 
     try {
-      if (isGroup && !isAdmin) {
-        await API.put("/api/chat/groupremove", {
-          chatId: selectedChat._id,
-          userId: myId,
-        });
-      } else {
-        const { data } = await API.delete(`/api/chat/${selectedChat._id}`);
+      if (socket) {
+        socket.emit("leave chat", chatId);
+      }
 
-        if (socket) {
+      if (isGroup && isCurrentUserMember && !isAdmin) {
+        try {
+          await API.put("/api/chat/groupremove", {
+            chatId: chatId,
+            userId: myId,
+          });
+        } catch (removeErr) {
+          console.warn("Error leaving group:", removeErr);
+        }
+      } else {
+        const { data } = await API.delete(`/api/chat/${chatId}`);
+
+        if (socket && isAdmin) {
           socket.emit("chat deleted", {
-            chatId: selectedChat._id,
+            chatId: chatId,
             usersToNotify: data.usersToNotify,
           });
         }
       }
 
-      setChats((prev) => prev.filter((c) => c._id !== selectedChat._id));
+      setChats((prev) => prev.filter((c) => c._id !== chatId));
       setSelectedChat(null);
       setMessages([]);
+
       setIsDeleteChatModalOpen(false);
+      setIsGroupDetailsModalOpen(false);
     } catch (err) {
       console.error("Error deleting/leaving chat:", err);
     }
   };
 
+  const handleRemoveUserFromGroup = useCallback(
+    async (userObj) => {
+      if (!selectedChat || !selectedChat.isGroupChat) return;
+
+      if (selectedChat.users?.length <= 2) {
+        setCannotRemoveModalUser(userObj);
+        return;
+      }
+
+      const userIdToRemove = (userObj._id || userObj).toString();
+
+      try {
+        const { data } = await API.put("/api/chat/groupremove", {
+          chatId: selectedChat._id,
+          userId: userIdToRemove,
+        });
+
+        setSelectedChat(data);
+        setChats((prev) => prev.map((c) => (c._id === data._id ? data : c)));
+      } catch (err) {
+        console.error("Error removing user from group:", err);
+      }
+    },
+    [selectedChat],
+  );
+
   const getChatSender = (users) => {
     if (!users || users.length === 0) return null;
 
-    const myId = currentUser?._id || currentUser?.id || currentUser?.userId;
     const partner = users.find((u) => {
       const uId = u._id || u.id || u;
-      return uId?.toString() !== myId?.toString();
+      return uId?.toString() !== myIdStr;
     });
 
     return partner || users[0];
@@ -1380,9 +1507,6 @@ const MessagesPage = () => {
   const rawPresence = onlineUsers?.[partnerIdStr];
   const isUserOnline = Boolean(rawPresence);
 
-  const myId = currentUser?._id || currentUser?.id || currentUser?.userId;
-  const myIdStr = myId?.toString();
-
   const isChatDeletedByPartner = Boolean(
     selectedChat &&
     !selectedChat.isGroupChat &&
@@ -1400,6 +1524,7 @@ const MessagesPage = () => {
 
     if (
       isChatDeletedByPartner ||
+      (selectedChat?.isGroupChat && !isCurrentUserMember) ||
       !newMessage.trim() ||
       !selectedChat ||
       !currentUser
@@ -1562,6 +1687,10 @@ const MessagesPage = () => {
     if (!deletingMessageTarget) return;
 
     const msgId = deletingMessageTarget._id;
+    const isOld =
+      Date.now() - new Date(deletingMessageTarget.createdAt).getTime() >
+      15 * 60 * 1000;
+
     setDeletingMessageTarget(null);
 
     let previousMessagesState = [];
@@ -1569,16 +1698,15 @@ const MessagesPage = () => {
     setMessages((prev) => {
       previousMessagesState = prev;
 
-      return prev.map((msg) => {
-        if (msg._id === msgId) {
-          return {
-            ...msg,
-            isDeleted: true,
-            content: "This message was deleted",
-          };
-        }
-        return msg;
-      });
+      if (isOld) {
+        return prev.map((msg) =>
+          msg._id === msgId
+            ? { ...msg, isDeleted: true, content: "This message was deleted" }
+            : msg,
+        );
+      } else {
+        return prev.filter((msg) => msg._id !== msgId);
+      }
     });
 
     try {
@@ -1588,13 +1716,12 @@ const MessagesPage = () => {
         setMessages((prev) => prev.filter((msg) => msg._id !== msgId));
       } else {
         const updatedMsg = data.message || data;
-
         setMessages((prev) =>
           prev.map((msg) =>
             msg._id === msgId
               ? {
                   ...msg,
-                  ...updatedMsg,
+                  ...(updatedMsg._id ? updatedMsg : {}),
                   isDeleted: true,
                   content: "This message was deleted",
                 }
@@ -1613,10 +1740,7 @@ const MessagesPage = () => {
 
   const handleToggleReaction = useCallback(
     async (msgId, emoji) => {
-      const currentMyIdStr =
-        currentUser?._id || currentUser?.id || currentUser?.userId;
-
-      if (!currentMyIdStr) return;
+      if (!myIdStr) return;
 
       setMessages((prevMessages) =>
         prevMessages.map((msg) => {
@@ -1629,15 +1753,14 @@ const MessagesPage = () => {
           const targetGroup = reactions.find((r) => r.emoji === emoji);
 
           const hasMyReaction = targetGroup?.users?.some(
-            (uId) => (uId._id || uId).toString() === currentMyIdStr.toString(),
+            (uId) => (uId._id || uId).toString() === myIdStr,
           );
 
           reactions = reactions
             .map((r) => ({
               ...r,
               users: r.users.filter(
-                (uId) =>
-                  (uId._id || uId).toString() !== currentMyIdStr.toString(),
+                (uId) => (uId._id || uId).toString() !== myIdStr,
               ),
             }))
             .filter((r) => r.users.length > 0);
@@ -1646,9 +1769,9 @@ const MessagesPage = () => {
             const existingGroup = reactions.find((r) => r.emoji === emoji);
 
             if (existingGroup) {
-              existingGroup.users.push(currentMyIdStr);
+              existingGroup.users.push(myIdStr);
             } else {
-              reactions.push({ emoji, users: [currentMyIdStr] });
+              reactions.push({ emoji, users: [myIdStr] });
             }
           }
 
@@ -1671,7 +1794,7 @@ const MessagesPage = () => {
         refreshChats();
       }
     },
-    [currentUser, socket],
+    [myIdStr, socket],
   );
 
   const handleTypingInput = (e) => {
@@ -1721,7 +1844,11 @@ const MessagesPage = () => {
         users: JSON.stringify(selectedGroupUsers),
       });
 
-      setChats((prev) => [data, ...prev]);
+      setChats((prev) => {
+        const exists = prev.some((c) => c._id === data._id);
+        return exists ? prev : [data, ...prev];
+      });
+
       handleSelectChat(data);
       setIsGroupModalOpen(false);
       setGroupName("");
@@ -1804,12 +1931,12 @@ const MessagesPage = () => {
   }, [selectedChat, myIdStr]);
 
   const firstNewMessageId = useMemo(() => {
-    if (!sessionLastReadMessage || messages.length === 0 || !myIdStr)
+    if (!sessionLastReadMessage || sortedMessages.length === 0 || !myIdStr)
       return null;
 
     const lastReadTime = new Date(sessionLastReadMessage.createdAt).getTime();
 
-    const firstNew = messages.find((m) => {
+    const firstNew = sortedMessages.find((m) => {
       const senderId = (m.sender?._id || m.sender)?.toString();
       const isIncoming = senderId !== myIdStr;
       const isAfterLastRead = new Date(m.createdAt).getTime() > lastReadTime;
@@ -1817,7 +1944,7 @@ const MessagesPage = () => {
     });
 
     return firstNew ? firstNew._id : null;
-  }, [messages, sessionLastReadMessage, myIdStr]);
+  }, [sortedMessages, sessionLastReadMessage, myIdStr]);
 
   return (
     <div className={styles.container}>
@@ -1991,9 +2118,7 @@ const MessagesPage = () => {
                         </div>
 
                         <span className={styles.latestMsg}>
-                          {chat.latestMessage
-                            ? `${chat.latestMessage.sender?.username || "User"}: ${chat.latestMessage.content}`
-                            : "No messages yet"}
+                          {formatLatestMessage(chat)}
                         </span>
                       </div>
 
@@ -2075,7 +2200,11 @@ const MessagesPage = () => {
 
               <div className={styles.userInfo}>
                 {selectedChat.isGroupChat ? (
-                  <div className={styles.authorBadgeStatic}>
+                  <div
+                    className={`${styles.authorBadge} ${styles.groupHeaderClickable}`}
+                    onClick={() => setIsGroupDetailsModalOpen(true)}
+                    title="View Group Info"
+                  >
                     <div className={styles.groupAvatarHeader}>
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -2120,8 +2249,11 @@ const MessagesPage = () => {
                       </div>
                     </div>
                   ) : selectedChat.isGroupChat ? (
-                    <span className={styles.statusText}>
-                      {`${selectedChat.users.length} members`}
+                    <span
+                      className={`${styles.statusText} ${styles.groupStatusClickable}`}
+                      onClick={() => setIsGroupDetailsModalOpen(true)}
+                    >
+                      {`${selectedChat.users?.length || 0} members`}
                     </span>
                   ) : (
                     <HeaderStatusTextSwitcher
@@ -2182,7 +2314,7 @@ const MessagesPage = () => {
                     />
                   </div>
                 ))
-              ) : messages.length === 0 ? (
+              ) : sortedMessages.length === 0 ? (
                 <div className={styles.emptyConversation}>
                   <div className={styles.emptyConversationIcon}>
                     <svg
@@ -2207,7 +2339,7 @@ const MessagesPage = () => {
                 </div>
               ) : (
                 <>
-                  {messages.map((msg, index) => {
+                  {sortedMessages.map((msg, index) => {
                     const msgSenderId = msg.sender?._id || msg.sender;
                     const isMyMessage = msgSenderId?.toString() === myIdStr;
                     const isEditing = editingMessageId === msg._id;
@@ -2227,7 +2359,7 @@ const MessagesPage = () => {
                     const prevMsgDateFormatted =
                       index > 0
                         ? formatMessageDateDivider(
-                            messages[index - 1].createdAt,
+                            sortedMessages[index - 1].createdAt,
                           )
                         : null;
 
@@ -2383,6 +2515,28 @@ const MessagesPage = () => {
                   your safety.
                 </span>
               </div>
+            ) : selectedChat?.isGroupChat && !isCurrentUserMember ? (
+              <div className={styles.deletedNoticeBanner}>
+                <svg
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+
+                <span>
+                  You were removed from this group. Messages are kept for your
+                  safety, but you can no longer write here.
+                </span>
+              </div>
             ) : (
               <form className={styles.inputFooter} onSubmit={handleSendMessage}>
                 <div className={styles.inputPill}>
@@ -2535,6 +2689,167 @@ const MessagesPage = () => {
         </div>
       )}
 
+      {isGroupDetailsModalOpen && selectedChat?.isGroupChat && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setIsGroupDetailsModalOpen(false)}
+        >
+          <div
+            className={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <div className={styles.groupModalTitleRow}>
+                <h3>{selectedChat.chatName}</h3>
+                <span className={styles.groupBadgeSubtitle}>
+                  {selectedChat.users?.length || 0} members
+                </span>
+              </div>
+
+              <button
+                type="button"
+                className={styles.closeModalBtn}
+                onClick={() => setIsGroupDetailsModalOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className={styles.userSelectionContainer}>
+              <span className={styles.selectTitle}>Group Members</span>
+
+              <div className={styles.userSelectionList}>
+                {selectedChat.users?.map((u, idx) => {
+                  const isAdminUser =
+                    (
+                      selectedChat.groupAdmin?._id || selectedChat.groupAdmin
+                    )?.toString() === (u._id || u).toString();
+                  const isMe = (u._id || u).toString() === myIdStr;
+
+                  return (
+                    <div
+                      key={u._id || u}
+                      className={styles.memberListItem}
+                      style={{ "--stagger-index": idx }}
+                    >
+                      <Avatar user={u} size={38} />
+
+                      <div className={styles.memberInfo}>
+                        <span className={styles.selectUsername}>
+                          {u.username} {isMe ? "(You)" : ""}
+                        </span>
+                        {u.fullName && (
+                          <span className={styles.globalFullName}>
+                            {u.fullName}
+                          </span>
+                        )}
+                      </div>
+
+                      {isAdminUser && (
+                        <span className={styles.adminBadge}>Admin</span>
+                      )}
+
+                      {isGroupAdmin && !isMe && (
+                        <button
+                          type="button"
+                          className={styles.removeMemberBtn}
+                          onClick={() => handleRemoveUserFromGroup(u)}
+                          title="Remove member"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.cancelBtn}
+                onClick={() => setIsGroupDetailsModalOpen(false)}
+              >
+                Close
+              </button>
+
+              <button
+                type="button"
+                className={styles.createBtn}
+                style={{ backgroundColor: "#ed4956" }}
+                onClick={() => {
+                  setIsGroupDetailsModalOpen(false);
+                  setIsDeleteChatModalOpen(true);
+                }}
+              >
+                {isGroupAdmin ? "Delete Group" : "Leave Group"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cannotRemoveModalUser && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setCannotRemoveModalUser(null)}
+        >
+          <div
+            className={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <h3>Cannot remove member</h3>
+              <button
+                type="button"
+                className={styles.closeModalBtn}
+                onClick={() => setCannotRemoveModalUser(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <p
+              style={{
+                color: "var(--text-secondary)",
+                margin: "16px 0 24px 0",
+                fontSize: "14px",
+                lineHeight: "1.5",
+              }}
+            >
+              Group chats require at least 2 members. Removing{" "}
+              <strong>{cannotRemoveModalUser?.username || "this user"}</strong>{" "}
+              will permanently delete this group chat for everyone. Would you
+              like to delete the group?
+            </p>
+
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.cancelBtn}
+                onClick={() => setCannotRemoveModalUser(null)}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className={styles.createBtn}
+                style={{ backgroundColor: "#ed4956" }}
+                onClick={() => {
+                  setCannotRemoveModalUser(null);
+                  setIsGroupDetailsModalOpen(false);
+                  handleConfirmDeleteChat();
+                }}
+              >
+                Delete Group
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isDeleteChatModalOpen && (
         <div
           className={styles.modalOverlay}
@@ -2620,7 +2935,7 @@ const MessagesPage = () => {
 
             <div className={styles.deletePreviewBubble}>
               <span className={styles.deletePreviewText}>
-                "{deletingMessageTarget.content}"
+                &quot;{deletingMessageTarget.content}&quot;
               </span>
             </div>
 

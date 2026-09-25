@@ -206,7 +206,6 @@ const ActivityWidget = () => {
         setIsRinging(false);
       }, 650);
     };
-
     const handleNotificationDeleted = (data) => {
       setActivities((prev) =>
         prev.filter((item) => {
@@ -224,10 +223,11 @@ const ActivityWidget = () => {
             if (data.postId) {
               const itemPostId = (item.post?._id || item.post)?.toString();
               if (itemPostId === data.postId.toString()) return false;
-            }
-            if (data.chatId) {
+            } else if (data.chatId) {
               const itemChatId = (item.chat?._id || item.chat)?.toString();
               if (itemChatId === data.chatId.toString()) return false;
+            } else if (data.type === "follow") {
+              return false;
             }
           }
 
@@ -268,6 +268,11 @@ const ActivityWidget = () => {
         existingGroup.count += 1;
         existingGroup.items.push(item);
 
+        if (new Date(item.createdAt) > new Date(existingGroup.createdAt)) {
+          existingGroup.createdAt = item.createdAt;
+          existingGroup.latestItem = item;
+        }
+
         const alreadyHasSender = existingGroup.senders.some(
           (s) => (s._id || s)?.toString() === senderId,
         );
@@ -290,7 +295,9 @@ const ActivityWidget = () => {
       return map;
     }, new Map());
 
-    return Array.from(groupedMap.values()).slice(0, 8);
+    return Array.from(groupedMap.values())
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 8);
   }, [activities]);
 
   const handleClearAll = async () => {
