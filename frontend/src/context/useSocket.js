@@ -2,5 +2,9 @@ import { useContext } from "react";
 import { SocketContext } from "./SocketContextInstance.js";
 
 export const useSocket = () => {
-  return useContext(SocketContext);
+  const context = useContext(SocketContext);
+  if (!context) {
+    console.warn("useSocket must be used within a SocketProvider");
+  }
+  return context;
 };

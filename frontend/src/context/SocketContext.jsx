@@ -28,36 +28,44 @@ export const SocketProvider = ({ children }) => {
     };
   }, []);
 
-  useEffect(() => {
+  const fetchProfile = useCallback(async () => {
     if (!token) return;
-
-    let isMounted = true;
-    const fetchProfile = async () => {
-      try {
-        const { data } = await API.get("/api/users/profile");
-        if (isMounted) {
-          setCurrentUser(data);
-        }
-      } catch (err) {
-        console.error("Error fetching user profile for socket:", err);
+    try {
+      const { data } = await API.get("/api/users/profile");
+      setCurrentUser(data);
+    } catch (err) {
+      console.error("Error fetching user profile for socket:", err);
+      if (err.response?.status === 401) {
+        setCurrentUser(null);
       }
-    };
+    }
+  }, [token]);
 
-    fetchProfile();
+  useEffect(() => {
+    let isMounted = true;
+
+    if (token) {
+
+      Promise.resolve().then(() => {
+        if (isMounted) {
+          fetchProfile();
+        }
+      });
+    }
 
     return () => {
       isMounted = false;
     };
-  }, [token]);
+  }, [token, fetchProfile]);
 
   useEffect(() => {
     if (!token || !currentUser) return;
 
     const s = io(ENDPOINT, {
-      transports: ["websocket"],
+      transports: ["websocket", "polling"],
       withCredentials: true,
       reconnection: true,
-      reconnectionAttempts: 30,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       timeout: 30000,
@@ -65,7 +73,6 @@ export const SocketProvider = ({ children }) => {
 
     s.on("connect", () => {
       setSocket(s);
-
       s.emit("setup", currentUser);
 
       if (activeChatIdRef.current) {
@@ -82,15 +89,14 @@ export const SocketProvider = ({ children }) => {
     });
 
     s.on("disconnect", (reason) => {
-      if (
-        reason === "transport close" ||
-        reason === "ping timeout" ||
-        reason === "transport error" ||
-        reason === "io server disconnect"
-      ) {
+      if (reason !== "io client disconnect") {
         setIsDisconnected(true);
         setShowRestored(false);
       }
+    });
+
+    s.on("connect_error", () => {
+      setIsDisconnected(true);
     });
 
     s.on("presence update", (usersMap) => {
@@ -100,6 +106,7 @@ export const SocketProvider = ({ children }) => {
     return () => {
       s.off("connect");
       s.off("disconnect");
+      s.off("connect_error");
       s.off("presence update");
       s.disconnect();
       setSocket(null);
@@ -107,9 +114,37 @@ export const SocketProvider = ({ children }) => {
   }, [token, currentUser]);
 
   useEffect(() => {
+    const handleForceReconnect = async () => {
+      await fetchProfile();
+      if (socket) {
+        if (!socket.connected) {
+          socket.connect();
+        } else if (currentUser) {
+          socket.emit("setup", currentUser);
+          if (activeChatIdRef.current) {
+            socket.emit("join chat", activeChatIdRef.current);
+          }
+        }
+      }
+    };
+
+    window.addEventListener("forceSocketReconnect", handleForceReconnect);
+    return () => {
+      window.removeEventListener("forceSocketReconnect", handleForceReconnect);
+    };
+  }, [socket, currentUser, fetchProfile]);
+
+  useEffect(() => {
     const handleFocus = () => {
-      if (socket && !socket.connected) {
-        socket.connect();
+      if (socket) {
+        if (!socket.connected) {
+          socket.connect();
+        } else if (currentUser) {
+          socket.emit("setup", currentUser);
+          if (activeChatIdRef.current) {
+            socket.emit("join chat", activeChatIdRef.current);
+          }
+        }
       }
     };
 
@@ -120,7 +155,7 @@ export const SocketProvider = ({ children }) => {
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleFocus);
     };
-  }, [socket]);
+  }, [socket, currentUser]);
 
   const getActivityTypeByPath = useCallback((path) => {
     if (path === "/dashboard") return "dashboard";
@@ -157,9 +192,16 @@ export const SocketProvider = ({ children }) => {
     };
   }, [location.pathname, currentUser, socket, getActivityTypeByPath]);
 
+  const effectiveUser = token ? currentUser : null;
+
   return (
     <SocketContext.Provider
-      value={{ socket, currentUser, onlineUsers, isDisconnected }}
+      value={{
+        socket,
+        currentUser: effectiveUser,
+        onlineUsers,
+        isDisconnected,
+      }}
     >
       {children}
 

@@ -63,10 +63,10 @@ app.get("/", (req, res) => {
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  pingTimeout: 60000,
-  pingInterval: 25000,
+  pingTimeout: 20000,
+  pingInterval: 10000,
   cors: {
-    origin: ["http://localhost:5173", process.env.CLIENT_URL].filter(Boolean),
+    origin: allowedOrigins.length > 0 ? allowedOrigins : "*",
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -231,11 +231,13 @@ io.on("connection", (socket) => {
       broadcastPresence();
     }
   });
+
   socket.on("group updated", (updatedGroup) => {
     if (updatedGroup?._id) {
       io.in(updatedGroup._id.toString()).emit("group updated", updatedGroup);
     }
   });
+
   socket.on("create group", (newGroupChat) => {
     if (newGroupChat?.users && Array.isArray(newGroupChat.users)) {
       newGroupChat.users.forEach((user) => {
@@ -244,6 +246,7 @@ io.on("connection", (socket) => {
       });
     }
   });
+
   socket.on("leave chat", (room) => {
     if (room) {
       socket.leave(room.toString());

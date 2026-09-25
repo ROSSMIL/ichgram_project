@@ -26,6 +26,7 @@ import useAutoLogout from "./hooks/useAutoLogout";
 import MessagesPage from "./pages/MessagesPage/MessagesPage";
 import { SocketProvider } from "./context/SocketContext.jsx";
 import AppSplashScreen from "./components/AppSplashScreen/AppSplashScreen";
+import GlobalServerError from "./components/GlobalServerError/GlobalServerError";
 import ScrollToTopButton from "./components/ScrollToTopButton/ScrollToTopButton";
 import API from "./api/axios";
 import "./App.css";
@@ -65,7 +66,6 @@ const ProtectedRoute = ({ children }) => {
   useEffect(() => {
     const handleOpenEdit = (e) => {
       setEditingPost(e.detail);
-
       setIsCreateModalOpen(true);
     };
 
@@ -78,13 +78,11 @@ const ProtectedRoute = ({ children }) => {
 
   const openCreateModal = () => {
     setEditingPost(null);
-
     setIsCreateModalOpen(true);
   };
 
   const closeCreateModal = () => {
     setIsCreateModalOpen(false);
-
     setEditingPost(null);
   };
 
@@ -96,13 +94,11 @@ const ProtectedRoute = ({ children }) => {
 
   const toggleSearch = () => {
     setIsNotificationsOpen(false);
-
     setIsSearchOpen((prev) => !prev);
   };
 
   const toggleNotifications = () => {
     setIsSearchOpen(false);
-
     setIsNotificationsOpen((prev) => !prev);
   };
 
@@ -169,9 +165,28 @@ const PublicOnlyRoute = ({ children }) => {
 
 function App() {
   const [isAppReady, setIsAppReady] = useState(false);
+  const [isServerError, setIsServerError] = useState(false);
+  const [retryTrigger, setRetryTrigger] = useState(0);
 
   useEffect(() => {
-    const checkServerHealth = async () => {
+    const handleGlobalMaintenance = () => {
+      setIsServerError(true);
+    };
+
+    window.addEventListener("globalServerMaintenance", handleGlobalMaintenance);
+
+    return () => {
+      window.removeEventListener(
+        "globalServerMaintenance",
+        handleGlobalMaintenance,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const runHealthCheck = async () => {
       const token = localStorage.getItem("token");
 
       const minDisplayTime = new Promise((resolve) =>
@@ -180,21 +195,45 @@ function App() {
 
       try {
         if (token) {
-          await API.get("/api/users/profile", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+          await API.get("/api/users/profile");
         }
       } catch (e) {
-        console.warn("Server warmup check finished or unauthenticated:", e);
+        console.warn("Server warmup check error:", e);
+
+        if (isMounted) {
+          const isNetworkDown = !e.response;
+          const isServer5xx =
+            e.response && [502, 503, 504].includes(e.response.status);
+
+          if (isNetworkDown || isServer5xx) {
+            setIsServerError(true);
+          }
+        }
       } finally {
         await minDisplayTime;
-
-        setIsAppReady(true);
+        if (isMounted) {
+          setIsAppReady(true);
+        }
       }
     };
 
-    checkServerHealth();
-  }, []);
+    runHealthCheck();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [retryTrigger]);
+
+  const handleServerRestored = () => {
+    setIsServerError(false);
+    setIsAppReady(true);
+    setRetryTrigger((prev) => prev + 1);
+
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("forceSocketReconnect"));
+      window.dispatchEvent(new CustomEvent("refreshDashboard"));
+    }, 200);
+  };
 
   return (
     <Router>
@@ -203,104 +242,108 @@ function App() {
 
         <ScrollToTop />
 
-        <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        {isServerError ? (
+          <GlobalServerError onSuccess={handleServerRestored} />
+        ) : (
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-          <Route
-            path="/login"
-            element={
-              <PublicOnlyRoute>
-                <LoginPage />
-              </PublicOnlyRoute>
-            }
-          />
+            <Route
+              path="/login"
+              element={
+                <PublicOnlyRoute>
+                  <LoginPage />
+                </PublicOnlyRoute>
+              }
+            />
 
-          <Route
-            path="/register"
-            element={
-              <PublicOnlyRoute>
-                <RegisterPage />
-              </PublicOnlyRoute>
-            }
-          />
+            <Route
+              path="/register"
+              element={
+                <PublicOnlyRoute>
+                  <RegisterPage />
+                </PublicOnlyRoute>
+              }
+            />
 
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/post/:id"
-            element={
-              <ProtectedRoute>
-                <PostPage />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/post/:id"
+              element={
+                <ProtectedRoute>
+                  <PostPage />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/explore"
-            element={
-              <ProtectedRoute>
-                <ExplorePage />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/explore"
+              element={
+                <ProtectedRoute>
+                  <ExplorePage />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <ProfilePage />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/user/:username"
-            element={
-              <ProtectedRoute>
-                <UserProfilePage />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/user/:username"
+              element={
+                <ProtectedRoute>
+                  <UserProfilePage />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/edit-profile"
-            element={
-              <ProtectedRoute>
-                <EditProfilePage />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/edit-profile"
+              element={
+                <ProtectedRoute>
+                  <EditProfilePage />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/messages"
-            element={
-              <ProtectedRoute>
-                <MessagesPage />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/messages"
+              element={
+                <ProtectedRoute>
+                  <MessagesPage />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/notifications"
-            element={<Navigate to="/dashboard" replace />}
-          />
+            <Route
+              path="/notifications"
+              element={<Navigate to="/dashboard" replace />}
+            />
 
-          <Route
-            path="*"
-            element={
-              <ProtectedRoute>
-                <NotFoundPage />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
+            <Route
+              path="*"
+              element={
+                <ProtectedRoute>
+                  <NotFoundPage />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        )}
       </SocketProvider>
     </Router>
   );

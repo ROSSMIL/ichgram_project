@@ -2,7 +2,7 @@ import axios from "axios";
 
 const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:3333",
-  timeout: 60000, 
+  timeout: 60000,
 });
 
 API.interceptors.request.use((config) => {
@@ -29,8 +29,13 @@ API.interceptors.response.use(
         await new Promise((resolve) => setTimeout(resolve, 2000));
         return await API(originalRequest);
       } catch (retryError) {
+        window.dispatchEvent(new CustomEvent("globalServerMaintenance"));
         return Promise.reject(retryError);
       }
+    }
+
+    if (error.response && [502, 503, 504].includes(error.response.status)) {
+      window.dispatchEvent(new CustomEvent("globalServerMaintenance"));
     }
 
     if (error.response && error.response.status === 401) {
