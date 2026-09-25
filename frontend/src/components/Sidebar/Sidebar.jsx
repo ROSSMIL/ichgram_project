@@ -104,8 +104,6 @@ const Sidebar = ({
   };
 
   const handleMessagesClick = () => {
-    // Не скидаємо unreadMessagesCount повністю при кліку на вкладку Direct/Messages.
-    // Скидання відбувається помірно при відкритті чату.
     window.dispatchEvent(new CustomEvent("clearAllMessageNotifications"));
   };
 
