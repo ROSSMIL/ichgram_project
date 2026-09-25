@@ -47,31 +47,38 @@ const SearchDrawer = ({ isOpen, onClose }) => {
       const activeRect = activeTabEl.getBoundingClientRect();
       const containerRect = container.getBoundingClientRect();
 
-      const leftOffset = activeRect.left - containerRect.left - 3;
-      const width = activeRect.width;
+      if (activeRect.width > 0) {
+        const leftOffset = activeRect.left - containerRect.left - 3;
+        const width = activeRect.width;
 
-      setGliderStyle({
-        transform: `translateX(${leftOffset}px)`,
-        width: `${width}px`,
-        opacity: 1,
-      });
+        setGliderStyle({
+          transform: `translateX(${leftOffset}px)`,
+          width: `${width}px`,
+          opacity: 1,
+        });
+      }
     }
   }, [activeTab]);
 
   useEffect(() => {
     if (!isOpen) return;
 
-    const animationFrame = requestAnimationFrame(() => {
+    const rafId = requestAnimationFrame(() => {
       updateGlider();
     });
+
+    const timerId = setTimeout(() => {
+      updateGlider();
+    }, 60);
 
     window.addEventListener("resize", updateGlider);
 
     return () => {
-      cancelAnimationFrame(animationFrame);
+      cancelAnimationFrame(rafId);
+      clearTimeout(timerId);
       window.removeEventListener("resize", updateGlider);
     };
-  }, [isOpen, updateGlider]);
+  }, [isOpen, activeTab, updateGlider]);
 
   const prevIsOpenRef = useRef(isOpen);
 
