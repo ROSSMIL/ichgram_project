@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
 import { createPortal } from "react-dom";
 import PropTypes from "prop-types";
 import styles from "./FeedFilterPill.module.css";
@@ -6,49 +12,58 @@ import styles from "./FeedFilterPill.module.css";
 const FeedFilterPill = ({ activeFilter, onFilterChange }) => {
   const containerRef = useRef(null);
   const tabsRef = useRef({});
-  const [gliderStyle, setGliderStyle] = useState({
+  const isFirstRender = useRef(true);
+
+  const [gliderStyle, setGliderStyle] = useState(() => ({
     transform: "translateX(0px)",
     width: "0px",
     opacity: 0,
-  });
+    isReady: false,
+  }));
 
   const updateGlider = useCallback(() => {
     const activeTab = tabsRef.current[activeFilter];
-    const container = containerRef.current;
 
-    if (activeTab && container) {
-      const activeRect = activeTab.getBoundingClientRect();
-      const containerRect = container.getBoundingClientRect();
+    if (activeTab) {
+      const leftOffset = activeTab.offsetLeft;
+      const width = activeTab.offsetWidth;
 
-      const leftOffset = activeRect.left - containerRect.left - 4;
-      const width = activeRect.width;
+      if (width > 0) {
+        setGliderStyle({
+          transform: `translateX(${leftOffset}px)`,
+          width: `${width}px`,
+          opacity: 1,
+          isReady: !isFirstRender.current,
+        });
 
-      setGliderStyle({
-        transform: `translateX(${leftOffset}px)`,
-        width: `${width}px`,
-        opacity: 1,
-      });
+        if (isFirstRender.current) {
+          requestAnimationFrame(() => {
+            isFirstRender.current = false;
+          });
+        }
+      }
     }
   }, [activeFilter]);
 
-  useEffect(() => {
-    const animationFrame = requestAnimationFrame(() => {
-      updateGlider();
-    });
+  useLayoutEffect(() => {
+    updateGlider();
+  }, [updateGlider]);
 
+  useEffect(() => {
     window.addEventListener("resize", updateGlider);
 
     const observer = new MutationObserver(() => {
       updateGlider();
     });
 
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-theme"],
-    });
+    if (document.documentElement) {
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["data-theme"],
+      });
+    }
 
     return () => {
-      cancelAnimationFrame(animationFrame);
       window.removeEventListener("resize", updateGlider);
       observer.disconnect();
     };
@@ -67,7 +82,16 @@ const FeedFilterPill = ({ activeFilter, onFilterChange }) => {
 
   return createPortal(
     <div ref={containerRef} className={styles.filterContainer}>
-      <div className={styles.glider} style={gliderStyle} />
+      <div
+        className={`${styles.glider} ${
+          !gliderStyle.isReady ? styles.noAnimation : ""
+        }`}
+        style={{
+          transform: gliderStyle.transform,
+          width: gliderStyle.width,
+          opacity: gliderStyle.opacity,
+        }}
+      />
 
       <button
         ref={(el) => (tabsRef.current["all"] = el)}

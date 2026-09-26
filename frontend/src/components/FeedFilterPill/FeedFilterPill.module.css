@@ -40,7 +40,7 @@
 .glider {
   position: absolute;
   top: 4px;
-  left: 4px;
+  left: 0;
   height: calc(100% - 8px);
   background-color: var(--text-primary);
   border-radius: 18px;
@@ -56,7 +56,7 @@
     background-color 0.3s ease;
 }
 
-.glider.noTransition {
+.glider.noAnimation {
   transition: none !important;
 }
 
