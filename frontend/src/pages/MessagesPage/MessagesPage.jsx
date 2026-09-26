@@ -805,6 +805,12 @@ const MessagesPage = () => {
   const messagesEndRef = useRef(null);
 
   const [isOlderThan15Min, setIsOlderThan15Min] = useState(false);
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, []);
 
   const myId = currentUser?._id || currentUser?.id || currentUser?.userId;
   const myIdStr = myId?.toString();

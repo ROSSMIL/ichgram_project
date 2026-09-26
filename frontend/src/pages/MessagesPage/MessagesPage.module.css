@@ -2756,3 +2756,6 @@
   color: #ffffff;
   border-color: #ef4444;
 }
+:global(.footer-container) {
+  display: none !important;
+}
