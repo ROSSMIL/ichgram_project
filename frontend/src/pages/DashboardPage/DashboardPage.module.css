@@ -67,7 +67,6 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  height: 100%;
 }
 
 .skeletonRightSection {
@@ -125,6 +124,8 @@
   align-items: center;
   gap: 10px;
   padding: 4px 6px 12px 6px;
+  height: 48px;
+  box-sizing: border-box;
 }
 
 .skeletonAvatar {
@@ -154,8 +155,7 @@
 
 .skeletonImage {
   width: 100%;
-  flex: 1;
-  min-height: 280px;
+  aspect-ratio: 1 / 1;
   border-radius: 18px;
 }
 
@@ -163,13 +163,13 @@
   padding: 12px 6px 0 6px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .skeletonActions {
   display: flex;
   gap: 12px;
-  margin-bottom: 2px;
+  height: 22px;
 }
 
 .skeletonIcon {
@@ -184,15 +184,15 @@
 }
 
 .skeletonLineShort {
-  width: 28%;
+  width: 90px;
 }
 
 .skeletonLineMedium {
-  width: 60%;
+  width: 75%;
 }
 
 .skeletonLineLong {
-  width: 85%;
+  width: 90%;
 }
 
 .skeletonAuthorCaptionBox {
