@@ -1,4 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useCallback,
+} from "react";
 import PropTypes from "prop-types";
 import { Link, useLocation } from "react-router-dom";
 import styles from "./SearchDrawer.module.css";
@@ -41,16 +47,11 @@ const SearchDrawer = ({ isOpen, onClose }) => {
 
   const updateGlider = useCallback(() => {
     const activeTabEl = tabsRef.current[activeTab];
-    const container = tabsContainerRef.current;
+    if (activeTabEl) {
+      const leftOffset = activeTabEl.offsetLeft;
+      const width = activeTabEl.offsetWidth;
 
-    if (activeTabEl && container) {
-      const activeRect = activeTabEl.getBoundingClientRect();
-      const containerRect = container.getBoundingClientRect();
-
-      if (activeRect.width > 0) {
-        const leftOffset = activeRect.left - containerRect.left - 3;
-        const width = activeRect.width;
-
+      if (width > 0) {
         setGliderStyle({
           transform: `translateX(${leftOffset}px)`,
           width: `${width}px`,
@@ -60,25 +61,20 @@ const SearchDrawer = ({ isOpen, onClose }) => {
     }
   }, [activeTab]);
 
+  useLayoutEffect(() => {
+    if (isOpen && shouldRender) {
+      updateGlider();
+    }
+  }, [isOpen, shouldRender, activeTab, recentlyViewed.length, updateGlider]);
+
   useEffect(() => {
     if (!isOpen) return;
 
-    const rafId = requestAnimationFrame(() => {
-      updateGlider();
-    });
-
-    const timerId = setTimeout(() => {
-      updateGlider();
-    }, 60);
-
     window.addEventListener("resize", updateGlider);
-
     return () => {
-      cancelAnimationFrame(rafId);
-      clearTimeout(timerId);
       window.removeEventListener("resize", updateGlider);
     };
-  }, [isOpen, activeTab, updateGlider]);
+  }, [isOpen, updateGlider]);
 
   const prevIsOpenRef = useRef(isOpen);
 
