@@ -156,8 +156,24 @@ const DashboardPage = () => {
           API.get("/api/users/profile"),
         ]);
 
-        const randomizedPosts = shuffleArray(postsRes.data);
-        setPosts(randomizedPosts);
+        setPosts((prevPosts) => {
+          if (prevPosts.length > 0) {
+            const fetchedPostsMap = new Map(
+              postsRes.data.map((p) => [p._id, p]),
+            );
+            const updatedExistingPosts = prevPosts.map(
+              (oldPost) => fetchedPostsMap.get(oldPost._id) || oldPost,
+            );
+
+            const existingIds = new Set(prevPosts.map((p) => p._id));
+            const newPosts = postsRes.data.filter(
+              (p) => !existingIds.has(p._id),
+            );
+
+            return [...newPosts, ...updatedExistingPosts];
+          }
+          return shuffleArray(postsRes.data);
+        });
 
         const followingIds =
           profileRes.data.following
@@ -183,31 +199,23 @@ const DashboardPage = () => {
     [token, navigate],
   );
 
-  const prevDisconnectedRef = useRef(isDisconnected);
+  const prevDisconnectedRef = useRef(null);
 
   useEffect(() => {
-    if (prevDisconnectedRef.current && !isDisconnected) {
+    if (prevDisconnectedRef.current === true && isDisconnected === false) {
       fetchFeedData(true);
     }
     prevDisconnectedRef.current = isDisconnected;
   }, [isDisconnected, fetchFeedData]);
 
+  const hasInitialLoadedRef = useRef(false);
+
   useEffect(() => {
-    let isMounted = true;
-
-    if (token) {
-      const loadInitialData = async () => {
-        if (isMounted) {
-          await fetchFeedData();
-        }
-      };
-      loadInitialData();
+    if (token && !hasInitialLoadedRef.current) {
+      hasInitialLoadedRef.current = true;
+      fetchFeedData();
     }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [fetchFeedData, token]);
+  }, [token, fetchFeedData]);
 
   const handlePostUpdate = useCallback((updatedPost) => {
     setPosts((prevPosts) =>
