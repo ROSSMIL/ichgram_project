@@ -1,7 +1,7 @@
 .filterContainer {
   position: fixed;
   top: 16px;
-  left: 285px;
+  left: 293px;
   z-index: 100;
   display: inline-flex;
   align-items: center;
@@ -92,16 +92,10 @@
   color: var(--bg-card);
 }
 
-@media (min-width: 1440px) {
-  .filterContainer {
-    left: 305px;
-  }
-}
-
 @media (max-width: 1024px) {
   .filterContainer {
     top: 14px;
-    left: 100px;
+    left: 98px;
   }
 }
 
