@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import PropTypes from "prop-types";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import styles from "./NotificationsDrawer.module.css";
 import Avatar from "../Avatar/Avatar";
 import API from "../../api/axios";
@@ -10,11 +10,18 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
+
+  const [shouldRender, setShouldRender] = useState(isOpen);
   const [isClosing, setIsClosing] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const touchStartY = useRef(0);
+  const prevIsOpenRef = useRef(isOpen);
 
   const socketContext = useSocket();
   const socket = socketContext?.socket;
   const navigate = useNavigate();
+  const location = useLocation();
 
   const tabsContainerRef = useRef(null);
   const tabsRef = useRef({});
@@ -23,6 +30,31 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
     width: "0px",
     opacity: 0,
   });
+
+  useEffect(() => {
+    const prevIsOpen = prevIsOpenRef.current;
+    prevIsOpenRef.current = isOpen;
+
+    if (isOpen && !prevIsOpen) {
+      setShouldRender(true);
+      setIsClosing(false);
+      setIsExpanded(false);
+    } else if (!isOpen && prevIsOpen) {
+      setIsClosing(true);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isClosing) return;
+
+    const timer = setTimeout(() => {
+      setShouldRender(false);
+      setIsClosing(false);
+      setIsExpanded(false);
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [isClosing]);
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
@@ -55,25 +87,76 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
     return () => clearTimeout(timer);
   }, [isOpen, fetchNotifications, markAsRead]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = "unset";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
+  const prevPathRef = useRef(location.pathname);
+  useEffect(() => {
+    if (prevPathRef.current !== location.pathname) {
+      prevPathRef.current = location.pathname;
+      if (isOpen) {
+        onClose();
+      }
+    }
+  }, [location.pathname, isOpen, onClose]);
+
+  useEffect(() => {
+    const preventGesture = (e) => {
+      e.preventDefault();
+    };
+
+    document.addEventListener("gesturestart", preventGesture);
+    document.addEventListener("gesturechange", preventGesture);
+
+    return () => {
+      document.removeEventListener("gesturestart", preventGesture);
+      document.removeEventListener("gesturechange", preventGesture);
+    };
+  }, []);
+
   const updateGlider = useCallback(() => {
     const activeTabEl = tabsRef.current[activeTab];
-    const container = tabsContainerRef.current;
-    if (activeTabEl && container) {
-      const activeRect = activeTabEl.getBoundingClientRect();
-      const containerRect = container.getBoundingClientRect();
-      const leftOffset = activeRect.left - containerRect.left - 3;
-      setGliderStyle({
-        transform: `translateX(${leftOffset}px)`,
-        width: `${activeRect.width}px`,
-        opacity: 1,
-      });
+    if (activeTabEl) {
+      const leftOffset = activeTabEl.offsetLeft;
+      const width = activeTabEl.offsetWidth;
+
+      if (width > 0) {
+        setGliderStyle({
+          transform: `translateX(${leftOffset}px)`,
+          width: `${width}px`,
+          opacity: 1,
+        });
+      }
     }
   }, [activeTab]);
 
   useEffect(() => {
+    if (isOpen && shouldRender) {
+      const anim = requestAnimationFrame(updateGlider);
+      return () => cancelAnimationFrame(anim);
+    }
+  }, [isOpen, shouldRender, updateGlider]);
+
+  useEffect(() => {
     if (!isOpen) return;
-    const anim = requestAnimationFrame(updateGlider);
-    return () => cancelAnimationFrame(anim);
+    window.addEventListener("resize", updateGlider);
+    return () => window.removeEventListener("resize", updateGlider);
   }, [isOpen, updateGlider]);
 
   useEffect(() => {
@@ -90,12 +173,23 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
     };
   }, [socket]);
 
-  const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(() => {
-      setIsClosing(false);
-      onClose();
-    }, 220);
+  const handleTouchStart = (e) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e) => {
+    const touchEndY = e.changedTouches[0].clientY;
+    const diff = touchStartY.current - touchEndY;
+
+    if (diff > 50) {
+      setIsExpanded(true);
+    } else if (diff < -50) {
+      if (isExpanded) {
+        setIsExpanded(false);
+      } else {
+        onClose();
+      }
+    }
   };
 
   const handleFollowToggle = async (e, userId) => {
@@ -115,7 +209,7 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
   };
 
   const handleItemClick = (notif) => {
-    handleClose();
+    onClose();
     if (notif.type === "like" || notif.type === "comment") {
       if (notif.post?._id || notif.post) {
         navigate(`/post/${notif.post._id || notif.post}`);
@@ -174,20 +268,25 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
     }
   };
 
-  if (!isOpen && !isClosing) return null;
+  if (!shouldRender) return null;
 
   return (
     <div
       className={`${styles.overlay} ${isClosing ? styles.overlayLeaving : ""}`}
-      onClick={handleClose}
+      onClick={onClose}
     >
       <div
         className={`${styles.drawerBox} ${
           isClosing ? styles.drawerLeaving : ""
-        }`}
+        } ${isExpanded ? styles.drawerExpanded : ""}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={styles.drawerIndicator} onClick={handleClose} />
+        <div
+          className={styles.drawerIndicator}
+          onClick={() => setIsExpanded((prev) => !prev)}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        />
 
         <div className={styles.headerTop}>
           <h2 className={styles.title}>Notifications</h2>

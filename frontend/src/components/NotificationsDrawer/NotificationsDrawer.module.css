@@ -14,6 +14,7 @@
   padding-left: calc(16px + 245px + 12px);
   box-sizing: border-box;
   animation: fadeInBackground 0.25s ease-out forwards;
+  touch-action: none;
 }
 
 .overlayLeaving {
@@ -39,10 +40,14 @@
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
+  will-change: transform, border-color, box-shadow;
   transition:
+    height 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    border-radius 0.3s ease,
+    background-color 0.4s ease,
     border-color 0.3s ease,
     box-shadow 0.3s ease,
-    transform 0.3s ease;
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .drawerBox:hover {
@@ -62,74 +67,83 @@
   background-color: var(--border-color);
   border-radius: 2px;
   margin: 12px auto 0 auto;
+  flex-shrink: 0;
   cursor: pointer;
 }
 
 .headerTop {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22px 24px 14px 24px;
   gap: 12px;
-  padding: 20px 20px 12px 20px;
 }
 
 .title {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   margin: 0;
   color: var(--text-primary);
   letter-spacing: -0.3px;
+  white-space: nowrap;
 }
 
 .modeTabs {
   position: relative;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 2px;
-  background-color: var(--bg-hover, rgba(255, 255, 255, 0.05));
+  background-color: var(--bg-hover, var(--border-color));
   padding: 3px;
-  border-radius: 12px;
+  border-radius: 14px;
   z-index: 5;
-  width: 100%;
   box-sizing: border-box;
-  overflow-x: auto;
-}
-
-.modeTabs::-webkit-scrollbar {
-  display: none;
 }
 
 .glider {
   position: absolute;
   top: 3px;
-  left: 3px;
+  left: 0;
   height: calc(100% - 6px);
   background-color: var(--bg-card);
-  border-radius: 9px;
+  border-radius: 11px;
   z-index: 1;
   pointer-events: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+  will-change: transform, width, opacity;
   transition:
-    transform 0.28s cubic-bezier(0.25, 1, 0.35, 1),
-    width 0.28s cubic-bezier(0.25, 1, 0.35, 1);
+    transform 0.32s cubic-bezier(0.25, 1, 0.35, 1),
+    width 0.32s cubic-bezier(0.25, 1, 0.35, 1),
+    opacity 0.2s ease;
 }
 
 .tabBtn {
   position: relative;
   z-index: 2;
-  flex: 1;
-  text-align: center;
   background: transparent;
   border: none;
-  padding: 6px 8px;
-  border-radius: 9px;
-  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
   cursor: pointer;
   outline: none;
+  user-select: none;
   white-space: nowrap;
-  transition: color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    color 0.22s ease,
+    transform 0.15s ease,
+    opacity 0.2s ease;
+}
+
+.tabBtn:hover:not(:disabled) {
+  color: var(--text-primary);
+}
+
+.tabBtn:active:not(:disabled) {
+  transform: scale(0.95);
 }
 
 .tabBtn.activeTab {
@@ -140,12 +154,25 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  margin: 0 12px 12px 12px;
-  padding: 8px;
-  background-color: var(--bg-main, rgba(0, 0, 0, 0.2));
+  margin: 0 16px 16px 16px;
+  padding: 16px;
+  background-color: var(--bg-main, rgba(0, 0, 0, 0.25));
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.05);
   overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  transition: background-color 0.3s ease;
+  position: relative;
+}
+
+.resultsContainer::-webkit-scrollbar {
+  width: 6px;
+}
+
+.resultsContainer::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 10px;
 }
 
 .notificationsList {
@@ -158,24 +185,31 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 10px 14px;
   border-radius: 14px;
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
   opacity: 0;
   cursor: pointer;
   animation: itemPopIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  animation-delay: calc(var(--stagger-index, 0) * 0.03s);
+  animation-delay: calc(var(--stagger-index, 0) * 0.035s);
+  will-change: transform, background-color, border-color, box-shadow, opacity;
   transition:
     background-color 0.2s ease,
     border-color 0.2s ease,
-    transform 0.2s ease;
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.2s ease;
 }
 
 .notifItem:hover {
   background-color: var(--bg-hover, rgba(255, 255, 255, 0.08));
   border-color: var(--text-secondary);
-  transform: translateY(-1px);
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+.notifItem:active {
+  transform: scale(0.98);
 }
 
 .unread {
@@ -297,6 +331,7 @@
     opacity: 1;
   }
 }
+
 @keyframes fadeOutBackground {
   from {
     opacity: 1;
@@ -305,6 +340,7 @@
     opacity: 0;
   }
 }
+
 @keyframes popInFloatingDrawer {
   from {
     opacity: 0;
@@ -315,6 +351,7 @@
     transform: scale(1) translateX(0);
   }
 }
+
 @keyframes popOutFloatingDrawer {
   from {
     opacity: 1;
@@ -325,10 +362,11 @@
     transform: scale(0.95) translateX(-12px);
   }
 }
+
 @keyframes itemPopIn {
   from {
     opacity: 0;
-    transform: translateY(8px) scale(0.98);
+    transform: translateY(10px) scale(0.97);
   }
   to {
     opacity: 1;
@@ -336,18 +374,99 @@
   }
 }
 
+@media (max-width: 1024px) {
+  .overlay {
+    padding-left: calc(12px + 68px + 12px);
+  }
+
+  .drawerBox {
+    height: calc(100vh - 24px);
+    margin-top: 20px;
+    border-radius: 20px;
+  }
+}
+
 @media (max-width: 768px) {
   .overlay {
     padding-left: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
     align-items: flex-end !important;
+    justify-content: center !important;
+    z-index: 10000 !important;
+    touch-action: pan-y !important;
   }
+
   .drawerBox {
+    width: 94vw !important;
+    max-width: 480px !important;
+    height: 82dvh !important;
+    margin-top: 0 !important;
+    border-radius: 24px 24px 0 0 !important;
+    border-bottom: none !important;
+    border-top: 1px solid var(--border-color);
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.3) !important;
+    transform-origin: bottom center;
+    animation: slideUpMobile 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    touch-action: pan-y !important;
+  }
+
+  .drawerBox:hover {
+    transform: none !important;
+  }
+
+  .drawerBox.drawerExpanded {
     width: 100vw !important;
     max-width: 100vw !important;
-    height: 82dvh !important;
-    border-radius: 24px 24px 0 0 !important;
+    height: calc(100dvh - 20px) !important;
+    border-radius: 20px 20px 0 0 !important;
+    padding-top: env(safe-area-inset-top, 10px);
   }
+
+  .drawerLeaving {
+    animation: slideDownMobile 0.25s ease-in forwards;
+  }
+
   .drawerIndicator {
     display: block !important;
+    width: 40px !important;
+    height: 5px !important;
+    background-color: var(--border-color) !important;
+    border-radius: 3px !important;
+    margin: 10px auto 8px auto !important;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .headerTop {
+    padding: 10px 20px 6px 20px !important;
+  }
+
+  .title {
+    font-size: 20px !important;
+  }
+
+  .resultsContainer {
+    margin: 0 12px calc(env(safe-area-inset-bottom, 12px) + 80px) 12px !important;
+    padding: 12px !important;
+  }
+}
+
+@keyframes slideUpMobile {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDownMobile {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
   }
 }
