@@ -592,7 +592,7 @@ const MessageItem = memo(
       hoverTimeoutRef.current = setTimeout(() => {
         setIsHoveredSender(false);
         setIsClosingSender(false);
-      }, 200); 
+      }, 200);
     };
 
     useEffect(() => {
@@ -1383,7 +1383,6 @@ const MessagesPage = () => {
 
       socket.emit("join chat", newChat._id);
     };
-
     const handleGroupUpdated = (updatedGroupChat) => {
       const isStillMember = updatedGroupChat.users?.some(
         (u) => (u._id || u.id || u).toString() === myIdStr,
@@ -1391,10 +1390,8 @@ const MessagesPage = () => {
 
       if (!isStillMember) {
         setChats((prev) => prev.filter((c) => c._id !== updatedGroupChat._id));
-
         if (selectedChatRef.current?._id === updatedGroupChat._id) {
-          setSelectedChat(null);
-          setMessages([]);
+          setSelectedChat(updatedGroupChat);
         }
       } else {
         setChats((prev) =>
