@@ -135,10 +135,9 @@ io.on("connection", (socket) => {
       socket.join(room.toString());
     }
   });
-
-  socket.on("typing", ({ chatId, userId }) => {
+  socket.on("typing", ({ chatId, userId, username }) => {
     if (chatId) {
-      socket.to(chatId.toString()).emit("typing", { chatId, userId });
+      socket.to(chatId.toString()).emit("typing", { chatId, userId, username });
     }
   });
 

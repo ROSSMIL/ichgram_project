@@ -487,13 +487,15 @@
 }
 
 .chatHeader {
+  position: relative;
   display: flex;
   align-items: center;
-  padding: 16px 20px 10px 20px;
+  padding: 10px 20px 10px 20px;
   flex-shrink: 0;
   gap: 12px;
   width: 100%;
   box-sizing: border-box;
+  z-index: 10;
 }
 
 .backBtn {
@@ -742,6 +744,53 @@
   }
 }
 
+.floatingTypingBanner {
+  position: absolute;
+  top: 90px;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  padding: 6px 16px;
+  background-color: var(--bg-card, rgba(28, 28, 30, 0.85));
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.15));
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  pointer-events: none;
+  white-space: nowrap;
+
+  opacity: 0;
+  filter: blur(10px);
+  will-change: opacity, filter;
+  transition:
+    opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    filter 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.typingBannerVisible {
+  opacity: 1;
+  filter: blur(0px);
+}
+
+.typingBannerContent {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.typingTextName {
+  font-weight: 700;
+  color: var(--link-color, #0095f6);
+}
+
+.typingTextAction {
+  opacity: 0.9;
+}
+
 .avatarTypingBadge {
   display: inline-flex;
   align-items: center;
@@ -811,14 +860,13 @@
   position: relative;
   gap: 16px;
   margin: 0 16px 12px 16px;
-  padding: 24px 20px 20px 20px;
+  padding: 20px;
   background-color: var(--bg-main);
   border-radius: 18px;
   border: 1px solid var(--border-color);
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  backface-visibility: hidden;
   transition:
     background-color 0.3s ease,
     border-color 0.3s ease;
@@ -1507,6 +1555,7 @@
 .sending {
   opacity: 0.6;
 }
+
 .senderNameContainer {
   margin-bottom: 4px;
   display: inline-block;
@@ -1534,20 +1583,12 @@
     background-color 0.25s ease,
     transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 .senderNameText {
   position: relative;
   z-index: 1;
 }
-.senderNameLink:hover {
-  background-color: rgba(0, 149, 246, 0.14);
-  color: #38bdf8;
-  transform: translateY(-1px) scale(1.03);
-}
 
-.senderNameLink:active {
-  transform: scale(0.94) translateY(0);
-  transition-duration: 0.08s;
-}
 .senderNameText::after {
   content: "";
   position: absolute;
@@ -1567,7 +1608,7 @@
 .senderNameLink:hover {
   background-color: rgba(0, 149, 246, 0.12);
   color: #38bdf8;
-  transform: translateY(-1px);
+  transform: translateY(-1px) scale(1.03);
 }
 
 .senderNameLink:hover .senderNameText::after {
@@ -1576,7 +1617,8 @@
 }
 
 .senderNameLink:active {
-  transform: scale(0.95);
+  transform: scale(0.94) translateY(0);
+  transition-duration: 0.08s;
 }
 
 .senderHoverCardPortal {
@@ -1597,14 +1639,12 @@
   user-select: none;
   box-sizing: border-box;
   transform: translateY(-100%);
-
   will-change: transform, opacity, background-color, border-color, box-shadow;
   transition:
     background-color 0.25s ease,
     border-color 0.25s ease,
     box-shadow 0.25s ease,
     transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-
   animation: hoverCardPopIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
@@ -1748,23 +1788,11 @@
   transform: translateX(3px) scale(1.12);
 }
 
-@keyframes hoverCardPopIn {
-  0% {
-    opacity: 0;
-    transform: translateY(-85%) scale(0.88);
-    filter: blur(6px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(-100%) scale(1);
-    filter: blur(0px);
-  }
-}
-
 .inputFooter {
   padding: 0 16px 16px 16px;
   background-color: transparent;
   flex-shrink: 0;
+  z-index: 10;
 }
 
 .inputPill {
@@ -1885,7 +1913,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10000;
   padding: 20px;
   box-sizing: border-box;
   animation: fadeInModalBg 0.25s ease-out forwards;

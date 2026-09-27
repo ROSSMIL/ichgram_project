@@ -341,6 +341,7 @@ InlineMessageMenu.propTypes = {
   onDeleteMessage: PropTypes.func,
   onCloseAnimated: PropTypes.func,
 };
+
 const SenderProfilePortal = memo(
   ({
     sender,
@@ -423,6 +424,7 @@ SenderProfilePortal.propTypes = {
   onMouseLeave: PropTypes.func,
   currentUsername: PropTypes.string,
 };
+
 const HeaderStatusTextSwitcher = memo(({ statusKey, isUserOnline }) => {
   const containerRef = useRef(null);
   const measureRef = useRef(null);
@@ -914,10 +916,16 @@ const MessagesPage = () => {
   const [chats, setChats] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState("");
+
+  const [drafts, setDrafts] = useState({});
+
   const [loadingChats, setLoadingChats] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
+  const [typingUsers, setTypingUsers] = useState([]);
+
+  const [displayTypingUsers, setDisplayTypingUsers] = useState([]);
+  const typingBannerTimeoutRef = useRef(null);
+
   const [unreadCounts, setUnreadCounts] = useState({});
   const [socketDeletedChatId, setSocketDeletedChatId] = useState(null);
   const [editingMessageId, setEditingMessageId] = useState(null);
@@ -960,8 +968,35 @@ const MessagesPage = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (typingBannerTimeoutRef.current) {
+      clearTimeout(typingBannerTimeoutRef.current);
+    }
+
+    if (typingUsers.length > 0) {
+      const task = setTimeout(() => {
+        setDisplayTypingUsers(typingUsers);
+      }, 0);
+
+      return () => clearTimeout(task);
+    } else {
+      typingBannerTimeoutRef.current = setTimeout(() => {
+        setDisplayTypingUsers([]);
+      }, 350);
+    }
+
+    return () => {
+      if (typingBannerTimeoutRef.current) {
+        clearTimeout(typingBannerTimeoutRef.current);
+      }
+    };
+  }, [typingUsers]);
+
   const myId = currentUser?._id || currentUser?.id || currentUser?.userId;
   const myIdStr = myId?.toString();
+
+  const currentChatId = selectedChat?._id;
+  const newMessage = currentChatId ? drafts[currentChatId] || "" : "";
 
   const isCurrentUserMember = useMemo(() => {
     if (!selectedChat || !selectedChat.isGroupChat || !myIdStr) return true;
@@ -1054,34 +1089,42 @@ const MessagesPage = () => {
     };
   }, [selectedChat, unreadCounts]);
 
-  const handleSelectChat = useCallback((chat) => {
-    if (selectedChatRef.current?._id === chat?._id) {
-      return;
-    }
+  const handleSelectChat = useCallback(
+    (chat) => {
+      if (selectedChatRef.current?._id === chat?._id) {
+        return;
+      }
 
-    setSelectedChat(chat);
-    setIsTyping(false);
-    setEditingMessageId(null);
-    setEditingContent("");
-    setSessionLastReadMessage(null);
-    setIsHidingNewMessages(false);
-    setShowScrollBottom(false);
-    setUnreadScrollCount(0);
+      setSelectedChat(chat);
+      setTypingUsers([]);
+      setDisplayTypingUsers([]);
+      setEditingMessageId(null);
+      setEditingContent("");
+      setSessionLastReadMessage(null);
+      setIsHidingNewMessages(false);
+      setShowScrollBottom(false);
+      setUnreadScrollCount(0);
 
-    if (chat?.latestMessage) {
-      setLoadingMessages(true);
-    } else {
-      setLoadingMessages(false);
-    }
-    setMessages([]);
+      if (socket && chat?._id) {
+        socket.emit("join chat", chat._id);
+      }
 
-    if (chat?._id) {
-      setUnreadCounts((prev) => ({
-        ...prev,
-        [chat._id]: 0,
-      }));
-    }
-  }, []);
+      if (chat?.latestMessage) {
+        setLoadingMessages(true);
+      } else {
+        setLoadingMessages(false);
+      }
+      setMessages([]);
+
+      if (chat?._id) {
+        setUnreadCounts((prev) => ({
+          ...prev,
+          [chat._id]: 0,
+        }));
+      }
+    },
+    [socket],
+  );
 
   const handleStartDirectChat = useCallback(
     async (targetUserId) => {
@@ -1383,6 +1426,7 @@ const MessagesPage = () => {
 
       socket.emit("join chat", newChat._id);
     };
+
     const handleGroupUpdated = (updatedGroupChat) => {
       const isStillMember = updatedGroupChat.users?.some(
         (u) => (u._id || u.id || u).toString() === myIdStr,
@@ -1560,25 +1604,40 @@ const MessagesPage = () => {
       refreshChats();
     };
 
-    const handleTyping = ({ chatId, userId }) => {
+    const handleTyping = ({ chatId, userId, username }) => {
       const activeChat = selectedChatRef.current;
+      const incomingChatId = chatId?.toString();
+      const currentChatId = activeChat?._id?.toString();
+      const incomingUserId = userId?.toString();
+      const currentUserId = myIdStr?.toString();
+
       if (
         activeChat &&
-        activeChat._id.toString() === chatId?.toString() &&
-        userId?.toString() !== myIdStr
+        currentChatId === incomingChatId &&
+        incomingUserId &&
+        incomingUserId !== currentUserId
       ) {
-        setIsTyping(true);
+        setTypingUsers((prev) => {
+          if (prev.some((u) => u.userId?.toString() === incomingUserId))
+            return prev;
+          return [
+            ...prev,
+            { userId: incomingUserId, username: username || "User" },
+          ];
+        });
       }
     };
 
     const handleStopTyping = ({ chatId, userId }) => {
       const activeChat = selectedChatRef.current;
-      if (
-        activeChat &&
-        activeChat._id.toString() === chatId?.toString() &&
-        userId?.toString() !== myIdStr
-      ) {
-        setIsTyping(false);
+      const incomingChatId = chatId?.toString();
+      const currentChatId = activeChat?._id?.toString();
+      const incomingUserId = userId?.toString();
+
+      if (activeChat && currentChatId === incomingChatId) {
+        setTypingUsers((prev) =>
+          prev.filter((u) => u.userId?.toString() !== incomingUserId),
+        );
       }
     };
 
@@ -1734,12 +1793,20 @@ const MessagesPage = () => {
       return;
     }
 
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
     if (socket && selectedChat && myIdStr) {
       socket.emit("stop typing", { chatId: selectedChat._id, userId: myIdStr });
     }
 
     const messageContent = newMessage.trim();
-    setNewMessage("");
+
+    setDrafts((prev) => ({
+      ...prev,
+      [selectedChat._id]: "",
+    }));
 
     if (!myId) {
       console.error("Could not determine current user ID for sending.");
@@ -2000,11 +2067,21 @@ const MessagesPage = () => {
   );
 
   const handleTypingInput = (e) => {
-    setNewMessage(e.target.value);
+    const text = e.target.value;
+    if (!currentChatId) return;
 
-    if (!socket || !selectedChat || !myIdStr) return;
+    setDrafts((prev) => ({
+      ...prev,
+      [currentChatId]: text,
+    }));
 
-    socket.emit("typing", { chatId: selectedChat._id, userId: myIdStr });
+    if (!socket || !selectedChat) return;
+
+    socket.emit("typing", {
+      chatId: selectedChat._id,
+      userId: myIdStr || currentUser?._id,
+      username: currentUser?.username,
+    });
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
@@ -2012,7 +2089,7 @@ const MessagesPage = () => {
       if (socket && selectedChat) {
         socket.emit("stop typing", {
           chatId: selectedChat._id,
-          userId: myIdStr,
+          userId: myIdStr || currentUser?._id,
         });
       }
     }, 2000);
@@ -2372,7 +2449,8 @@ const MessagesPage = () => {
                 className={styles.backBtn}
                 onClick={() => {
                   setSelectedChat(null);
-                  setIsTyping(false);
+                  setTypingUsers([]);
+                  setDisplayTypingUsers([]);
                   setEditingMessageId(null);
                   setEditingContent("");
                   handleClosePortalAnimated();
@@ -2431,17 +2509,7 @@ const MessagesPage = () => {
 
                 <div className={styles.userMeta}>
                   <span className={styles.dot}>•</span>
-
-                  {isTyping ? (
-                    <div className={styles.avatarTypingBadge}>
-                      <span className={styles.typingBadgeText}>typing</span>
-                      <div className={styles.typingDots}>
-                        <span className={styles.dotWave}></span>
-                        <span className={styles.dotWave}></span>
-                        <span className={styles.dotWave}></span>
-                      </div>
-                    </div>
-                  ) : selectedChat.isGroupChat ? (
+                  {selectedChat.isGroupChat ? (
                     <span
                       className={`${styles.statusText} ${styles.groupStatusClickable}`}
                       onClick={() => setIsGroupDetailsModalOpen(true)}
@@ -2460,6 +2528,39 @@ const MessagesPage = () => {
                   )}
                 </div>
               </div>
+
+              {displayTypingUsers.length > 0 && (
+                <div
+                  className={`${styles.floatingTypingBanner} ${
+                    typingUsers.length > 0 ? styles.typingBannerVisible : ""
+                  }`}
+                >
+                  <div className={styles.typingBannerContent}>
+                    {selectedChat.isGroupChat ? (
+                      <>
+                        <span className={styles.typingTextName}>
+                          {displayTypingUsers.length === 1
+                            ? displayTypingUsers[0].username
+                            : `${displayTypingUsers[0].username} +${displayTypingUsers.length - 1}`}
+                        </span>
+                        <span className={styles.typingTextAction}>
+                          {displayTypingUsers.length > 1
+                            ? "are typing"
+                            : "is typing"}
+                        </span>
+                      </>
+                    ) : (
+                      <span className={styles.typingTextAction}>typing</span>
+                    )}
+
+                    <div className={styles.typingDots}>
+                      <span className={styles.dotWave}></span>
+                      <span className={styles.dotWave}></span>
+                      <span className={styles.dotWave}></span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <button
                 type="button"
