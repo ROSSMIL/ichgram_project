@@ -1,13 +1,13 @@
 import {
   useState,
   useEffect,
-  useRef,
   useCallback,
+  useRef,
   useLayoutEffect,
 } from "react";
 import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
-import API from "../../api/axios";
 import EmojiPicker from "emoji-picker-react";
+import API from "../../api/axios";
 import Avatar from "../../components/Avatar/Avatar";
 import styles from "./PostPage.module.css";
 
@@ -53,6 +53,10 @@ const formatTimeAgo = (dateInput) => {
   return diffInYears === 1 ? "1 year" : `${diffInYears} years`;
 };
 
+const isPostEdited = (post) => {
+  return Boolean(post?.isEdited);
+};
+
 const checkIsLiked = (postObj, userId) => {
   if (!postObj || !userId || !postObj.likes) return false;
   return postObj.likes.some((like) => {
@@ -82,18 +86,19 @@ const PostPage = () => {
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
   const [animateHeart, setAnimateHeart] = useState(false);
-  const [showBigHeart, setShowBigHeart] = useState(false);
+  const [floatingHearts, setFloatingHearts] = useState([]);
 
   const [showMenu, setShowMenu] = useState(false);
-  const [isMenuClosing, setIsMenuClosing] = useState(false);
-  const [commentToDelete, setCommentToDelete] = useState(null);
-  const [isCommentMenuClosing, setIsCommentMenuClosing] = useState(false);
+  const [activeCommentMenuId, setActiveCommentMenuId] = useState(null);
 
   const emojiPickerRef = useRef(null);
   const commentInputRef = useRef(null);
   const commentsAreaRef = useRef(null);
+  const likeBtnRef = useRef(null);
   const clickTimerRef = useRef(null);
+  const postMenuRef = useRef(null);
 
   function getLoggedInUsername() {
     const token = localStorage.getItem("token");
@@ -195,6 +200,12 @@ const PostPage = () => {
       ) {
         setShowEmojiPicker(false);
       }
+      if (postMenuRef.current && !postMenuRef.current.contains(event.target)) {
+        setShowMenu(false);
+      }
+      if (!event.target.closest(`.${styles.commentMenuWrapper}`)) {
+        setActiveCommentMenuId(null);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -202,11 +213,11 @@ const PostPage = () => {
 
   const triggerHapticFeedback = () => {
     if ("vibrate" in navigator) {
-      navigator.vibrate(40);
+      navigator.vibrate(30);
     }
   };
 
-  const handleLikeToggle = async () => {
+  const toggleLikeApiCall = async () => {
     if (isLiking || !post) return;
     setIsLiking(true);
     const previousIsLiked = isLiked;
@@ -219,9 +230,7 @@ const PostPage = () => {
     if (nextLikedState) {
       triggerHapticFeedback();
       setAnimateHeart(true);
-      setTimeout(() => setAnimateHeart(false), 450);
-      setShowBigHeart(true);
-      setTimeout(() => setShowBigHeart(false), 800);
+      setTimeout(() => setAnimateHeart(false), 500);
     }
 
     try {
@@ -243,16 +252,67 @@ const PostPage = () => {
     }
   };
 
-  const handleImageClick = () => {
+  const handleLikeToggle = () => {
+    toggleLikeApiCall();
+  };
+
+  const handleImageClick = (e) => {
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
-      triggerHapticFeedback();
-      setShowBigHeart(true);
-      setTimeout(() => setShowBigHeart(false), 800);
 
-      if (!isLiked) {
-        handleLikeToggle();
+      const imgRect = e.currentTarget.getBoundingClientRect();
+      const clickX = e.clientX - imgRect.left;
+      const clickY = e.clientY - imgRect.top;
+
+      const heartId = Date.now() + Math.random();
+      const isFirstLike = !isLiked;
+
+      let flyDeltaX = 0;
+      let flyDeltaY = 0;
+
+      if (isFirstLike && likeBtnRef.current) {
+        const btnRect = likeBtnRef.current.getBoundingClientRect();
+        const targetX = btnRect.left + btnRect.width / 2 - imgRect.left;
+        const targetY = btnRect.top + btnRect.height / 2 - imgRect.top;
+
+        flyDeltaX = targetX - clickX;
+        flyDeltaY = targetY - clickY;
+      }
+
+      const randomRotation = isFirstLike
+        ? 0
+        : Math.floor(Math.random() * 30) - 15;
+
+      const newHeart = {
+        id: heartId,
+        x: (clickX / imgRect.width) * 100,
+        y: (clickY / imgRect.height) * 100,
+        rotate: randomRotation,
+        isFlying: isFirstLike,
+        flyX: `${flyDeltaX}px`,
+        flyY: `${flyDeltaY}px`,
+      };
+
+      setFloatingHearts((prev) => [...prev, newHeart]);
+      triggerHapticFeedback();
+
+      if (isFirstLike) {
+        setTimeout(() => {
+          toggleLikeApiCall();
+        }, 550);
+
+        setTimeout(() => {
+          setFloatingHearts((prev) =>
+            prev.filter((item) => item.id !== heartId),
+          );
+        }, 650);
+      } else {
+        setTimeout(() => {
+          setFloatingHearts((prev) =>
+            prev.filter((item) => item.id !== heartId),
+          );
+        }, 1200);
       }
     } else {
       clickTimerRef.current = setTimeout(() => {
@@ -260,6 +320,12 @@ const PostPage = () => {
       }, 250);
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    };
+  }, []);
 
   const handleSendComment = async (e) => {
     e.preventDefault();
@@ -322,13 +388,9 @@ const PostPage = () => {
     });
   };
 
-  const handleOpenMenu = () => setShowMenu(true);
-  const handleCloseMenu = () => {
-    setIsMenuClosing(true);
-    setTimeout(() => {
-      setShowMenu(false);
-      setIsMenuClosing(false);
-    }, 250);
+  const handleTriggerEdit = () => {
+    setShowMenu(false);
+    window.dispatchEvent(new CustomEvent("openEditPost", { detail: post }));
   };
 
   const handleDeletePost = async () => {
@@ -337,33 +399,23 @@ const PostPage = () => {
       await API.delete(`/api/posts/${post._id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      handleCloseMenu();
+      setShowMenu(false);
       navigate("/dashboard");
     } catch (error) {
       console.error("Error deleting post:", error);
-      alert("Failed to delete post.");
     }
   };
 
-  const handleOpenCommentMenu = (commentId) => setCommentToDelete(commentId);
-  const handleCloseCommentMenu = () => {
-    setIsCommentMenuClosing(true);
-    setTimeout(() => {
-      setCommentToDelete(null);
-      setIsCommentMenuClosing(false);
-    }, 250);
-  };
-
-  const handleDeleteComment = async () => {
-    if (!commentToDelete) return;
+  const handleDeleteComment = async (targetId) => {
+    if (!targetId) return;
     try {
       const token = localStorage.getItem("token");
       const response = await API.delete(
-        `/api/posts/${post._id}/comment/${commentToDelete}`,
+        `/api/posts/${post._id}/comment/${targetId}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       setComments(response.data.comments);
-      handleCloseCommentMenu();
+      setActiveCommentMenuId(null);
     } catch (error) {
       console.error("Error during comment deletion:", error);
     }
@@ -381,7 +433,11 @@ const PostPage = () => {
   };
 
   const authorUsername = post?.user?.username || "user";
-  const authorUser = post?.user || { username: authorUsername };
+  const authorUser = post?.user || {
+    username: authorUsername,
+    avatar: post?.user?.avatar,
+    fullName: post?.user?.fullName || authorUsername,
+  };
   const authorId = post?.user?._id || post?.user?.id || post?.user;
 
   const isAuthor =
@@ -391,29 +447,64 @@ const PostPage = () => {
     (currentUsername &&
       currentUsername.toLowerCase() === authorUsername.toLowerCase());
 
+  const edited = isPostEdited(post);
+
+  if (loading) {
+    return (
+      <div className={styles.loadingContainer}>
+        <span>Loading post...</span>
+      </div>
+    );
+  }
+
+  if (!post) {
+    return (
+      <div className={styles.loadingContainer}>
+        <span>Post not found.</span>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.pageWrapper}>
-      <div className={styles.modalBox}>
-        <div className={styles.imageSection} onClick={handleImageClick}>
-          {post?.url ? (
+      <div className={styles.containerBox}>
+        <div className={styles.imageSection}>
+          <div className={styles.imageContainer} onClick={handleImageClick}>
+            <div
+              className={styles.blurredBg}
+              style={{ backgroundImage: `url(${post.url})` }}
+            />
             <img src={post.url} alt="Post content" className={styles.postImg} />
-          ) : (
-            <div className={styles.imgPlaceholder} />
-          )}
-          {showBigHeart && (
-            <div className={styles.bigHeartOverlay}>
-              <svg viewBox="0 0 24 24" className={styles.bigHeartIcon}>
-                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>
-              </svg>
-            </div>
-          )}
+
+            {floatingHearts.map((heart) => (
+              <div
+                key={heart.id}
+                className={`${styles.heartPulseAura} ${
+                  heart.isFlying ? styles.flyingHeartAura : ""
+                }`}
+                style={{
+                  top: `${heart.y}%`,
+                  left: `${heart.x}%`,
+                  "--heart-rotate": `${heart.rotate}deg`,
+                  "--fly-x": heart.flyX,
+                  "--fly-y": heart.flyY,
+                }}
+              >
+                <div className={styles.glassHeartCircle}>
+                  <svg viewBox="0 0 24 24" className={styles.modernHeartIcon}>
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                  </svg>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className={styles.infoSection}>
           <header className={styles.header}>
             <div className={styles.headerLeftGroup}>
               <button
-                className={styles.mobileBackBtn}
+                className={styles.backBtn}
                 onClick={() => navigate(-1)}
                 aria-label="Back"
               >
@@ -439,66 +530,130 @@ const PostPage = () => {
               <div className={styles.userInfo}>
                 <Link
                   to={getProfileLink(authorUsername)}
-                  className={styles.avatarLink}
+                  className={styles.authorBadge}
                 >
                   <Avatar user={authorUser} size={32} />
+                  <span className={styles.username}>{authorUsername}</span>
                 </Link>
-                <Link
-                  to={getProfileLink(authorUsername)}
-                  className={styles.usernameLink}
-                >
-                  <span className={styles.username}>
-                    {loading ? "Loading..." : authorUsername}
+
+                <div className={styles.userMeta}>
+                  <span className={styles.dot}>•</span>
+                  <span className={styles.time}>
+                    {formatTimeAgo(post.createdAt)}
                   </span>
-                </Link>
+
+                  {edited && (
+                    <>
+                      <span className={styles.dot}>•</span>
+                      <span
+                        className={styles.editedBadge}
+                        title={
+                          post.updatedAt
+                            ? `Edited ${formatTimeAgo(post.updatedAt)} ago`
+                            : "Edited"
+                        }
+                      >
+                        edited
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
-            {isAuthor && !loading && (
-              <button className={styles.moreOptions} onClick={handleOpenMenu}>
-                <svg
+            {isAuthor && (
+              <div className={styles.menuWrapper} ref={postMenuRef}>
+                <button
+                  className={`${styles.moreOptions} ${
+                    showMenu ? styles.activeMoreOptions : ""
+                  }`}
+                  onClick={() => setShowMenu((prev) => !prev)}
                   aria-label="More options"
-                  color="currentColor"
-                  fill="currentColor"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  width="20"
                 >
-                  <circle cx="12" cy="12" r="1.5"></circle>
-                  <circle cx="6" cy="12" r="1.5"></circle>
-                  <circle cx="18" cy="12" r="1.5"></circle>
-                </svg>
-              </button>
+                  <svg
+                    aria-label="More options"
+                    color="currentColor"
+                    fill="currentColor"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    width="20"
+                  >
+                    <circle cx="12" cy="12" r="1.5"></circle>
+                    <circle cx="6" cy="12" r="1.5"></circle>
+                    <circle cx="18" cy="12" r="1.5"></circle>
+                  </svg>
+                </button>
+
+                {showMenu && (
+                  <div className={styles.popoverMenu}>
+                    <button
+                      className={styles.popoverItem}
+                      onClick={handleTriggerEdit}
+                    >
+                      <svg
+                        width="15"
+                        height="15"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                      </svg>
+                      <span>Edit post</span>
+                    </button>
+
+                    <button
+                      className={`${styles.popoverItem} ${styles.dangerItem}`}
+                      onClick={handleDeletePost}
+                    >
+                      <svg
+                        width="15"
+                        height="15"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                      </svg>
+                      <span>Delete post</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </header>
 
-          <div className={styles.commentsArea} ref={commentsAreaRef}>
-            {post?.caption && (
-              <div className={styles.commentItemContainer}>
-                <div className={styles.commentItem}>
-                  <Link to={getProfileLink(authorUsername)}>
-                    <Avatar user={authorUser} size={32} />
-                  </Link>
-                  <div className={styles.commentContent}>
-                    <p className={styles.commentText}>
-                      <Link
-                        to={getProfileLink(authorUsername)}
-                        className={styles.commentUsernameLink}
-                      >
-                        <span className={styles.commentUsername}>
-                          {authorUsername}
-                        </span>
-                      </Link>{" "}
-                      {post.caption}
-                    </p>
-                    <span className={styles.commentTime}>
+          {post.caption && (
+            <div className={styles.stickyCaptionArea}>
+              <div className={styles.authorCaptionBox}>
+                <Avatar user={authorUser} size={30} />
+                <div className={styles.captionBody}>
+                  <div className={styles.captionHeader}>
+                    <Link
+                      to={getProfileLink(authorUsername)}
+                      className={styles.captionUsername}
+                    >
+                      {authorUsername}
+                    </Link>
+                    <span className={styles.commentTimeAgo}>
                       {formatTimeAgo(post.createdAt)}
                     </span>
                   </div>
+                  <span className={styles.captionText}>{post.caption}</span>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
+          <div className={styles.commentsArea} ref={commentsAreaRef}>
             {comments.length > 0 ? (
               comments.map((comment) => {
                 const commenterUsername =
@@ -510,97 +665,134 @@ const PostPage = () => {
                 const commenterId =
                   comment.user?._id || comment.user?.id || comment.user;
                 const isMyComment =
-                  currentUserId && commenterId === currentUserId;
+                  currentUserId &&
+                  commenterId &&
+                  commenterId.toString() === currentUserId.toString();
+                const commentId = comment._id || comment.createdAt;
+                const isCommentMenuOpen = activeCommentMenuId === commentId;
 
                 return (
-                  <div
-                    key={comment._id || comment.createdAt}
-                    className={styles.commentItemContainer}
-                  >
-                    <div className={styles.commentItem}>
-                      <Link to={getProfileLink(commenterUsername)}>
-                        <Avatar user={commenterUser} size={32} />
-                      </Link>
-                      <div className={styles.commentContent}>
-                        <p className={styles.commentText}>
-                          <Link
-                            to={getProfileLink(commenterUsername)}
-                            className={styles.commentUsernameLink}
-                          >
-                            <span className={styles.commentUsername}>
-                              {commenterUsername}
-                            </span>
-                          </Link>{" "}
-                          {comment.text}
-                        </p>
-                        <span className={styles.commentTime}>
+                  <div key={commentId} className={styles.commentCard}>
+                    <Avatar user={commenterUser} size={28} />
+                    <div className={styles.commentBody}>
+                      <div className={styles.commentHeader}>
+                        <Link
+                          to={getProfileLink(commenterUsername)}
+                          className={styles.commentUser}
+                        >
+                          {commenterUsername}
+                        </Link>
+                        <span className={styles.commentTimeAgo}>
                           {formatTimeAgo(comment.createdAt)}
                         </span>
                       </div>
+                      <span className={styles.commentText}>{comment.text}</span>
                     </div>
+
                     {isMyComment && (
-                      <button
-                        className={styles.commentMoreOptions}
-                        onClick={() => handleOpenCommentMenu(comment._id)}
-                      >
-                        <svg
+                      <div className={styles.commentMenuWrapper}>
+                        <button
+                          className={`${styles.commentMoreBtn} ${
+                            isCommentMenuOpen ? styles.activeCommentMoreBtn : ""
+                          }`}
+                          onClick={() =>
+                            setActiveCommentMenuId(
+                              isCommentMenuOpen ? null : commentId,
+                            )
+                          }
+                          title="Comment options"
                           aria-label="Comment options"
-                          fill="currentColor"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          width="14"
                         >
-                          <circle cx="12" cy="12" r="2"></circle>
-                          <circle cx="6" cy="12" r="2"></circle>
-                          <circle cx="18" cy="12" r="2"></circle>
-                        </svg>
-                      </button>
+                          <svg
+                            aria-label="Comment options"
+                            color="currentColor"
+                            fill="currentColor"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            width="16"
+                          >
+                            <circle cx="12" cy="12" r="1.5"></circle>
+                            <circle cx="6" cy="12" r="1.5"></circle>
+                            <circle cx="18" cy="12" r="1.5"></circle>
+                          </svg>
+                        </button>
+
+                        {isCommentMenuOpen && (
+                          <div className={styles.commentPopoverMenu}>
+                            <button
+                              className={`${styles.popoverItem} ${styles.dangerItem}`}
+                              onClick={() => handleDeleteComment(comment._id)}
+                            >
+                              <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                              </svg>
+                              <span>Delete comment</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 );
               })
             ) : (
               <div className={styles.noComments}>
-                {loading
-                  ? "Loading comments..."
-                  : "No comments yet. Be the first!"}
+                No comments yet. Be the first!
               </div>
             )}
           </div>
 
           <div className={styles.actionsArea}>
-            <div className={styles.iconsRow}>
-              <button className={styles.iconBtn} onClick={handleLikeToggle}>
+            <div className={styles.actionsRow}>
+              <button
+                ref={likeBtnRef}
+                className={styles.actionBtn}
+                onClick={handleLikeToggle}
+              >
                 <svg
                   aria-label="Like"
-                  height="24"
+                  height="22"
                   viewBox="0 0 24 24"
-                  width="24"
-                  className={`${isLiked ? styles.likedHeart : styles.unlikedHeart} ${
-                    animateHeart ? styles.popActive : ""
-                  }`}
+                  width="22"
+                  className={`${
+                    isLiked ? styles.likedHeart : styles.unlikedHeart
+                  } ${animateHeart ? styles.popActive : ""}`}
                 >
-                  <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path>
                 </svg>
               </button>
               <button
-                className={styles.iconBtn}
+                className={styles.actionBtn}
                 onClick={handleFocusCommentInput}
               >
                 <svg
                   aria-label="Comment"
-                  height="24"
+                  height="22"
                   viewBox="0 0 24 24"
-                  width="24"
+                  width="22"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                   className={styles.commentSvgIcon}
                 >
                   <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
                 </svg>
               </button>
             </div>
-            <div className={styles.likesCount}>{likesCount} likes</div>
-            <div className={styles.postDate}>
-              {post?.createdAt ? formatTimeAgo(post.createdAt) : "just now"}
+            <div className={styles.likesCount}>
+              {likesCount.toLocaleString()} likes
             </div>
           </div>
 
@@ -618,11 +810,11 @@ const PostPage = () => {
                 >
                   <svg
                     aria-label="Emoji"
-                    color="rgb(115, 115, 115)"
-                    fill="rgb(115, 115, 115)"
-                    height="24"
+                    color="currentColor"
+                    fill="currentColor"
+                    height="22"
                     viewBox="0 0 24 24"
-                    width="24"
+                    width="22"
                   >
                     <path d="M15.83 10.96a1.75 1.75 0 1 1 1.75-1.76 1.75 1.75 0 0 1-1.75 1.76Zm-7.66 0a1.75 1.75 0 1 1 1.75-1.76 1.75 1.75 0 0 1-1.75 1.76Zm4.17 6.64a5.12 5.12 0 0 1-4.08-2.03.75.75 0 0 1 1.18-.93 3.6 3.6 0 0 0 5.8 0 .75.75 0 0 1 1.18.93 5.12 5.12 0 0 1-4.08 2.03ZM12 2.5a9.5 9.5 0 1 0 9.5 9.5 9.51 9.51 0 0 0-9.5-9.5Zm0 21a11.5 11.5 0 1 1 11.5-11.5 11.51 11.51 0 0 1-11.5 11.5Z"></path>
                   </svg>
@@ -633,7 +825,7 @@ const PostPage = () => {
                     <EmojiPicker
                       onEmojiClick={handleEmojiClick}
                       autoFocusSearch={false}
-                      theme="light"
+                      theme="auto"
                       searchDisabled={true}
                       skinTonesDisabled={true}
                       previewConfig={{ showPreview: false }}
@@ -675,56 +867,6 @@ const PostPage = () => {
               </button>
             </div>
           </form>
-
-          {showMenu && (
-            <div
-              className={`${styles.menuDrawer} ${
-                isMenuClosing ? styles.menuDrawerLeaving : ""
-              }`}
-            >
-              <div className={styles.drawerOverlay} onClick={handleCloseMenu} />
-              <div className={styles.drawerContent}>
-                <div className={styles.drawerIndicator} />
-                <button
-                  className={`${styles.drawerBtn} ${styles.deleteBtn}`}
-                  onClick={handleDeletePost}
-                >
-                  Delete Post
-                </button>
-                <button className={styles.drawerBtn} onClick={handleCloseMenu}>
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-
-          {commentToDelete && (
-            <div
-              className={`${styles.menuDrawer} ${
-                isCommentMenuClosing ? styles.menuDrawerLeaving : ""
-              }`}
-            >
-              <div
-                className={styles.drawerOverlay}
-                onClick={handleCloseCommentMenu}
-              />
-              <div className={styles.drawerContent}>
-                <div className={styles.drawerIndicator} />
-                <button
-                  className={`${styles.drawerBtn} ${styles.deleteBtn}`}
-                  onClick={handleDeleteComment}
-                >
-                  Delete my comment
-                </button>
-                <button
-                  className={styles.drawerBtn}
-                  onClick={handleCloseCommentMenu}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
