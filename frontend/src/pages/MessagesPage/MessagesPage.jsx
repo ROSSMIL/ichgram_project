@@ -10,14 +10,39 @@ import {
 } from "react";
 import PropTypes from "prop-types";
 import { Link, useLocation } from "react-router-dom";
-import { useSocket } from "../../context/useSocket.js";
 import { createPortal } from "react-dom";
+import { useSocket } from "../../context/useSocket.js";
 import API from "../../api/axios.js";
 import Avatar from "../../components/Avatar/Avatar";
 import PageHeader from "../../components/PageHeader/PageHeader";
 import styles from "./MessagesPage.module.css";
 
 const QUICK_EMOJIS = ["❤️", "👍", "🔥", "😂", "😮", "😢"];
+
+const getLoggedInUsername = () => {
+  const token = localStorage.getItem("token");
+  if (!token) return null;
+
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.username;
+  } catch (e) {
+    console.error("Failed to decode token:", e);
+    return null;
+  }
+};
+
+const getProfileLink = (targetUsername, currentUsername) => {
+  if (!targetUsername || targetUsername === "Deleted User") return "#";
+
+  const myUsername = currentUsername || getLoggedInUsername();
+
+  if (myUsername && myUsername.toLowerCase() === targetUsername.toLowerCase()) {
+    return "/profile";
+  }
+
+  return `/user/${targetUsername}`;
+};
 
 const formatLatestMessage = (chat) => {
   const msg = chat?.latestMessage;
@@ -316,7 +341,88 @@ InlineMessageMenu.propTypes = {
   onDeleteMessage: PropTypes.func,
   onCloseAnimated: PropTypes.func,
 };
+const SenderProfilePortal = memo(
+  ({
+    sender,
+    linkRef,
+    isHovered,
+    isClosing,
+    onMouseEnter,
+    onMouseLeave,
+    currentUsername,
+  }) => {
+    const [coords, setCoords] = useState({ top: 0, left: 0 });
 
+    useLayoutEffect(() => {
+      if ((isHovered || isClosing) && linkRef.current) {
+        const rect = linkRef.current.getBoundingClientRect();
+        setCoords({
+          top: rect.top - 8,
+          left: rect.left,
+        });
+      }
+    }, [isHovered, isClosing, linkRef]);
+
+    if (!isHovered && !isClosing) return null;
+
+    return createPortal(
+      <Link
+        to={getProfileLink(sender?.username, currentUsername)}
+        className={`${styles.senderHoverCardPortal} ${
+          isClosing ? styles.senderHoverCardPortalExit : ""
+        }`}
+        style={{
+          position: "fixed",
+          top: `${coords.top}px`,
+          left: `${coords.left}px`,
+          zIndex: 9998,
+        }}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <Avatar user={sender} size={36} />
+        <div className={styles.senderHoverInfo}>
+          <span className={styles.senderHoverUsername}>{sender?.username}</span>
+          {sender?.fullName && (
+            <span className={styles.senderHoverFullName}>
+              {sender?.fullName}
+            </span>
+          )}
+          <div className={styles.senderHoverActionPill}>
+            <span>View Profile</span>
+            <span className={styles.arrowCircleBadge}>
+              <svg
+                viewBox="0 0 24 24"
+                className={styles.hoverArrowSvg}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </span>
+          </div>
+        </div>
+      </Link>,
+      document.body,
+    );
+  },
+);
+
+SenderProfilePortal.displayName = "SenderProfilePortal";
+SenderProfilePortal.propTypes = {
+  sender: PropTypes.object,
+  linkRef: PropTypes.object,
+  isHovered: PropTypes.bool,
+  isClosing: PropTypes.bool,
+  onMouseEnter: PropTypes.func,
+  onMouseLeave: PropTypes.func,
+  currentUsername: PropTypes.string,
+};
 const HeaderStatusTextSwitcher = memo(({ statusKey, isUserOnline }) => {
   const containerRef = useRef(null);
   const measureRef = useRef(null);
@@ -445,19 +551,6 @@ HeaderStatusTextSwitcher.propTypes = {
   isUserOnline: PropTypes.bool,
 };
 
-const getLoggedInUsername = () => {
-  const token = localStorage.getItem("token");
-  if (!token) return null;
-
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.username;
-  } catch (e) {
-    console.error("Failed to decode token:", e);
-    return null;
-  }
-};
-
 const MessageItem = memo(
   ({
     msg,
@@ -477,10 +570,36 @@ const MessageItem = memo(
     onClosePortalAnimated,
     isClosing,
     selectedChat,
+    currentUserUsername,
   }) => {
     const itemRef = useRef(null);
     const textareaRef = useRef(null);
     const triggerBtnRef = useRef(null);
+    const senderLinkRef = useRef(null);
+    const hoverTimeoutRef = useRef(null);
+
+    const [isHoveredSender, setIsHoveredSender] = useState(false);
+    const [isClosingSender, setIsClosingSender] = useState(false);
+
+    const handleMouseEnterSender = () => {
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+      setIsClosingSender(false);
+      setIsHoveredSender(true);
+    };
+
+    const handleMouseLeaveSender = () => {
+      setIsClosingSender(true);
+      hoverTimeoutRef.current = setTimeout(() => {
+        setIsHoveredSender(false);
+        setIsClosingSender(false);
+      }, 200); 
+    };
+
+    useEffect(() => {
+      return () => {
+        if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+      };
+    }, []);
 
     const formatTime = (dateString) => {
       if (!dateString) return "";
@@ -532,7 +651,30 @@ const MessageItem = memo(
         >
           <div className={styles.floatWrapper}>
             {!isMyMessage && selectedChat?.isGroupChat && (
-              <span className={styles.senderName}>{msg.sender?.username}</span>
+              <div className={styles.senderNameContainer}>
+                <Link
+                  ref={senderLinkRef}
+                  to={getProfileLink(msg.sender?.username, currentUserUsername)}
+                  className={styles.senderNameLink}
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseEnter={handleMouseEnterSender}
+                  onMouseLeave={handleMouseLeaveSender}
+                >
+                  <span className={styles.senderNameText}>
+                    {msg.sender?.username || "User"}
+                  </span>
+                </Link>
+
+                <SenderProfilePortal
+                  sender={msg.sender}
+                  linkRef={senderLinkRef}
+                  isHovered={isHoveredSender}
+                  isClosing={isClosingSender}
+                  onMouseEnter={handleMouseEnterSender}
+                  onMouseLeave={handleMouseLeaveSender}
+                  currentUsername={currentUserUsername}
+                />
+              </div>
             )}
 
             {isEditing ? (
@@ -761,6 +903,7 @@ MessageItem.propTypes = {
   onClosePortalAnimated: PropTypes.func,
   isClosing: PropTypes.bool,
   selectedChat: PropTypes.object,
+  currentUserUsername: PropTypes.string,
 };
 
 const MessagesPage = () => {
@@ -797,6 +940,10 @@ const MessagesPage = () => {
 
   const [cannotRemoveModalUser, setCannotRemoveModalUser] = useState(null);
 
+  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  const [selectedAddUsers, setSelectedAddUsers] = useState([]);
+  const [searchAddUserQuery, setSearchAddUserQuery] = useState("");
+
   const messagesContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const selectedChatRef = useRef(selectedChat);
@@ -805,6 +952,7 @@ const MessagesPage = () => {
   const messagesEndRef = useRef(null);
 
   const [isOlderThan15Min, setIsOlderThan15Min] = useState(false);
+
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => {
@@ -821,6 +969,43 @@ const MessagesPage = () => {
       (u) => (u._id || u.id || u).toString() === myIdStr,
     );
   }, [selectedChat, myIdStr]);
+
+  const availableUsersToAdd = useMemo(() => {
+    if (!selectedChat || !selectedChat.isGroupChat) return [];
+    const existingIds = new Set(
+      selectedChat.users.map((u) => (u._id || u.id || u).toString()),
+    );
+    return allGlobalUsers.filter((u) => !existingIds.has(u._id.toString()));
+  }, [selectedChat, allGlobalUsers]);
+
+  const toggleSelectUserForAdd = (userId) => {
+    setSelectedAddUsers((prev) =>
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId],
+    );
+  };
+
+  const handleAddMembersToGroup = async () => {
+    if (!selectedChat || selectedAddUsers.length === 0) return;
+
+    try {
+      for (const userId of selectedAddUsers) {
+        const { data } = await API.put("/api/chat/groupadd", {
+          chatId: selectedChat._id,
+          userId,
+        });
+        setSelectedChat(data);
+        setChats((prev) => prev.map((c) => (c._id === data._id ? data : c)));
+      }
+
+      setIsAddMemberModalOpen(false);
+      setSelectedAddUsers([]);
+      setSearchAddUserQuery("");
+    } catch (err) {
+      console.error("Error adding members to group:", err);
+    }
+  };
 
   useEffect(() => {
     showScrollBottomRef.current = showScrollBottom;
@@ -842,9 +1027,11 @@ const MessagesPage = () => {
     );
   }, [messages]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     selectedChatRef.current = selectedChat;
+  }, [selectedChat]);
 
+  useEffect(() => {
     const currentUnreadForThisChat = selectedChat?._id
       ? unreadCounts[selectedChat._id] || 0
       : 0;
@@ -868,6 +1055,10 @@ const MessagesPage = () => {
   }, [selectedChat, unreadCounts]);
 
   const handleSelectChat = useCallback((chat) => {
+    if (selectedChatRef.current?._id === chat?._id) {
+      return;
+    }
+
     setSelectedChat(chat);
     setIsTyping(false);
     setEditingMessageId(null);
@@ -876,6 +1067,13 @@ const MessagesPage = () => {
     setIsHidingNewMessages(false);
     setShowScrollBottom(false);
     setUnreadScrollCount(0);
+
+    if (chat?.latestMessage) {
+      setLoadingMessages(true);
+    } else {
+      setLoadingMessages(false);
+    }
+    setMessages([]);
 
     if (chat?._id) {
       setUnreadCounts((prev) => ({
@@ -980,7 +1178,7 @@ const MessagesPage = () => {
     }
   }, [messages, loadingMessages, scrollToBottom]);
 
-  const refreshChats = async () => {
+  const refreshChats = useCallback(async () => {
     try {
       const { data } = await API.get("/api/chat");
       setChats(data);
@@ -995,7 +1193,7 @@ const MessagesPage = () => {
     } catch (err) {
       console.error("Error refreshing chats:", err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -1091,13 +1289,11 @@ const MessagesPage = () => {
   ]);
 
   useEffect(() => {
-    if (!selectedChat) return;
+    if (!selectedChat?._id) return;
 
     let isMounted = true;
 
     const loadMessages = async () => {
-      setLoadingMessages(true);
-
       try {
         const { data } = await API.get(`/api/message/${selectedChat._id}`);
 
@@ -1171,7 +1367,7 @@ const MessagesPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [selectedChat, myId, myIdStr, socket]);
+  }, [selectedChat?._id, myId, myIdStr, socket]);
 
   useEffect(() => {
     if (!socket) return;
@@ -1412,7 +1608,7 @@ const MessagesPage = () => {
       socket.off("typing", handleTyping);
       socket.off("stop typing", handleStopTyping);
     };
-  }, [socket, myId, myIdStr]);
+  }, [socket, myId, myIdStr, refreshChats]);
 
   const handleConfirmDeleteChat = async () => {
     if (!selectedChat) return;
@@ -1487,16 +1683,19 @@ const MessagesPage = () => {
     [selectedChat],
   );
 
-  const getChatSender = (users) => {
-    if (!users || users.length === 0) return null;
+  const getChatSender = useCallback(
+    (users) => {
+      if (!users || users.length === 0) return null;
 
-    const partner = users.find((u) => {
-      const uId = u._id || u.id || u;
-      return uId?.toString() !== myIdStr;
-    });
+      const partner = users.find((u) => {
+        const uId = u._id || u.id || u;
+        return uId?.toString() !== myIdStr;
+      });
 
-    return partner || users[0];
-  };
+      return partner || users[0];
+    },
+    [myIdStr],
+  );
 
   const partnerUser =
     selectedChat && !selectedChat.isGroupChat
@@ -1674,7 +1873,7 @@ const MessagesPage = () => {
         }
       }
     },
-    [editingContent, socket],
+    [editingContent, socket, refreshChats],
   );
 
   const handleRequestDeleteMessage = useCallback((msg) => {
@@ -1742,7 +1941,7 @@ const MessagesPage = () => {
       console.error("Error deleting message:", err);
       setMessages(previousMessagesState);
     }
-  }, [deletingMessageTarget, socket]);
+  }, [deletingMessageTarget, socket, refreshChats]);
 
   const handleToggleReaction = useCallback(
     async (msgId, emoji) => {
@@ -1800,7 +1999,7 @@ const MessagesPage = () => {
         refreshChats();
       }
     },
-    [myIdStr, socket],
+    [myIdStr, socket, refreshChats],
   );
 
   const handleTypingInput = (e) => {
@@ -1821,6 +2020,12 @@ const MessagesPage = () => {
       }
     }, 2000);
   };
+
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    };
+  }, []);
 
   const handleOpenGroupModal = async () => {
     setIsGroupModalOpen(true);
@@ -1862,21 +2067,6 @@ const MessagesPage = () => {
     } catch (err) {
       console.error("Error creating group chat:", err);
     }
-  };
-
-  const getProfileLink = (targetUsername) => {
-    if (!targetUsername || targetUsername === "Deleted User") return "#";
-
-    const myUsername = currentUser?.username || getLoggedInUsername();
-
-    if (
-      myUsername &&
-      myUsername.toLowerCase() === targetUsername.toLowerCase()
-    ) {
-      return "/profile";
-    }
-
-    return `/user/${targetUsername}`;
   };
 
   const isGroup = selectedChat?.isGroupChat;
@@ -2234,7 +2424,7 @@ const MessagesPage = () => {
                   </div>
                 ) : (
                   <Link
-                    to={getProfileLink(partnerUsername)}
+                    to={getProfileLink(partnerUsername, currentUser?.username)}
                     className={styles.authorBadge}
                   >
                     <Avatar user={partnerUser} size={36} />
@@ -2286,19 +2476,35 @@ const MessagesPage = () => {
                     : "Delete Chat"
                 }
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  width="20"
-                  height="20"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                </svg>
+                {isGroup && !isGroupAdmin ? (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    width="20"
+                    height="20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.5 3.75a1.5 1.5 0 0 1 1.5 1.5v13.5a1.5 1.5 0 0 1-1.5 1.5h-6a1.5 1.5 0 0 1-1.5-1.5V15a.75.75 0 0 0-1.5 0v3.75a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3V5.25a3 3 0 0 0-3-3h-6a3 3 0 0 0-3 3V9A.75.75 0 1 0 9 9V5.25a1.5 1.5 0 0 1 1.5-1.5h6ZM5.78 8.47a.75.75 0 0 0-1.06 0l-3 3a.75.75 0 0 0 0 1.06l3 3a.75.75 0 0 0 1.06-1.06l-1.72-1.72H15a.75.75 0 0 0 0-1.5H4.06l1.72-1.72a.75.75 0 0 0 0-1.06Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="20"
+                    height="20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
+                )}
               </button>
             </div>
 
@@ -2451,6 +2657,7 @@ const MessagesPage = () => {
                             }}
                             onClosePortalAnimated={handleClosePortalAnimated}
                             selectedChat={selectedChat}
+                            currentUserUsername={currentUser?.username}
                           />
                         </div>
                       </Fragment>
@@ -2721,6 +2928,19 @@ const MessagesPage = () => {
               </button>
             </div>
 
+            {isGroupAdmin && (
+              <button
+                type="button"
+                className={styles.addMemberTriggerBtn}
+                onClick={() => {
+                  setIsGroupDetailsModalOpen(false);
+                  setIsAddMemberModalOpen(true);
+                }}
+              >
+                + Add Members
+              </button>
+            )}
+
             <div className={styles.userSelectionContainer}>
               <span className={styles.selectTitle}>Group Members</span>
 
@@ -2790,6 +3010,102 @@ const MessagesPage = () => {
                 }}
               >
                 {isGroupAdmin ? "Delete Group" : "Leave Group"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isAddMemberModalOpen && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setIsAddMemberModalOpen(false)}
+        >
+          <div
+            className={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <h3>Add Members to Group</h3>
+              <button
+                type="button"
+                className={styles.closeModalBtn}
+                onClick={() => setIsAddMemberModalOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <input
+              type="text"
+              placeholder="Search users to add..."
+              value={searchAddUserQuery}
+              onChange={(e) => setSearchAddUserQuery(e.target.value)}
+              className={styles.modalInput}
+            />
+
+            <div className={styles.userSelectionContainer}>
+              <span className={styles.selectTitle}>Available Contacts</span>
+              <div className={styles.userSelectionList}>
+                {availableUsersToAdd
+                  .filter((u) =>
+                    u.username
+                      .toLowerCase()
+                      .includes(searchAddUserQuery.toLowerCase()),
+                  )
+                  .map((u, idx) => {
+                    const isSelected = selectedAddUsers.includes(u._id);
+                    return (
+                      <div
+                        key={u._id}
+                        className={`${styles.userSelectItem} ${
+                          isSelected ? styles.selectedUserItem : ""
+                        }`}
+                        style={{ "--stagger-index": idx }}
+                        onClick={() => toggleSelectUserForAdd(u._id)}
+                      >
+                        <Avatar user={u} size={36} />
+                        <span className={styles.selectUsername}>
+                          {u.username}
+                        </span>
+                        <div
+                          className={`${styles.customCheckbox} ${
+                            isSelected ? styles.checkboxChecked : ""
+                          }`}
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            className={styles.checkboxCheckmark}
+                          >
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        </div>
+                      </div>
+                    );
+                  })}
+                {availableUsersToAdd.length === 0 && (
+                  <p className={styles.noUsersNotice}>
+                    No new users available to add
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.cancelBtn}
+                onClick={() => setIsAddMemberModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.createBtn}
+                onClick={handleAddMembersToGroup}
+                disabled={selectedAddUsers.length === 0}
+              >
+                Add Selected ({selectedAddUsers.length})
               </button>
             </div>
           </div>

@@ -1000,12 +1000,15 @@
   transform: scale(0.7);
   flex-shrink: 0;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  will-change:
+    transform, opacity, background-color, color, border-color, box-shadow;
   transition:
     opacity 0.2s ease,
     transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
     background-color 0.2s ease,
     color 0.2s ease,
-    border-color 0.2s ease;
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .messageOuterContainer:hover .threeDotsCircleBtn,
@@ -1020,6 +1023,13 @@
   color: var(--text-primary, #ffffff);
   border-color: var(--text-secondary);
   transform: scale(1.12);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.threeDotsCircleBtn:active {
+  transform: scale(0.85) rotate(-6deg) !important;
+  transition-duration: 0.08s !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .threeDotsSvg {
@@ -1497,13 +1507,258 @@
 .sending {
   opacity: 0.6;
 }
+.senderNameContainer {
+  margin-bottom: 4px;
+  display: inline-block;
+  position: relative;
+  z-index: 10;
+}
 
-.senderName {
-  font-size: 0.7rem;
-  font-weight: 700;
-  margin-bottom: 2px;
-  letter-spacing: 0.2px;
+.senderNameLink {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: none;
   color: var(--link-color, #0095f6);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 2px 6px;
+  margin-left: -6px;
+  will-change: transform, background-color, color;
+  transition:
+    color 0.25s ease,
+    background-color 0.25s ease,
+    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.senderNameText {
+  position: relative;
+  z-index: 1;
+}
+.senderNameLink:hover {
+  background-color: rgba(0, 149, 246, 0.14);
+  color: #38bdf8;
+  transform: translateY(-1px) scale(1.03);
+}
+
+.senderNameLink:active {
+  transform: scale(0.94) translateY(0);
+  transition-duration: 0.08s;
+}
+.senderNameText::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 100%;
+  height: 1.5px;
+  background-color: var(--link-color, #0095f6);
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition:
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.2s ease;
+}
+
+.senderNameLink:hover {
+  background-color: rgba(0, 149, 246, 0.12);
+  color: #38bdf8;
+  transform: translateY(-1px);
+}
+
+.senderNameLink:hover .senderNameText::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.senderNameLink:active {
+  transform: scale(0.95);
+}
+
+.senderHoverCardPortal {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: var(--bg-card, rgba(28, 28, 30, 0.85));
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.18));
+  padding: 10px 14px;
+  border-radius: 20px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  white-space: nowrap;
+  pointer-events: auto;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  box-sizing: border-box;
+  transform: translateY(-100%);
+
+  will-change: transform, opacity, background-color, border-color, box-shadow;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  animation: hoverCardPopIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.senderHoverCardPortal::before {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  height: 14px;
+  background: transparent;
+}
+
+.senderHoverCardPortal::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 18px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: var(--bg-card, rgba(28, 28, 30, 0.85)) transparent transparent
+    transparent;
+  transition: border-color 0.25s ease;
+}
+
+.senderHoverCardPortal:hover {
+  border-color: var(--link-color, #0095f6);
+  transform: translateY(-100%) scale(1.06) translateY(-2px);
+  box-shadow:
+    0 20px 48px rgba(0, 0, 0, 0.45),
+    0 0 20px rgba(0, 149, 246, 0.2);
+}
+
+.senderHoverCardPortal:active {
+  transform: translateY(-100%) scale(0.96) !important;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3) !important;
+  transition-duration: 0.08s !important;
+}
+
+@keyframes hoverCardPopIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-85%) scale(0.85);
+    filter: blur(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-100%) scale(1);
+    filter: blur(0px);
+  }
+}
+
+.senderHoverCardPortalExit {
+  animation: hoverCardPopOut 0.2s cubic-bezier(0.4, 0, 1, 1) forwards !important;
+  pointer-events: none;
+}
+
+@keyframes hoverCardPopOut {
+  0% {
+    opacity: 1;
+    transform: translateY(-100%) scale(1);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-88%) scale(0.85);
+    filter: blur(6px);
+  }
+}
+
+.senderHoverInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.senderHoverUsername {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary, #ffffff);
+  line-height: 1.2;
+}
+
+.senderHoverFullName {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-secondary, #a8a8a8);
+  line-height: 1.2;
+}
+
+.senderHoverActionPill {
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 3px 10px;
+  border-radius: 999px;
+  background-color: rgba(0, 149, 246, 0.12);
+  border: 1px solid rgba(0, 149, 246, 0.25);
+  color: var(--link-color, #0095f6);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease;
+}
+
+.senderHoverCardPortal:hover .senderHoverActionPill {
+  background-color: rgba(0, 149, 246, 0.25);
+  border-color: rgba(0, 149, 246, 0.5);
+  color: #38bdf8;
+}
+
+.arrowCircleBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: rgba(0, 149, 246, 0.2);
+  color: var(--link-color, #0095f6);
+  flex-shrink: 0;
+  transition:
+    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    background-color 0.25s ease,
+    color 0.25s ease;
+}
+
+.hoverArrowSvg {
+  width: 10px;
+  height: 10px;
+}
+
+.senderHoverCardPortal:hover .arrowCircleBadge {
+  background-color: var(--link-color, #0095f6);
+  color: #ffffff;
+  transform: translateX(3px) scale(1.12);
+}
+
+@keyframes hoverCardPopIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-85%) scale(0.88);
+    filter: blur(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-100%) scale(1);
+    filter: blur(0px);
+  }
 }
 
 .inputFooter {
@@ -2202,7 +2457,7 @@
   position: relative;
   user-select: none;
   pointer-events: none;
-  z-index: 2;
+  z-index: 1;
 }
 
 .dateDividerBubble {
@@ -2220,93 +2475,6 @@
   animation: dateDividerPopIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-@keyframes itemPopIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.92);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes fadeInModalBg {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes popInModal {
-  from {
-    opacity: 0;
-    transform: scale(0.9) translateY(20px);
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes itemPopInModal {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.94);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes emptyConversationPopIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.9) translateY(10px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-@keyframes emptyWave {
-  0%,
-  100% {
-    transform: rotate(0deg);
-  }
-  15% {
-    transform: rotate(14deg);
-  }
-  30% {
-    transform: rotate(-8deg);
-  }
-  45% {
-    transform: rotate(14deg);
-  }
-  60% {
-    transform: rotate(-4deg);
-  }
-  75% {
-    transform: rotate(10deg);
-  }
-}
-
-@keyframes dateDividerPopIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.85) translateY(-6px);
-    filter: blur(4px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-    filter: blur(0px);
-  }
-}
-
 .newMessagesDividerWrapper {
   display: grid;
   grid-template-rows: 1fr;
@@ -2314,7 +2482,7 @@
   position: relative;
   user-select: none;
   pointer-events: none;
-  z-index: 2;
+  z-index: 1;
   will-change: grid-template-rows, opacity, filter, margin;
   transition:
     grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1),
@@ -2392,19 +2560,6 @@
   height: 14px;
   color: var(--link-color, #0095f6);
   flex-shrink: 0;
-}
-
-@keyframes newMsgPopIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.88) translateY(-8px);
-    filter: blur(4px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-    filter: blur(0px);
-  }
 }
 
 .scrollBottomBtn {
@@ -2518,6 +2673,301 @@
   }
 }
 
+.deletePreviewBubble {
+  background-color: var(--bg-main);
+  border: 1px dashed var(--border-color);
+  border-left: 3px solid var(--link-color, #0095f6);
+  padding: 10px 14px;
+  border-radius: 12px;
+  margin-top: 4px;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+.deletePreviewText {
+  font-size: 13px;
+  color: var(--text-primary);
+  opacity: 0.9;
+  font-style: italic;
+  word-break: break-word;
+}
+
+.deleteConfirmNotice {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 8px 0;
+  line-height: 1.4;
+}
+
+.timeWarningBox {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background-color: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 12px 14px;
+  border-radius: 14px;
+  margin: 6px 0;
+  color: #f59e0b;
+}
+
+.warningIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.timeWarningBox strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.timeWarningBox p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-primary);
+  opacity: 0.85;
+}
+
+.groupHeaderClickable {
+  cursor: pointer;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.groupHeaderClickable:hover {
+  opacity: 0.85;
+  transform: scale(1.02);
+}
+
+.groupStatusClickable {
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.groupStatusClickable:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+.groupModalTitleRow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.groupBadgeSubtitle {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.memberListItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  opacity: 0;
+  animation: itemPopInModal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation-delay: calc(var(--stagger-index, 0) * 0.03s);
+}
+
+.memberInfo {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+.adminBadge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+
+.systemMessageContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 10px 0;
+  width: 100%;
+}
+
+.systemMessageBubble {
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 14px;
+  border-radius: 12px;
+  text-align: center;
+  backdrop-filter: blur(4px);
+}
+
+.removeMemberBtn {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: auto;
+}
+
+.removeMemberBtn:hover {
+  background: #ef4444;
+  color: #ffffff;
+  border-color: #ef4444;
+}
+
+:global(.footer-container) {
+  display: none !important;
+}
+
+.addMemberTriggerBtn {
+  width: 100%;
+  background-color: var(--btn-guest-bg);
+  color: var(--btn-guest-text);
+  border: 1px solid var(--border-color);
+  padding: 10px 16px;
+  border-radius: 14px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    background-color 0.2s ease;
+}
+
+.addMemberTriggerBtn:hover {
+  background-color: var(--btn-guest-hover);
+  transform: translateY(-2px);
+}
+
+.noUsersNotice {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+  padding: 12px 0;
+  margin: 0;
+}
+
+@keyframes itemPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fadeInModalBg {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes popInModal {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes itemPopInModal {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes emptyConversationPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes emptyWave {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  15% {
+    transform: rotate(14deg);
+  }
+  30% {
+    transform: rotate(-8deg);
+  }
+  45% {
+    transform: rotate(14deg);
+  }
+  60% {
+    transform: rotate(-4deg);
+  }
+  75% {
+    transform: rotate(10deg);
+  }
+}
+
+@keyframes dateDividerPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.85) translateY(-6px);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0px);
+  }
+}
+
+@keyframes newMsgPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.88) translateY(-8px);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0px);
+  }
+}
+
 @media (min-width: 1440px) {
   .container {
     max-width: 1600px;
@@ -2594,168 +3044,4 @@
     font-size: 18px;
     padding: 4px;
   }
-}
-
-.deletePreviewBubble {
-  background-color: var(--bg-main);
-  border: 1px dashed var(--border-color);
-  border-left: 3px solid var(--link-color, #0095f6);
-  padding: 10px 14px;
-  border-radius: 12px;
-  margin-top: 4px;
-  max-height: 80px;
-  overflow-y: auto;
-}
-
-.deletePreviewText {
-  font-size: 13px;
-  color: var(--text-primary);
-  opacity: 0.9;
-  font-style: italic;
-  word-break: break-word;
-}
-
-.deleteConfirmNotice {
-  color: var(--text-secondary);
-  font-size: 14px;
-  margin: 8px 0;
-  line-height: 1.4;
-}
-
-.timeWarningBox {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  background-color: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  padding: 12px 14px;
-  border-radius: 14px;
-  margin: 6px 0;
-  color: #f59e0b;
-}
-
-.warningIcon {
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.timeWarningBox strong {
-  display: block;
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 2px;
-}
-
-.timeWarningBox p {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--text-primary);
-  opacity: 0.85;
-}
-.groupHeaderClickable {
-  cursor: pointer;
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.groupHeaderClickable:hover {
-  opacity: 0.85;
-  transform: scale(1.02);
-}
-
-.groupStatusClickable {
-  cursor: pointer;
-  transition: color 0.2s ease;
-}
-
-.groupStatusClickable:hover {
-  color: var(--text-primary);
-  text-decoration: underline;
-}
-
-.groupModalTitleRow {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.groupBadgeSubtitle {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.memberListItem {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border-radius: 14px;
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
-  opacity: 0;
-  animation: itemPopInModal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  animation-delay: calc(var(--stagger-index, 0) * 0.03s);
-}
-
-.memberInfo {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-  overflow: hidden;
-}
-
-.adminBadge {
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  padding: 3px 8px;
-  border-radius: 8px;
-  background-color: rgba(16, 185, 129, 0.15);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  letter-spacing: 0.3px;
-  flex-shrink: 0;
-}
-.systemMessageContainer {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin: 10px 0;
-  width: 100%;
-}
-
-.systemMessageBubble {
-  background-color: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 500;
-  padding: 4px 14px;
-  border-radius: 12px;
-  text-align: center;
-  backdrop-filter: blur(4px);
-}
-.removeMemberBtn {
-  background: rgba(239, 68, 68, 0.12);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  padding: 5px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin-left: auto;
-}
-
-.removeMemberBtn:hover {
-  background: #ef4444;
-  color: #ffffff;
-  border-color: #ef4444;
-}
-:global(.footer-container) {
-  display: none !important;
 }
