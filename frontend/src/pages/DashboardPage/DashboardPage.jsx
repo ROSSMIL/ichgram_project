@@ -358,7 +358,7 @@ const DashboardPage = () => {
     const isMe = authorIdStr === currentUserId?.toString();
 
     if (activeFilter === "following") {
-      return isMe || currentUserFollowing.includes(authorIdStr);
+      return currentUserFollowing.includes(authorIdStr);
     }
 
     if (activeFilter === "discover") {

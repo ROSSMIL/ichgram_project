@@ -362,16 +362,15 @@ const ExplorePage = () => {
     if (!postAuthorId) return true;
 
     const authorIdStr = postAuthorId.toString();
-    const isFollowingOrMe =
-      authorIdStr === currentUserId?.toString() ||
-      currentUserFollowing.includes(authorIdStr);
+    const isMe = authorIdStr === currentUserId?.toString();
+    const isFollowing = currentUserFollowing.includes(authorIdStr);
 
     if (activeFilter === "following") {
-      return isFollowingOrMe;
+      return isFollowing;
     }
 
     if (activeFilter === "discover") {
-      return !isFollowingOrMe;
+      return !isMe && !isFollowing;
     }
 
     return true;
