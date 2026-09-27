@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, memo } from "react";
+import { useState, useEffect, useRef, useCallback, memo, useMemo } from "react";
 import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import API from "../../api/axios";
@@ -8,6 +8,21 @@ import getCroppedImg from "../../utils/getCroppedImg";
 import styles from "./CreatePostModal.module.css";
 import Avatar from "../Avatar/Avatar";
 import PostCard from "../PostCard/PostCard";
+
+const DEMO_COMMENTS = [
+  {
+    _id: "demo_c1",
+    text: "Awesome shot! 🔥",
+    createdAt: "2026-03-27T20:00:00.000Z",
+    user: { username: "alex_design", avatar: "" },
+  },
+  {
+    _id: "demo_c2",
+    text: "Love the lighting and composition! ✨",
+    createdAt: "2026-03-27T20:30:00.000Z",
+    user: { username: "creative_mind", avatar: "" },
+  },
+];
 
 const getUserFromToken = () => {
   const token = localStorage.getItem("token");
@@ -471,19 +486,27 @@ const CreatePostModal = ({
     }
   };
 
-  const previewPostData = {
-    _id: editingPost ? editingPost._id : "preview_temp_id",
-    url: croppedImage || rawImage,
-    caption: caption,
-    createdAt: editingPost ? editingPost.createdAt : new Date().toISOString(),
-    likes: editingPost ? editingPost.likes : [],
-    likesCount: editingPost ? editingPost.likesCount : 0,
-    isEdited: editingPost ? true : false,
-    user: user || {
-      username: "username",
-      avatar: "",
-    },
-  };
+  const previewPostData = useMemo(() => {
+    return {
+      _id: editingPost ? editingPost._id : "preview_temp_id",
+      url: croppedImage || rawImage,
+      caption: caption,
+      createdAt: editingPost
+        ? editingPost.createdAt
+        : "2026-03-27T21:00:00.000Z",
+      likes: editingPost ? editingPost.likes : [],
+      likesCount: editingPost ? editingPost.likesCount : 0,
+      isEdited: editingPost ? true : false,
+      user: user || {
+        username: "username",
+        avatar: "",
+      },
+      comments:
+        editingPost?.comments?.length > 0
+          ? editingPost.comments
+          : DEMO_COMMENTS,
+    };
+  }, [editingPost, croppedImage, rawImage, caption, user]);
 
   const isPreview = viewMode === "preview" && !!croppedImage;
 
@@ -499,7 +522,9 @@ const CreatePostModal = ({
           isPreview
             ? previewStyle === "explore"
               ? styles.previewExploreModeModal
-              : styles.previewModeModal
+              : previewStyle === "desktop"
+                ? styles.previewDesktopModeModal
+                : styles.previewModeModal
             : ""
         } ${isClosing ? styles.scaleDown : ""}`}
         onClick={(e) => e.stopPropagation()}
@@ -897,6 +922,15 @@ const CreatePostModal = ({
                 <button
                   type="button"
                   className={`${styles.styleSubBtn} ${
+                    previewStyle === "desktop" ? styles.activeStyleSubBtn : ""
+                  }`}
+                  onClick={() => setPreviewStyle("desktop")}
+                >
+                  Desktop 2K
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.styleSubBtn} ${
                     previewStyle === "explore" ? styles.activeStyleSubBtn : ""
                   }`}
                   onClick={() => setPreviewStyle("explore")}
@@ -908,6 +942,15 @@ const CreatePostModal = ({
 
             {previewStyle === "feed" ? (
               <div className={styles.previewCardContainer}>
+                <PostCard
+                  post={previewPostData}
+                  currentUserId={user?._id || user?.id}
+                  currentUsername={user?.username}
+                  onOpenModal={() => {}}
+                />
+              </div>
+            ) : previewStyle === "desktop" ? (
+              <div className={styles.desktopPreviewCardContainer}>
                 <PostCard
                   post={previewPostData}
                   currentUserId={user?._id || user?.id}

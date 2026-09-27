@@ -1200,3 +1200,58 @@
     height: 240px !important;
   }
 }
+
+.previewDesktopModeModal {
+  max-width: 980px;
+  height: min(85vh, 640px);
+}
+
+.desktopPreviewCardContainer {
+  width: 100%;
+  max-width: 920px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.desktopPreviewCardContainer :global(.PostCard_postCard__3Xf9q),
+.desktopPreviewCardContainer > article {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  padding: 18px !important;
+  gap: 20px !important;
+  border-radius: 26px !important;
+  height: 520px !important;
+  max-height: 520px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.desktopPreviewCardContainer > article > div:first-child {
+  flex: 0 0 420px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+}
+
+.desktopPreviewCardContainer > article > div:first-child > div:last-child {
+  display: none !important;
+}
+
+.desktopPreviewCardContainer > article > div:last-child {
+  display: flex !important;
+  flex: 1 !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  background-color: var(--bg-main, rgba(255, 255, 255, 0.02)) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 20px !important;
+  padding: 16px !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
