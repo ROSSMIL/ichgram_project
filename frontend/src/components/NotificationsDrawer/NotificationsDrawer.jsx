@@ -71,6 +71,7 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
   const markAsRead = useCallback(async () => {
     try {
       await API.patch("/api/notifications/read");
+      window.dispatchEvent(new CustomEvent("unreadCountsUpdated"));
     } catch (err) {
       console.error("Error marking notifications read:", err);
     }
@@ -208,8 +209,22 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleItemClick = (notif) => {
+  const handleItemClick = async (notif) => {
+    setNotifications((prev) =>
+      prev.map((item) =>
+        item._id === notif._id ? { ...item, isRead: true } : item,
+      ),
+    );
+
+    try {
+      await API.patch("/api/notifications/read");
+      window.dispatchEvent(new CustomEvent("unreadCountsUpdated"));
+    } catch (err) {
+      console.error("Error marking read on item click:", err);
+    }
+
     onClose();
+
     if (notif.type === "like" || notif.type === "comment") {
       const targetPostId = notif.post?._id || notif.post;
       if (targetPostId) {

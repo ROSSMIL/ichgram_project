@@ -39,7 +39,7 @@ const ActivityWidget = () => {
   const ringTimerRef = useRef(null);
 
   useEffect(() => {
-    const handleActiveChatChange = async (e) => {
+    const handleActiveChatChange = (e) => {
       const chatId = e.detail?.chatId || null;
       activeChatIdRef.current = chatId;
 
@@ -50,13 +50,7 @@ const ActivityWidget = () => {
             return itemChatId !== chatId.toString();
           }),
         );
-
-        try {
-          await API.delete(`/api/notifications/chat/${chatId}`);
-          window.dispatchEvent(new CustomEvent("unreadCountsUpdated"));
-        } catch (err) {
-          console.error("Error clearing notifications for opened chat:", err);
-        }
+        window.dispatchEvent(new CustomEvent("unreadCountsUpdated"));
       }
     };
 
@@ -67,24 +61,9 @@ const ActivityWidget = () => {
   }, []);
 
   useEffect(() => {
-    const handleClearAllMessages = async () => {
-      const messageNotifIds = activities
-        .filter((item) => item.type === "message")
-        .map((item) => item._id)
-        .filter(Boolean);
-
+    const handleClearAllMessages = () => {
       setActivities((prev) => prev.filter((item) => item.type !== "message"));
-
-      if (messageNotifIds.length > 0) {
-        try {
-          await Promise.all(
-            messageNotifIds.map((id) => API.delete(`/api/notifications/${id}`)),
-          );
-          window.dispatchEvent(new CustomEvent("unreadCountsUpdated"));
-        } catch (err) {
-          console.error("Error clearing all message notifications:", err);
-        }
-      }
+      window.dispatchEvent(new CustomEvent("unreadCountsUpdated"));
     };
 
     window.addEventListener(
@@ -97,7 +76,7 @@ const ActivityWidget = () => {
         handleClearAllMessages,
       );
     };
-  }, [activities]);
+  }, []);
 
   const fetchActivities = useCallback(async () => {
     try {
@@ -324,10 +303,9 @@ const ActivityWidget = () => {
       prev.filter((act) => !notificationIds.includes(act._id)),
     );
 
-    window.dispatchEvent(new CustomEvent("unreadCountsUpdated"));
-
     try {
       await API.patch("/api/notifications/read");
+      window.dispatchEvent(new CustomEvent("unreadCountsUpdated"));
     } catch (err) {
       console.error("Error marking notifications read on click:", err);
     }

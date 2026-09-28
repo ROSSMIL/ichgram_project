@@ -98,9 +98,15 @@ const Sidebar = ({
     };
   }, [socket, location.pathname, isNotificationsOpen]);
 
-  const handleNotificationsClick = () => {
+  const handleNotificationsClick = async () => {
     setUnreadNotifsCount(0);
     onNotificationsToggle();
+    try {
+      await API.patch("/api/notifications/read");
+      window.dispatchEvent(new CustomEvent("unreadCountsUpdated"));
+    } catch (err) {
+      console.error("Error marking notifications read on sidebar click:", err);
+    }
   };
 
   const handleMessagesClick = () => {
