@@ -2,12 +2,18 @@ import mongoose from "mongoose";
 import Notification from "../models/notificationModel.js";
 import Message from "../models/messageModel.js";
 import Chat from "../models/chatModel.js";
-
 export const getNotifications = async (req, res) => {
   try {
     const userId = req.user?.userId || req.user?.id || req.user?._id;
+    const { unreadOnly } = req.query;
 
-    const notifications = await Notification.find({ recipient: userId })
+    const query = { recipient: userId };
+
+    if (unreadOnly === "true") {
+      query.isRead = false;
+    }
+
+    const notifications = await Notification.find(query)
       .populate("sender", "username avatar fullName")
       .populate("post", "url")
       .populate("chat")

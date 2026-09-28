@@ -101,7 +101,7 @@ const ActivityWidget = () => {
 
   const fetchActivities = useCallback(async () => {
     try {
-      const { data } = await API.get("/api/notifications");
+      const { data } = await API.get("/api/notifications?unreadOnly=true");
       setActivities(data);
     } catch (err) {
       console.error("Error fetching widget activities:", err);
@@ -206,6 +206,7 @@ const ActivityWidget = () => {
         setIsRinging(false);
       }, 650);
     };
+
     const handleNotificationDeleted = (data) => {
       setActivities((prev) =>
         prev.filter((item) => {
@@ -305,38 +306,31 @@ const ActivityWidget = () => {
     setIsClearing(true);
 
     try {
-      await API.delete("/api/notifications");
+      await API.patch("/api/notifications/read");
       setActivities([]);
       window.dispatchEvent(new CustomEvent("unreadCountsUpdated"));
     } catch (err) {
-      console.error("Failed to clear notifications:", err);
+      console.error("Failed to mark notifications read:", err);
     } finally {
       setIsClearing(false);
     }
   };
-  const handleItemClick = (group) => {
+
+  const handleItemClick = async (group) => {
     const item = group.latestItem;
-    const notificationIdsToDelete = group.items
-      .map((i) => i._id)
-      .filter(Boolean);
+    const notificationIds = group.items.map((i) => i._id).filter(Boolean);
 
     setActivities((prev) =>
-      prev.filter((act) => !notificationIdsToDelete.includes(act._id)),
+      prev.filter((act) => !notificationIds.includes(act._id)),
     );
 
     window.dispatchEvent(new CustomEvent("unreadCountsUpdated"));
 
-    Promise.all(
-      notificationIdsToDelete.map((id) =>
-        API.delete(`/api/notifications/${id}`),
-      ),
-    )
-      .then(() => {
-        window.dispatchEvent(new CustomEvent("unreadCountsUpdated"));
-      })
-      .catch((err) =>
-        console.error("Error auto-deleting notifications on click:", err),
-      );
+    try {
+      await API.patch("/api/notifications/read");
+    } catch (err) {
+      console.error("Error marking notifications read on click:", err);
+    }
 
     if (group.type === "message") {
       const chatId = group.chat?._id || group.chat;
