@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Notification from "../models/notificationModel.js";
 import Message from "../models/messageModel.js";
 import Chat from "../models/chatModel.js";
+
 export const getNotifications = async (req, res) => {
   try {
     const userId = req.user?.userId || req.user?.id || req.user?._id;
@@ -16,7 +17,14 @@ export const getNotifications = async (req, res) => {
     const notifications = await Notification.find(query)
       .populate("sender", "username avatar fullName")
       .populate("post", "url")
-      .populate("chat")
+      .populate({
+        path: "chat",
+        select: "chatName isGroupChat users groupAdmin",
+        populate: {
+          path: "users",
+          select: "username avatar fullName",
+        },
+      })
       .sort({ createdAt: -1 })
       .limit(40);
 

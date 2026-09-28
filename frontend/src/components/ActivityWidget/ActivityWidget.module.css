@@ -407,3 +407,15 @@
     display: none;
   }
 }
+.groupAvatarBadge {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--bg-tertiary, #262626);
+  border: 1px solid var(--border-color, #363636);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary, #ffffff);
+  flex-shrink: 0;
+}

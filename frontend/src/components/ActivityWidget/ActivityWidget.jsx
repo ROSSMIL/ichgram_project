@@ -64,11 +64,10 @@ const ActivityWidget = () => {
 
       setActivities((prev) =>
         prev.filter((item) => {
-
           if (idsToRemove.length > 0 && idsToRemove.includes(item._id)) {
             return false;
           }
-       
+
           if (postId) {
             const itemPostId = (item.post?._id || item.post)?.toString();
             if (itemPostId === postId.toString()) return false;
@@ -427,8 +426,10 @@ const ActivityWidget = () => {
   };
 
   const renderGroupText = (group) => {
-    const { type, senders, count, latestItem } = group;
+    const { type, senders, count, latestItem, chat } = group;
     const primaryUsername = senders[0]?.username || "Someone";
+    const isGroupChat = Boolean(chat?.isGroupChat);
+    const groupName = chat?.chatName || "Group Chat";
 
     if (type === "like") {
       if (senders.length > 1) {
@@ -480,6 +481,15 @@ const ActivityWidget = () => {
     }
 
     if (type === "message") {
+      if (isGroupChat) {
+        return (
+          <>
+            <strong>{groupName}</strong> • {primaryUsername}: &quot;
+            {latestItem.messageText || latestItem.content || "..."}&quot;
+          </>
+        );
+      }
+
       if (count > 1) {
         return (
           <>
@@ -491,7 +501,7 @@ const ActivityWidget = () => {
       return (
         <>
           <strong>{primaryUsername}</strong>: &quot;
-          {latestItem.messageText || "..."}&quot;
+          {latestItem.messageText || latestItem.content || "..."}&quot;
         </>
       );
     }
@@ -597,6 +607,7 @@ const ActivityWidget = () => {
             <AnimatePresence initial={false}>
               {groupedActivities.map((group) => {
                 const hasMultipleSenders = group.senders.length > 1;
+                const isGroupChat = Boolean(group.chat?.isGroupChat);
 
                 return (
                   <motion.div
@@ -626,7 +637,24 @@ const ActivityWidget = () => {
                       onClick={() => handleItemClick(group)}
                     >
                       <div className={styles.avatarWrapper}>
-                        {hasMultipleSenders ? (
+                        {isGroupChat ? (
+                          <div className={styles.groupAvatarBadge}>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              strokeWidth={1.5}
+                              stroke="currentColor"
+                              style={{ width: "20px", height: "20px" }}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"
+                              />
+                            </svg>
+                          </div>
+                        ) : hasMultipleSenders ? (
                           <div className={styles.avatarStack}>
                             <div className={styles.avatarPrimary}>
                               <Avatar user={group.senders[0]} size={28} />
