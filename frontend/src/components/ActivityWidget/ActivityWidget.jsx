@@ -38,6 +38,57 @@ const ActivityWidget = () => {
   const activeChatIdRef = useRef(null);
   const ringTimerRef = useRef(null);
 
+  const fetchActivities = useCallback(async () => {
+    try {
+      const { data } = await API.get("/api/notifications?unreadOnly=true");
+      setActivities(data);
+    } catch (err) {
+      console.error("Error fetching widget activities:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      fetchActivities();
+    });
+  }, [fetchActivities]);
+
+  useEffect(() => {
+    const handleSingleRead = (e) => {
+      const { notificationId, notificationIds, postId, chatId } =
+        e.detail || {};
+      const idsToRemove =
+        notificationIds || (notificationId ? [notificationId] : []);
+
+      setActivities((prev) =>
+        prev.filter((item) => {
+
+          if (idsToRemove.length > 0 && idsToRemove.includes(item._id)) {
+            return false;
+          }
+       
+          if (postId) {
+            const itemPostId = (item.post?._id || item.post)?.toString();
+            if (itemPostId === postId.toString()) return false;
+          }
+
+          if (chatId) {
+            const itemChatId = (item.chat?._id || item.chat)?.toString();
+            if (itemChatId === chatId.toString()) return false;
+          }
+          return true;
+        }),
+      );
+    };
+
+    window.addEventListener("singleNotificationRead", handleSingleRead);
+    return () => {
+      window.removeEventListener("singleNotificationRead", handleSingleRead);
+    };
+  }, []);
+
   useEffect(() => {
     const handleActiveChatChange = (e) => {
       const chatId = e.detail?.chatId || null;
@@ -77,23 +128,6 @@ const ActivityWidget = () => {
       );
     };
   }, []);
-
-  const fetchActivities = useCallback(async () => {
-    try {
-      const { data } = await API.get("/api/notifications?unreadOnly=true");
-      setActivities(data);
-    } catch (err) {
-      console.error("Error fetching widget activities:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    queueMicrotask(() => {
-      fetchActivities();
-    });
-  }, [fetchActivities]);
 
   const triggerBorderBurst = useCallback(() => {
     const particleCount = 18;
@@ -239,9 +273,11 @@ const ActivityWidget = () => {
       const groupKey =
         type === "like" && postId
           ? `like_${postId}`
-          : type === "message" && (chatId || senderId)
-            ? `msg_${chatId || senderId}`
-            : `${type}_${senderId}_${item._id}`;
+          : type === "comment" && postId
+            ? `comment_${postId}`
+            : type === "message" && (chatId || senderId)
+              ? `msg_${chatId || senderId}`
+              : `${type}_${senderId}_${item._id}`;
 
       if (map.has(groupKey)) {
         const existingGroup = map.get(groupKey);
@@ -304,7 +340,9 @@ const ActivityWidget = () => {
     );
 
     try {
-      await API.patch("/api/notifications/read");
+      await API.patch("/api/notifications/read", {
+        notificationIds: notificationIds.length ? notificationIds : undefined,
+      });
       window.dispatchEvent(new CustomEvent("unreadCountsUpdated"));
     } catch (err) {
       console.error("Error marking notifications read on click:", err);
@@ -412,6 +450,35 @@ const ActivityWidget = () => {
       );
     }
 
+    if (type === "comment") {
+      if (senders.length > 1) {
+        const othersCount = senders.length - 1;
+        return (
+          <>
+            <strong>{primaryUsername}</strong> and{" "}
+            <strong>
+              {othersCount} other{othersCount > 1 ? "s" : ""}
+            </strong>{" "}
+            commented on your post
+          </>
+        );
+      }
+      if (count > 1) {
+        return (
+          <>
+            <strong>{primaryUsername}</strong> left{" "}
+            <strong>{count} comments</strong> on your post
+          </>
+        );
+      }
+      return (
+        <>
+          <strong>{primaryUsername}</strong> commented: &quot;
+          {latestItem.commentText || "..."}&quot;
+        </>
+      );
+    }
+
     if (type === "message") {
       if (count > 1) {
         return (
@@ -425,15 +492,6 @@ const ActivityWidget = () => {
         <>
           <strong>{primaryUsername}</strong>: &quot;
           {latestItem.messageText || "..."}&quot;
-        </>
-      );
-    }
-
-    if (type === "comment") {
-      return (
-        <>
-          <strong>{primaryUsername}</strong> commented: &quot;
-          {latestItem.commentText || "..."}&quot;
         </>
       );
     }
@@ -597,9 +655,11 @@ const ActivityWidget = () => {
                         </span>
                       </div>
 
-                      {group.count > 1 && group.type === "message" && (
-                        <div className={styles.countPill}>{group.count}</div>
-                      )}
+                      {group.count > 1 &&
+                        (group.type === "message" ||
+                          group.type === "comment") && (
+                          <div className={styles.countPill}>{group.count}</div>
+                        )}
                     </div>
                   </motion.div>
                 );

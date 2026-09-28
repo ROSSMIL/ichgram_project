@@ -68,25 +68,15 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
     }
   }, []);
 
-  const markAsRead = useCallback(async () => {
-    try {
-      await API.patch("/api/notifications/read");
-      window.dispatchEvent(new CustomEvent("unreadCountsUpdated"));
-    } catch (err) {
-      console.error("Error marking notifications read:", err);
-    }
-  }, []);
-
   useEffect(() => {
     if (!isOpen) return;
 
     const timer = setTimeout(() => {
       fetchNotifications();
-      markAsRead();
     }, 0);
 
     return () => clearTimeout(timer);
-  }, [isOpen, fetchNotifications, markAsRead]);
+  }, [isOpen, fetchNotifications]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -165,7 +155,11 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
 
     const handleNewNotif = (newNotif) => {
       if (newNotif.type === "message") return;
-      setNotifications((prev) => [newNotif, ...prev]);
+      const incomingNotif = {
+        ...newNotif,
+        isRead: false,
+      };
+      setNotifications((prev) => [incomingNotif, ...prev]);
     };
 
     socket.on("new notification", handleNewNotif);
@@ -210,6 +204,10 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
   };
 
   const handleItemClick = async (notif) => {
+    if (!notif._id) return;
+
+    const targetPostId = notif.post?._id || notif.post;
+
     setNotifications((prev) =>
       prev.map((item) =>
         item._id === notif._id ? { ...item, isRead: true } : item,
@@ -217,16 +215,26 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
     );
 
     try {
-      await API.patch("/api/notifications/read");
+      await API.patch("/api/notifications/read", {
+        notificationIds: [notif._id],
+      });
+
+      window.dispatchEvent(
+        new CustomEvent("singleNotificationRead", {
+          detail: {
+            notificationId: notif._id,
+            postId: targetPostId,
+          },
+        }),
+      );
       window.dispatchEvent(new CustomEvent("unreadCountsUpdated"));
     } catch (err) {
-      console.error("Error marking read on item click:", err);
+      console.error("Error marking single notification read on click:", err);
     }
 
     onClose();
 
     if (notif.type === "like" || notif.type === "comment") {
-      const targetPostId = notif.post?._id || notif.post;
       if (targetPostId) {
         window.dispatchEvent(
           new CustomEvent("openPostModal", {
@@ -357,53 +365,61 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
             </div>
           ) : (
             <div className={styles.notificationsList}>
-              {filteredNotifications.map((notif, idx) => (
-                <div
-                  key={notif._id || idx}
-                  className={`${styles.notifItem} ${
-                    !notif.isRead ? styles.unread : ""
-                  }`}
-                  style={{ "--stagger-index": idx }}
-                  onClick={() => handleItemClick(notif)}
-                >
-                  <Link
-                    to={`/user/${notif.sender?.username}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className={styles.avatarLink}
+              {filteredNotifications.map((notif, idx) => {
+                const isUnread = notif.isRead !== true;
+
+                return (
+                  <div
+                    key={notif._id || idx}
+                    className={`${styles.notifItem} ${
+                      isUnread ? styles.unread : ""
+                    }`}
+                    style={{ "--stagger-index": idx }}
+                    onClick={() => handleItemClick(notif)}
                   >
-                    <Avatar user={notif.sender} size={42} />
-                    {renderBadgeIcon(notif.type)}
-                  </Link>
-
-                  <div className={styles.notifContent}>
-                    <p className={styles.notifText}>
-                      <strong>{notif.sender?.username}</strong>{" "}
-                      {notif.type === "like" && "liked your post."}
-                      {notif.type === "comment" &&
-                        `commented: "${notif.commentText || "..."}"`}
-                      {notif.type === "follow" && "started following you."}
-                    </p>
-                  </div>
-
-                  {notif.post?.url && (
-                    <img
-                      src={notif.post.url}
-                      alt="Post preview"
-                      className={styles.postPreview}
-                    />
-                  )}
-
-                  {notif.type === "follow" && (
-                    <button
-                      type="button"
-                      className={styles.followActionBtn}
-                      onClick={(e) => handleFollowToggle(e, notif.sender?._id)}
+                    <Link
+                      to={`/user/${notif.sender?.username}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className={styles.avatarLink}
                     >
-                      {notif.isFollowing ? "Following" : "Follow"}
-                    </button>
-                  )}
-                </div>
-              ))}
+                      <Avatar user={notif.sender} size={42} />
+                      {renderBadgeIcon(notif.type)}
+                    </Link>
+
+                    <div className={styles.notifContent}>
+                      <p className={styles.notifText}>
+                        <strong>{notif.sender?.username}</strong>{" "}
+                        {notif.type === "like" && "liked your post."}
+                        {notif.type === "comment" &&
+                          `commented: "${notif.commentText || "..."}"`}
+                        {notif.type === "follow" && "started following you."}
+                      </p>
+                    </div>
+
+                    {notif.post?.url && (
+                      <img
+                        src={notif.post.url}
+                        alt="Post preview"
+                        className={styles.postPreview}
+                      />
+                    )}
+
+                    {isUnread && <span className={styles.unreadDot} />}
+
+                    {notif.type === "follow" && (
+                      <button
+                        type="button"
+                        className={styles.followActionBtn}
+                        onClick={(e) =>
+                          handleFollowToggle(e, notif.sender?._id)
+                        }
+                      >
+                        {notif.isFollowing ? "Following" : "Follow"}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
