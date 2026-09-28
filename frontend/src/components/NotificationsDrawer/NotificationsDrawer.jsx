@@ -211,8 +211,16 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
   const handleItemClick = (notif) => {
     onClose();
     if (notif.type === "like" || notif.type === "comment") {
-      if (notif.post?._id || notif.post) {
-        navigate(`/post/${notif.post._id || notif.post}`);
+      const targetPostId = notif.post?._id || notif.post;
+      if (targetPostId) {
+        window.dispatchEvent(
+          new CustomEvent("openPostModal", {
+            detail: {
+              postId: targetPostId,
+              focusComment: notif.type === "comment",
+            },
+          }),
+        );
       }
     } else if (notif.type === "follow") {
       if (notif.sender?.username) {

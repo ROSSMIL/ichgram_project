@@ -314,7 +314,6 @@ const ActivityWidget = () => {
       setIsClearing(false);
     }
   };
-
   const handleItemClick = (group) => {
     const item = group.latestItem;
     const notificationIdsToDelete = group.items
@@ -351,8 +350,16 @@ const ActivityWidget = () => {
         replace: true,
       });
     } else if (group.type === "like" || group.type === "comment") {
-      if (group.post?._id || group.post) {
-        navigate(`/post/${group.post._id || group.post}`);
+      const targetPostId = group.post?._id || group.post;
+      if (targetPostId) {
+        window.dispatchEvent(
+          new CustomEvent("openPostModal", {
+            detail: {
+              postId: targetPostId,
+              focusComment: group.type === "comment",
+            },
+          }),
+        );
       }
     } else if (group.type === "follow") {
       if (item.sender?.username) {

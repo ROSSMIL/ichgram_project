@@ -5,6 +5,7 @@ import {
   Route,
   Navigate,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
 import LoginPage from "./pages/LoginPage/LoginPage";
 import RegisterPage from "./pages/RegisterPage/RegisterPage";
@@ -15,6 +16,7 @@ import UserProfilePage from "./pages/UserProfilePage/UserProfilePage";
 import ExplorePage from "./pages/ExplorePage/ExplorePage";
 import PostPage from "./pages/PostPage/PostPage";
 import CreatePostModal from "./components/CreatePostModal/CreatePostModal";
+import PostModal from "./components/PostModal/PostModal";
 import Sidebar from "./components/Sidebar/Sidebar";
 import ActivityWidget from "./components/ActivityWidget/ActivityWidget";
 import ProfileDropdown from "./components/ProfileDropdown/ProfileDropdown";
@@ -56,10 +58,15 @@ const ScrollToTop = () => {
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
+  const navigate = useNavigate();
+
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingPost, setEditingPost] = useState(null);
+
+  const [activePostModal, setActivePostModal] = useState(null);
+  const [autoFocusComment, setAutoFocusComment] = useState(false);
 
   useAutoLogout();
 
@@ -69,12 +76,41 @@ const ProtectedRoute = ({ children }) => {
       setIsCreateModalOpen(true);
     };
 
+    const handleOpenPostModal = async (e) => {
+      const { postId, post, focusComment } = e.detail || {};
+      const isMobile = window.innerWidth <= 768;
+
+      if (isMobile) {
+        if (postId || post?._id) {
+          navigate(
+            `/post/${postId || post._id}${focusComment ? "?focus=true" : ""}`,
+          );
+        }
+        return;
+      }
+
+      setAutoFocusComment(Boolean(focusComment));
+
+      if (post) {
+        setActivePostModal(post);
+      } else if (postId) {
+        try {
+          const { data } = await API.get(`/api/posts/${postId}`);
+          setActivePostModal(data);
+        } catch (err) {
+          console.error("Error fetching post for global modal:", err);
+        }
+      }
+    };
+
     window.addEventListener("openEditPost", handleOpenEdit);
+    window.addEventListener("openPostModal", handleOpenPostModal);
 
     return () => {
       window.removeEventListener("openEditPost", handleOpenEdit);
+      window.removeEventListener("openPostModal", handleOpenPostModal);
     };
-  }, []);
+  }, [navigate]);
 
   const openCreateModal = () => {
     setEditingPost(null);
@@ -148,6 +184,22 @@ const ProtectedRoute = ({ children }) => {
         editingPost={editingPost}
         onPostUpdated={handlePostUpdated}
       />
+
+      {activePostModal && (
+        <PostModal
+          post={activePostModal}
+          onClose={() => {
+            setActivePostModal(null);
+            setAutoFocusComment(false);
+          }}
+          autoFocusComment={autoFocusComment}
+          onPostUpdate={(updatedPost) => {
+            setActivePostModal(updatedPost);
+            handlePostUpdated(updatedPost);
+          }}
+        />
+      )}
+
       <ScrollToTopButton />
     </div>
   );
