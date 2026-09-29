@@ -206,7 +206,13 @@ const ActivityWidget = () => {
         ? newNotif
         : { ...newNotif, _id: Date.now() };
 
-      setActivities((prev) => [itemWithId, ...prev]);
+      setActivities((prev) => {
+        if (prev.some((item) => item._id === itemWithId._id)) {
+          return prev;
+        }
+        return [itemWithId, ...prev];
+      });
+
       setIsRinging(true);
       triggerBorderBurst();
 
@@ -274,7 +280,7 @@ const ActivityWidget = () => {
           ? `like_${postId}`
           : type === "comment" && postId
             ? `comment_${postId}`
-            : type === "message" && (chatId || senderId)
+            : type === "message"
               ? `msg_${chatId || senderId}`
               : `${type}_${senderId}_${item._id}`;
 
