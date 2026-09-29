@@ -6,6 +6,13 @@ import Avatar from "../Avatar/Avatar";
 import API from "../../api/axios";
 import { useSocket } from "../../context/useSocket";
 
+const TABS = [
+  { id: "all", label: "All" },
+  { id: "follows", label: "Follows" },
+  { id: "comments", label: "Comments" },
+  { id: "interactions", label: "Activity" },
+];
+
 const NotificationsDrawer = ({ isOpen, onClose }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -255,6 +262,7 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
   const filteredNotifications = notifications.filter((item) => {
     if (item.type === "message") return false;
     if (activeTab === "follows") return item.type === "follow";
+    if (activeTab === "comments") return item.type === "comment";
     if (activeTab === "interactions")
       return item.type === "like" || item.type === "comment";
     return true;
@@ -324,19 +332,17 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
 
           <div ref={tabsContainerRef} className={styles.modeTabs}>
             <div className={styles.glider} style={gliderStyle} />
-            {["all", "follows", "interactions"].map((tab) => (
+            {TABS.map((tab) => (
               <button
-                key={tab}
-                ref={(el) => (tabsRef.current[tab] = el)}
+                key={tab.id}
+                ref={(el) => (tabsRef.current[tab.id] = el)}
                 type="button"
                 className={`${styles.tabBtn} ${
-                  activeTab === tab ? styles.activeTab : ""
+                  activeTab === tab.id ? styles.activeTab : ""
                 }`}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => setActiveTab(tab.id)}
               >
-                {tab === "interactions"
-                  ? "Activity"
-                  : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab.label}
               </button>
             ))}
           </div>
