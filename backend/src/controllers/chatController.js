@@ -75,7 +75,12 @@ export const accessChat = async (req, res) => {
           $pull: { deletedFor: currentUserId },
         });
       }
-      return res.status(200).json(existingChat);
+
+      const updatedChat = await Chat.findById(existingChat._id)
+        .populate("users", "-password")
+        .populate("latestMessage");
+
+      return res.status(200).json(updatedChat || existingChat);
     }
 
     const chatData = {
@@ -350,6 +355,7 @@ export const removeFromGroup = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 export const deleteChat = async (req, res) => {
   const { chatId } = req.params;
   const currentUserId = getUserId(req);
@@ -391,7 +397,6 @@ export const deleteChat = async (req, res) => {
       chatId,
       {
         $addToSet: { deletedFor: currentUserId },
-        $pull: { users: currentUserId, leftUsers: currentUserId },
       },
       { returnDocument: "after" },
     );
@@ -400,6 +405,17 @@ export const deleteChat = async (req, res) => {
       ...chat.users.map((u) => u.toString()),
       ...(chat.leftUsers || []).map((u) => u.toString()),
     ];
+
+    if (io) {
+      allMembers.forEach((mId) => {
+        if (mId !== currentUserId.toString()) {
+          io.to(mId).emit("partner deleted chat", {
+            chatId,
+            deletedBy: currentUserId,
+          });
+        }
+      });
+    }
 
     const allUsersDeleted = allMembers.every((uId) =>
       updatedChat.deletedFor.some((delId) => delId.toString() === uId),

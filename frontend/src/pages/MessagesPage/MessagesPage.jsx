@@ -1604,6 +1604,45 @@ const MessagesPage = () => {
       refreshChats();
     };
 
+    const handlePartnerDeletedChat = ({ chatId, deletedBy }) => {
+      setChats((prev) =>
+        prev.map((c) => {
+          if (c._id === chatId) {
+            const currentDeletedFor = c.deletedFor || [];
+            if (
+              !currentDeletedFor.some(
+                (id) => (id._id || id).toString() === deletedBy.toString(),
+              )
+            ) {
+              return {
+                ...c,
+                deletedFor: [...currentDeletedFor, deletedBy],
+              };
+            }
+          }
+          return c;
+        }),
+      );
+
+      if (selectedChatRef.current?._id === chatId) {
+        setSelectedChat((prev) => {
+          if (!prev) return prev;
+          const currentDeletedFor = prev.deletedFor || [];
+          if (
+            !currentDeletedFor.some(
+              (id) => (id._id || id).toString() === deletedBy.toString(),
+            )
+          ) {
+            return {
+              ...prev,
+              deletedFor: [...currentDeletedFor, deletedBy],
+            };
+          }
+          return prev;
+        });
+      }
+    };
+
     const handleTyping = ({ chatId, userId, username }) => {
       const activeChat = selectedChatRef.current;
       const incomingChatId = chatId?.toString();
@@ -1649,6 +1688,7 @@ const MessagesPage = () => {
     socket.on("message deleted", handleMessageDeleted);
     socket.on("messages read", handleMessagesRead);
     socket.on("chat deleted", handleChatDeleted);
+    socket.on("partner deleted chat", handlePartnerDeletedChat);
     socket.on("typing", handleTyping);
     socket.on("stop typing", handleStopTyping);
 
@@ -1661,6 +1701,7 @@ const MessagesPage = () => {
       socket.off("message deleted", handleMessageDeleted);
       socket.off("messages read", handleMessagesRead);
       socket.off("chat deleted", handleChatDeleted);
+      socket.off("partner deleted chat", handlePartnerDeletedChat);
       socket.off("typing", handleTyping);
       socket.off("stop typing", handleStopTyping);
     };
