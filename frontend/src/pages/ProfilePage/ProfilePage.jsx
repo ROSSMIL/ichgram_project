@@ -8,6 +8,32 @@ import PostModal from "../../components/PostModal/PostModal";
 import Avatar from "../../components/Avatar/Avatar";
 import AvatarViewModal from "../../components/AvatarViewModal/AvatarViewModal";
 
+const SEEDED_EMAILS = [
+  "hub@itcareer.com",
+  "tonia@example.com",
+  "society@example.com",
+  "pixel@example.com",
+  "gamer@example.com",
+  "nature@example.com",
+  "food@example.com",
+  "sound@example.com",
+  "ninja@example.com",
+  "volley@example.com",
+];
+
+const SEEDED_USERNAMES = [
+  "itcareerhub",
+  "tonia_art",
+  "society_vibe",
+  "pixel_master",
+  "gamer_pro",
+  "nature_lover",
+  "foodie_joy",
+  "sound_wave",
+  "ninja_code",
+  "volley_star",
+];
+
 const ProfilePostItem = memo(({ post, index, onSelectPost }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -179,30 +205,43 @@ const ProfilePage = () => {
 
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
 
+  const isSeeded = Boolean(
+    user?.isSeeded ||
+    SEEDED_EMAILS.includes((user?.email || "").toLowerCase()) ||
+    SEEDED_USERNAMES.includes((user?.username || "").toLowerCase()),
+  );
+
   const handleLogout = useCallback(() => {
     localStorage.removeItem("token");
     navigate("/login");
   }, [navigate]);
 
-  const handleAvatarUpload = useCallback(async (file) => {
-    if (!file) return;
+  const handleAvatarUpload = useCallback(
+    async (file) => {
+      if (!file || isSeeded) return;
 
-    const dataToSend = new FormData();
-    dataToSend.append("avatar", file);
+      const dataToSend = new FormData();
+      dataToSend.append("avatar", file);
 
-    try {
-      const token = localStorage.getItem("token");
-      const { data } = await API.put("/api/users/edit", dataToSend, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setUser((prevUser) => data.user || { ...prevUser, avatar: data.avatar });
-      window.dispatchEvent(new Event("profileUpdated"));
-    } catch (err) {
-      console.error("Error uploading avatar:", err);
-    }
-  }, []);
+      try {
+        const token = localStorage.getItem("token");
+        const { data } = await API.put("/api/users/edit", dataToSend, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setUser(
+          (prevUser) => data.user || { ...prevUser, avatar: data.avatar },
+        );
+        window.dispatchEvent(new Event("profileUpdated"));
+      } catch (err) {
+        console.error("Error uploading avatar:", err);
+      }
+    },
+    [isSeeded],
+  );
 
   const handleAvatarRemove = useCallback(async () => {
+    if (isSeeded) return;
+
     const dataToSend = new FormData();
     dataToSend.append("deleteAvatar", "true");
 
@@ -216,7 +255,7 @@ const ProfilePage = () => {
     } catch (err) {
       console.error("Error deleting avatar:", err);
     }
-  }, []);
+  }, [isSeeded]);
 
   const handlePostUpdate = useCallback((updatedPost) => {
     setPosts((prevPosts) =>
@@ -525,10 +564,11 @@ const ProfilePage = () => {
       <header className={styles.header}>
         <div className={styles.headerTopMobile}>
           <div
-            className={styles.avatarContainer}
-            onClick={() => setIsAvatarModalOpen(true)}
+            className={`${styles.avatarContainer} ${styles.avatarOnlineContainer}`}
+            onClick={() => !isSeeded && setIsAvatarModalOpen(true)}
+            style={{ cursor: isSeeded ? "default" : "pointer" }}
           >
-            <div className={styles.avatarFrame}>
+            <div className={`${styles.avatarFrame} ${styles.avatarOnlineGlow}`}>
               <Avatar user={user} size={150} showStatus={false} />
             </div>
           </div>
@@ -589,12 +629,14 @@ const ProfilePage = () => {
         <section className={styles.userInfo}>
           <div className={styles.usernameRow}>
             <h2>{user.username}</h2>
+
             <button
               className={styles.editButton}
               onClick={() => navigate("/edit-profile")}
             >
               Edit profile
             </button>
+
             <button
               onClick={() => setIsSettingsOpen(true)}
               className={styles.settingsButton}
@@ -942,7 +984,7 @@ const ProfilePage = () => {
           document.body,
         )}
 
-      {isAvatarModalOpen && (
+      {isAvatarModalOpen && !isSeeded && (
         <AvatarViewModal
           user={user}
           isOwnProfile={true}

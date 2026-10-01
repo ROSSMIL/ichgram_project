@@ -1913,7 +1913,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
+  z-index: 100000;
   padding: 20px;
   box-sizing: border-box;
   animation: fadeInModalBg 0.25s ease-out forwards;
@@ -1992,15 +1992,15 @@
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05);
   transform: translateY(-1px);
 }
-
 .userSelectionContainer {
   display: flex;
   flex-direction: column;
   gap: 8px;
   background-color: var(--bg-main, rgba(0, 0, 0, 0.25));
-  padding: 12px;
+  padding: 14px 12px 12px 12px;
   border-radius: 18px;
   border: 1px solid var(--border-color);
+  box-sizing: border-box;
 }
 
 .selectTitle {
@@ -2015,10 +2015,12 @@
 .userSelectionList {
   max-height: 220px;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding-right: 4px;
+  gap: 8px;
+  padding: 6px 8px 6px 4px;
+  box-sizing: border-box;
 }
 
 .userSelectionList::-webkit-scrollbar {
@@ -2034,29 +2036,31 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-radius: 14px;
   cursor: pointer;
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
+  box-sizing: border-box;
   opacity: 0;
   animation: itemPopInModal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   animation-delay: calc(var(--stagger-index, 0) * 0.03s);
+  will-change: background-color, border-color, box-shadow;
   transition:
     background-color 0.2s ease,
     border-color 0.2s ease,
-    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow 0.2s ease;
 }
 
 .userSelectItem:hover {
-  background-color: var(--bg-hover, var(--border-color));
+  background-color: var(--bg-hover, rgba(255, 255, 255, 0.08));
   border-color: var(--text-secondary);
-  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .selectedUserItem {
   border-color: var(--text-secondary);
-  background-color: var(--bg-hover, var(--border-color));
+  background-color: var(--bg-hover, rgba(255, 255, 255, 0.08));
 }
 
 .selectUsername {
@@ -3072,4 +3076,448 @@
     font-size: 18px;
     padding: 4px;
   }
+}
+
+.deletedSenderBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  margin-left: -4px;
+  margin-bottom: 2px;
+  border-radius: 6px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px dashed var(--border-color, rgba(255, 255, 255, 0.18));
+  color: var(--text-secondary, #8e8e93);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+  user-select: none;
+  cursor: default;
+  will-change: transform, background-color, border-color, color;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.deletedSenderBadge:hover {
+  background-color: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #ef4444;
+  transform: translateY(-1px) scale(1.03);
+}
+
+.deletedSenderIcon {
+  flex-shrink: 0;
+  opacity: 0.75;
+  transition:
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.2s ease;
+}
+
+.deletedSenderBadge:hover .deletedSenderIcon {
+  opacity: 1;
+  transform: scale(1.15) rotate(-6deg);
+}
+
+.deletedSenderText {
+  line-height: 1;
+  font-style: italic;
+}
+
+.deletedHoverCard {
+  border-style: dashed !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+  background-color: var(--bg-card, rgba(28, 28, 30, 0.92)) !important;
+  cursor: default !important;
+}
+
+.deletedHoverCard:hover {
+  border-color: rgba(239, 68, 68, 0.6) !important;
+  transform: translateY(-100%) scale(1.02) !important;
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.4),
+    0 0 18px rgba(239, 68, 68, 0.15) !important;
+}
+
+.deletedHoverBadgePill {
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background-color: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+  user-select: none;
+}
+.restoreBody {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 4px 0 8px 0;
+}
+
+.restoreAvatarWrapper {
+  margin-bottom: 12px;
+  display: inline-flex;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.modalContent:hover .restoreAvatarWrapper {
+  transform: scale(1.05) rotate(-2deg);
+}
+
+.restoreUsername {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
+}
+
+.restoreHandle {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-top: 2px;
+  margin-bottom: 14px;
+}
+
+.restoreDescription {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  padding: 12px 16px;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.deleteModalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.deleteModalDescription {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  font-family: inherit;
+}
+
+.deleteInfoNoticeBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  text-align: left;
+}
+
+.deleteInfoNoticeIcon {
+  width: 18px;
+  height: 18px;
+  color: var(--link-color, #0095f6);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.deleteInfoNoticeText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.deleteInfoNoticeText strong {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: -0.1px;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.deleteInfoNoticeText p {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  font-family: inherit;
+}
+
+.deleteInfoNoticeText ul {
+  margin: 2px 0 0 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.deleteInfoNoticeText li {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  font-family: inherit;
+}
+
+.deleteInfoNoticeText li strong,
+.deleteInfoNoticeText p strong {
+  display: inline;
+  font-size: inherit;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.deleteWarningBox {
+  background-color: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.deleteWarningIcon {
+  color: #ef4444;
+}
+
+.deleteWarningBox strong {
+  color: #ef4444;
+}
+
+.deleteWarningBox p strong {
+  color: var(--text-primary);
+}
+
+.dangerConfirmBtn {
+  padding: 10px 20px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 0.86rem;
+  cursor: pointer;
+  border: none;
+  color: #ffffff;
+  background-color: #ed4956;
+  box-shadow: 0 4px 14px rgba(237, 73, 86, 0.3);
+  will-change: transform, background-color, box-shadow;
+  transition:
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.dangerConfirmBtn:hover {
+  background-color: #e03d4a;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 6px 18px rgba(237, 73, 86, 0.45);
+}
+
+.dangerConfirmBtn:active {
+  transform: scale(0.95) translateY(0);
+  box-shadow: 0 2px 8px rgba(237, 73, 86, 0.25);
+}
+.deleteWarningBox {
+  background-color: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.deleteWarningIcon {
+  color: #ef4444;
+}
+
+.deleteWarningBox strong {
+  color: #ef4444;
+}
+.headerMenuWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.headerDropdownMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 200px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 6px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: dropdownPopIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.headerMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.headerMenuItem:hover {
+  background-color: var(--bg-hover, var(--border-color));
+  transform: translateX(2px);
+}
+
+.headerMenuItemDanger {
+  color: #ef4444;
+}
+
+.headerMenuItemDanger:hover {
+  background-color: rgba(239, 68, 68, 0.12);
+}
+
+@keyframes dropdownPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.headerDropdownMenuClosing {
+  animation: dropdownPopOut 0.18s cubic-bezier(0.4, 0, 1, 1) forwards !important;
+  pointer-events: none;
+}
+
+@keyframes dropdownPopOut {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9) translateY(-6px);
+  }
+}
+.modalOverlayClosing {
+  animation: fadeOutModalBg 0.2s cubic-bezier(0.4, 0, 1, 1) forwards !important;
+}
+
+.modalContentClosing {
+  animation: popOutModal 0.2s cubic-bezier(0.4, 0, 1, 1) forwards !important;
+}
+
+@keyframes fadeOutModalBg {
+  from {
+    opacity: 1;
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+  to {
+    opacity: 0;
+    -webkit-backdrop-filter: blur(0px);
+    backdrop-filter: blur(0px);
+  }
+}
+
+@keyframes popOutModal {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.92) translateY(12px);
+    filter: blur(4px);
+  }
+}
+.memberListItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 16px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  box-sizing: border-box;
+  opacity: 0;
+  animation: itemPopInModal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation-delay: calc(var(--stagger-index, 0) * 0.03s);
+  will-change: background-color, border-color, box-shadow;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.memberListItem:hover {
+  background-color: var(--bg-hover, rgba(255, 255, 255, 0.06));
+  border-color: var(--text-secondary);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.memberUserLink,
+.memberUserStatic {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-grow: 1;
+  text-decoration: none;
+  min-width: 0;
+  padding: 4px;
+  border-radius: 12px;
+}
+
+.memberUserLink {
+  cursor: pointer;
+}
+
+.modalAvatarWrapper {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.memberUserLink:hover .modalAvatarWrapper {
+  transform: scale(1.12) rotate(-3deg);
+}
+
+.memberUserLink:active .modalAvatarWrapper {
+  transform: scale(0.92);
+}
+
+.memberUserLink:hover .profileArrowBadge {
+  opacity: 1;
+  transform: translateX(0) scale(1.1);
+  background-color: var(--link-color, #0095f6);
+  color: #ffffff;
+}
+
+.memberUserLink:hover .selectUsername {
+  color: var(--link-color, #0095f6);
 }

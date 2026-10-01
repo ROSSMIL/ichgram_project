@@ -22,19 +22,38 @@ export const sendMessage = async (req, res) => {
     return res.status(401).json({ message: "User not authenticated" });
   }
 
-  const targetChat = await Chat.findById(chatId);
+  const targetChat = await Chat.findById(chatId).populate(
+    "users",
+    "isDeleted username",
+  );
+
   if (!targetChat) {
     return res.status(404).json({ message: "Chat not found" });
   }
 
   if (
     targetChat.isGroupChat &&
-    !targetChat.users.some((u) => u.toString() === senderId.toString())
+    !targetChat.users.some((u) => u._id.toString() === senderId.toString())
   ) {
     return res
       .status(403)
       .json({ message: "You are no longer a member of this group" });
   }
+
+  if (!targetChat.isGroupChat) {
+    const partner = targetChat.users.find(
+      (u) => u._id.toString() !== senderId.toString(),
+    );
+    if (
+      partner &&
+      (partner.isDeleted || partner.username?.startsWith("deleted_user_"))
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Cannot send messages to a deleted account" });
+    }
+  }
+
   const newMessage = {
     sender: senderId,
     content: content,
@@ -45,17 +64,21 @@ export const sendMessage = async (req, res) => {
   try {
     let message = await Message.create(newMessage);
 
-    message = await message.populate("sender", "username avatar fullName");
+    message = await message.populate(
+      "sender",
+      "username avatar fullName isDeleted",
+    );
     message = await message.populate({
       path: "chat",
       populate: {
         path: "users",
-        select: "username avatar fullName email",
+        select: "username avatar fullName email isDeleted",
       },
     });
 
     await Chat.findByIdAndUpdate(chatId, {
       latestMessage: message._id,
+      deletedFor: [],
     });
 
     if (message.chat && Array.isArray(message.chat.users)) {
@@ -64,7 +87,7 @@ export const sendMessage = async (req, res) => {
       for (const recipientUser of message.chat.users) {
         const recipientId = (recipientUser._id || recipientUser).toString();
 
-        if (recipientId !== senderId.toString()) {
+        if (recipientId !== senderId.toString() && !recipientUser.isDeleted) {
           const notif = await Notification.create({
             recipient: recipientId,
             sender: senderId,
@@ -94,7 +117,7 @@ export const sendMessage = async (req, res) => {
 export const allMessages = async (req, res) => {
   try {
     const messages = await Message.find({ chat: req.params.chatId })
-      .populate("sender", "username avatar fullName email")
+      .populate("sender", "username avatar fullName email isDeleted")
       .populate("chat")
       .sort({ createdAt: 1 });
 
@@ -133,10 +156,13 @@ export const editMessage = async (req, res) => {
     await message.save();
 
     const updatedMessage = await Message.findById(messageId)
-      .populate("sender", "username avatar fullName email")
+      .populate("sender", "username avatar fullName email isDeleted")
       .populate({
         path: "chat",
-        populate: { path: "users", select: "username avatar fullName email" },
+        populate: {
+          path: "users",
+          select: "username avatar fullName email isDeleted",
+        },
       });
 
     res.status(200).json(updatedMessage);
@@ -213,10 +239,13 @@ export const deleteMessage = async (req, res) => {
       await message.save();
 
       const updatedMessage = await Message.findById(messageId)
-        .populate("sender", "username avatar fullName email")
+        .populate("sender", "username avatar fullName email isDeleted")
         .populate({
           path: "chat",
-          populate: { path: "users", select: "username avatar fullName email" },
+          populate: {
+            path: "users",
+            select: "username avatar fullName email isDeleted",
+          },
         });
 
       payload = {
@@ -302,10 +331,13 @@ export const toggleReaction = async (req, res) => {
     await Message.updateOne({ _id: messageId }, { $set: { reactions } });
 
     const updatedMessage = await Message.findById(messageId)
-      .populate("sender", "username avatar fullName email")
+      .populate("sender", "username avatar fullName email isDeleted")
       .populate({
         path: "chat",
-        populate: { path: "users", select: "username avatar fullName email" },
+        populate: {
+          path: "users",
+          select: "username avatar fullName email isDeleted",
+        },
       });
 
     return res.status(200).json(updatedMessage);

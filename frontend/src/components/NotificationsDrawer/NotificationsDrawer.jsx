@@ -194,26 +194,11 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleFollowToggle = async (e, userId) => {
-    e.stopPropagation();
-    try {
-      await API.post(`/api/users/follow/${userId}`);
-      setNotifications((prev) =>
-        prev.map((item) =>
-          item.sender?._id === userId
-            ? { ...item, isFollowing: !item.isFollowing }
-            : item,
-        ),
-      );
-    } catch (err) {
-      console.error("Error toggling follow:", err);
-    }
-  };
-
   const handleItemClick = async (notif) => {
     if (!notif._id) return;
 
-    const targetPostId = notif.post?._id || notif.post;
+    const targetPostId =
+      notif.post?._id || (typeof notif.post === "string" ? notif.post : null);
 
     setNotifications((prev) =>
       prev.map((item) =>
@@ -253,8 +238,13 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
         );
       }
     } else if (notif.type === "follow") {
-      if (notif.sender?.username) {
-        navigate(`/user/${notif.sender.username}`);
+      const username = notif.sender?.username;
+      if (
+        username &&
+        !username.startsWith("deleted_user_") &&
+        username !== "Deleted User"
+      ) {
+        navigate(`/user/${username}`);
       }
     }
   };
@@ -373,6 +363,19 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
             <div className={styles.notificationsList}>
               {filteredNotifications.map((notif, idx) => {
                 const isUnread = notif.isRead !== true;
+                const senderUsername = notif.sender?.username;
+                const isUserDeleted =
+                  !senderUsername ||
+                  notif.sender?.isDeleted ||
+                  senderUsername.startsWith("deleted_user_") ||
+                  senderUsername === "Deleted User";
+
+                const postImageUrl =
+                  typeof notif.post === "object"
+                    ? notif.post?.imageUrl ||
+                      notif.post?.url ||
+                      notif.post?.image
+                    : null;
 
                 return (
                   <div
@@ -383,18 +386,30 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
                     style={{ "--stagger-index": idx }}
                     onClick={() => handleItemClick(notif)}
                   >
-                    <Link
-                      to={`/user/${notif.sender?.username}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className={styles.avatarLink}
-                    >
-                      <Avatar user={notif.sender} size={42} />
-                      {renderBadgeIcon(notif.type)}
-                    </Link>
+                    {!isUserDeleted ? (
+                      <Link
+                        to={`/user/${senderUsername}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className={styles.avatarLink}
+                      >
+                        <Avatar user={notif.sender} size={42} />
+                        {renderBadgeIcon(notif.type)}
+                      </Link>
+                    ) : (
+                      <div className={styles.avatarLink}>
+                        <Avatar
+                          user={{ ...notif.sender, isDeleted: true }}
+                          size={42}
+                        />
+                        {renderBadgeIcon(notif.type)}
+                      </div>
+                    )}
 
                     <div className={styles.notifContent}>
                       <p className={styles.notifText}>
-                        <strong>{notif.sender?.username}</strong>{" "}
+                        <strong>
+                          {isUserDeleted ? "Deleted User" : senderUsername}
+                        </strong>{" "}
                         {notif.type === "like" && "liked your post."}
                         {notif.type === "comment" &&
                           `commented: "${notif.commentText || "..."}"`}
@@ -402,27 +417,15 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
                       </p>
                     </div>
 
-                    {notif.post?.url && (
+                    {postImageUrl && (
                       <img
-                        src={notif.post.url}
+                        src={postImageUrl}
                         alt="Post preview"
                         className={styles.postPreview}
                       />
                     )}
 
                     {isUnread && <span className={styles.unreadDot} />}
-
-                    {notif.type === "follow" && (
-                      <button
-                        type="button"
-                        className={styles.followActionBtn}
-                        onClick={(e) =>
-                          handleFollowToggle(e, notif.sender?._id)
-                        }
-                      >
-                        {notif.isFollowing ? "Following" : "Follow"}
-                      </button>
-                    )}
                   </div>
                 );
               })}

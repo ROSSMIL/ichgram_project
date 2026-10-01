@@ -405,7 +405,6 @@ const UserProfilePage = () => {
 
   const [isClosingUsersModal, setIsClosingUsersModal] = useState(false);
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
-
   useEffect(() => {
     const fetchUserProfileAndPosts = async () => {
       try {
@@ -420,6 +419,15 @@ const UserProfilePage = () => {
 
         const myRes = await API.get("/api/users/profile", { headers });
         setCurrentUser(myRes.data);
+
+        if (username.startsWith("deleted_user_")) {
+          setUser({
+            username: "Deleted User",
+            fullName: "Account Deleted",
+            isDeleted: true,
+          });
+          return;
+        }
 
         const userRes = await API.get(`/api/users/${username}`, { headers });
         const userData = userRes.data;
@@ -442,7 +450,16 @@ const UserProfilePage = () => {
         setPosts(postsRes.data || []);
       } catch (error) {
         console.error("Error fetching user profile and posts:", error);
-        navigate("/dashboard");
+
+        if (error.response?.status === 404 || error.response?.status === 400) {
+          setUser({
+            username: "Deleted User",
+            fullName: "Account Deleted",
+            isDeleted: true,
+          });
+        } else {
+          navigate("/dashboard");
+        }
       } finally {
         setLoading(false);
       }
@@ -452,7 +469,6 @@ const UserProfilePage = () => {
       fetchUserProfileAndPosts();
     }
   }, [username, navigate]);
-
   const handleOpenChat = async () => {
     if (!user) return;
     try {
@@ -469,13 +485,13 @@ const UserProfilePage = () => {
         state: {
           openChatId: data._id,
           partnerId: user._id,
+          checkRestore: true,
         },
       });
     } catch (err) {
       console.error("Error opening chat with user:", err);
     }
   };
-
   const handleFollowToggle = useCallback(async () => {
     if (!user) return;
 
@@ -689,6 +705,41 @@ const UserProfilePage = () => {
   }
 
   if (!user) return <div className={styles.loading}>User not found.</div>;
+
+  if (user.isDeleted || user.username?.startsWith("deleted_user_")) {
+    return (
+      <div className={styles.profileContainer}>
+        <PageHeader />
+        <div className={styles.deletedProfileWrapper}>
+          <div className={styles.deletedAvatarIcon}>
+            <svg
+              width="64"
+              height="64"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+              <line x1="18" y1="8" x2="22" y2="12" />
+              <line x1="22" y1="8" x2="18" y2="12" />
+            </svg>
+          </div>
+          <h2>Account Deleted</h2>
+          <p>This account has been deleted or is no longer available.</p>
+          <button
+            onClick={() => navigate(-1)}
+            className={styles.deletedBackButton}
+          >
+            Go back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const bioText = user.bio || "No bio yet.";
   const BIO_LIMIT = 108;

@@ -38,6 +38,10 @@ const userSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
     postsCount: { type: Number, default: 0 },
     followers: [
       {

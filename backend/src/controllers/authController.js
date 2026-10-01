@@ -84,7 +84,6 @@ export const register = async (req, res) => {
     });
   }
 };
-
 export const login = async (req, res) => {
   try {
     const { emailOrUsername, password } = req.body;
@@ -103,7 +102,12 @@ export const login = async (req, res) => {
       ? await bcrypt.compare(password, user.password)
       : false;
 
-    if (!user || !isMatch) {
+    if (
+      !user ||
+      !isMatch ||
+      user.isDeleted ||
+      user.username?.startsWith("deleted_user_")
+    ) {
       return res
         .status(400)
         .json({ message: "Invalid username/email or password." });
@@ -131,13 +135,18 @@ export const login = async (req, res) => {
       .json({ message: "Server error during login", error: error.message });
   }
 };
-
 export const guestLogin = async (req, res) => {
   try {
     const { guestDeviceId } = req.body;
     const deviceId = guestDeviceId || crypto.randomUUID();
 
     let guestUser = await User.findOne({ guestDeviceId: deviceId });
+    if (
+      guestUser &&
+      (guestUser.isDeleted || guestUser.username?.startsWith("deleted_user_"))
+    ) {
+      guestUser = null;
+    }
 
     if (!guestUser) {
       const uniqueSuffix = crypto.randomBytes(3).toString("hex");

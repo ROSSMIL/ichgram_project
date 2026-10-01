@@ -24,7 +24,7 @@ const SearchDrawer = ({ isOpen, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const location = useLocation();
+  const { pathname } = useLocation();
 
   const [recentlyViewed, setRecentlyViewed] = useState([]);
   const [activeTab, setActiveTab] = useState("recent");
@@ -128,20 +128,19 @@ const SearchDrawer = ({ isOpen, onClose }) => {
     };
   }, [isOpen, onClose]);
 
-  const prevPathRef = useRef(location.pathname);
+  const prevPathRef = useRef(pathname);
 
   useEffect(() => {
-    if (prevPathRef.current !== location.pathname) {
-      prevPathRef.current = location.pathname;
+    if (prevPathRef.current !== pathname) {
+      prevPathRef.current = pathname;
       if (isOpen) {
         onClose();
       }
     }
-  }, [location.pathname, isOpen, onClose]);
+  }, [pathname, isOpen, onClose]);
 
   useEffect(() => {
     if (!isOpen) return;
-    if (users.length > 0) return;
 
     const fetchUsers = async () => {
       setLoading(true);
@@ -158,7 +157,33 @@ const SearchDrawer = ({ isOpen, onClose }) => {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        setUsers(response.data);
+        const activeUsersFromBackend = response.data || [];
+        setUsers(activeUsersFromBackend);
+
+        const savedRecent = getSavedRecentlyViewed();
+        const activeUserIds = new Set(activeUsersFromBackend.map((u) => u._id));
+
+        const updatedRecent = savedRecent.map((recentUser) => {
+          const isDeleted =
+            !activeUserIds.has(recentUser._id) ||
+            recentUser.isDeleted ||
+            recentUser.username === "Deleted User" ||
+            recentUser.username?.startsWith("deleted_user_") ||
+            recentUser.fullName === "Account Deleted";
+
+          if (isDeleted) {
+            return {
+              ...recentUser,
+              username: "Deleted User",
+              fullName: "Account Deleted",
+              avatar: "",
+              isDeleted: true,
+            };
+          }
+          return recentUser;
+        });
+
+        setRecentlyViewed(updatedRecent);
       } catch (err) {
         console.error("=== SEARCH DRAWER FETCH ERROR ===", err.message);
         setError(err.response?.data?.message || err.message);
@@ -168,7 +193,7 @@ const SearchDrawer = ({ isOpen, onClose }) => {
     };
 
     fetchUsers();
-  }, [isOpen, users.length]);
+  }, [isOpen]);
 
   useEffect(() => {
     const preventGesture = (e) => {
@@ -237,8 +262,51 @@ const SearchDrawer = ({ isOpen, onClose }) => {
     searchQuery.trim() === ""
       ? users
       : users.filter((user) =>
-          user.username.toLowerCase().includes(searchQuery.toLowerCase()),
+          user.username?.toLowerCase().includes(searchQuery.toLowerCase()),
         );
+
+  const renderUserItem = (user, idx, keyPrefix) => {
+    const isUserDeleted =
+      user.isDeleted ||
+      user.username === "Deleted User" ||
+      user.username?.startsWith("deleted_user_");
+
+    const displayUsername = isUserDeleted ? "Deleted User" : user.username;
+    const displayFullName = isUserDeleted ? "Account Deleted" : user.fullName;
+
+    const displayAvatarUser = isUserDeleted
+      ? {
+          ...user,
+          username: "Deleted User",
+          fullName: "Account Deleted",
+          avatar: "",
+          isDeleted: true,
+        }
+      : user;
+
+    return (
+      <Link
+        key={`${keyPrefix}-${user._id}`}
+        to={getProfileLink(user.username)}
+        className={styles.userItem}
+        style={{ "--stagger-index": idx }}
+        onClick={() => {
+          if (!isUserDeleted) {
+            saveToRecentlyViewed(user);
+          }
+          onClose();
+        }}
+      >
+        <Avatar user={displayAvatarUser} size={42} />
+        <div className={styles.userInfoText}>
+          <span className={styles.username}>{displayUsername}</span>
+          {displayFullName && (
+            <span className={styles.userFullName}>{displayFullName}</span>
+          )}
+        </div>
+      </Link>
+    );
+  };
 
   if (!shouldRender) return null;
 
@@ -384,28 +452,9 @@ const SearchDrawer = ({ isOpen, onClose }) => {
                 } ${isClearing ? styles.sectionClearing : ""}`}
               >
                 <div className={styles.usersList}>
-                  {recentlyViewed.map((user, idx) => (
-                    <Link
-                      key={`recent-${user._id}`}
-                      to={getProfileLink(user.username)}
-                      className={styles.userItem}
-                      style={{ "--stagger-index": idx }}
-                      onClick={() => {
-                        saveToRecentlyViewed(user);
-                        onClose();
-                      }}
-                    >
-                      <Avatar user={user} size={42} />
-                      <div className={styles.userInfoText}>
-                        <span className={styles.username}>{user.username}</span>
-                        {user.fullName && (
-                          <span className={styles.userFullName}>
-                            {user.fullName}
-                          </span>
-                        )}
-                      </div>
-                    </Link>
-                  ))}
+                  {recentlyViewed.map((user, idx) =>
+                    renderUserItem(user, idx, "recent"),
+                  )}
                 </div>
               </div>
             ) : (
@@ -431,30 +480,9 @@ const SearchDrawer = ({ isOpen, onClose }) => {
 
                   {!loading &&
                     !error &&
-                    users.map((user, idx) => (
-                      <Link
-                        key={`suggested-${user._id}`}
-                        to={getProfileLink(user.username)}
-                        className={styles.userItem}
-                        style={{ "--stagger-index": idx }}
-                        onClick={() => {
-                          saveToRecentlyViewed(user);
-                          onClose();
-                        }}
-                      >
-                        <Avatar user={user} size={42} />
-                        <div className={styles.userInfoText}>
-                          <span className={styles.username}>
-                            {user.username}
-                          </span>
-                          {user.fullName && (
-                            <span className={styles.userFullName}>
-                              {user.fullName}
-                            </span>
-                          )}
-                        </div>
-                      </Link>
-                    ))}
+                    users.map((user, idx) =>
+                      renderUserItem(user, idx, "suggested"),
+                    )}
                 </div>
               </div>
             )
@@ -475,30 +503,9 @@ const SearchDrawer = ({ isOpen, onClose }) => {
                 )}
 
                 {!loading && !error && filteredUsers.length > 0
-                  ? filteredUsers.map((user, idx) => (
-                      <Link
-                        key={`search-${user._id}`}
-                        to={getProfileLink(user.username)}
-                        className={styles.userItem}
-                        style={{ "--stagger-index": idx }}
-                        onClick={() => {
-                          saveToRecentlyViewed(user);
-                          onClose();
-                        }}
-                      >
-                        <Avatar user={user} size={42} />
-                        <div className={styles.userInfoText}>
-                          <span className={styles.username}>
-                            {user.username}
-                          </span>
-                          {user.fullName && (
-                            <span className={styles.userFullName}>
-                              {user.fullName}
-                            </span>
-                          )}
-                        </div>
-                      </Link>
-                    ))
+                  ? filteredUsers.map((user, idx) =>
+                      renderUserItem(user, idx, "search"),
+                    )
                   : !loading &&
                     !error && (
                       <p className={styles.statusMessage}>No users found</p>

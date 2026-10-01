@@ -19,8 +19,10 @@ export const getProfile = async (req, res) => {
 
     const user = await User.findById(userId).select("-password");
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found in database" });
+    if (!user || user.isDeleted || user.username?.startsWith("deleted_user_")) {
+      return res
+        .status(401)
+        .json({ message: "Account has been deleted or does not exist" });
     }
 
     res.status(200).json(user);
@@ -33,7 +35,7 @@ export const getProfile = async (req, res) => {
 export const editProfile = async (req, res) => {
   try {
     const userId = req.user?.userId || req.user?.id || req.user?._id;
-    const { username, website, bio, deleteAvatar } = req.body;
+    const { username, fullName, website, bio, deleteAvatar } = req.body;
 
     if (!userId) {
       return res
@@ -48,6 +50,10 @@ export const editProfile = async (req, res) => {
 
     const isSeededAccount = SEEDED_EMAILS.includes(user.email.toLowerCase());
 
+    if (fullName !== undefined) {
+      user.fullName = fullName.trim();
+    }
+
     if (username && username.toLowerCase() !== user.username.toLowerCase()) {
       if (isSeededAccount) {
         return res.status(400).json({
@@ -55,18 +61,27 @@ export const editProfile = async (req, res) => {
         });
       }
 
-      const existingUser = await User.findOne({
-        username: username.toLowerCase(),
-      });
+      const cleanUsername = username.trim().toLowerCase();
+
+      const usernameRegex = /^[a-z0-9._]{3,30}$/;
+      if (!usernameRegex.test(cleanUsername)) {
+        return res.status(400).json({
+          message:
+            "Username can only contain letters, numbers, underscores, and periods (3-30 chars).",
+        });
+      }
+
+      const existingUser = await User.findOne({ username: cleanUsername });
       if (existingUser && existingUser._id.toString() !== userId.toString()) {
         return res
           .status(400)
           .json({ message: "This username is already taken" });
       }
-      user.username = username.toLowerCase();
+
+      user.username = cleanUsername;
     }
 
-    if (website !== undefined) user.website = website;
+    if (website !== undefined) user.website = website.trim();
     if (bio !== undefined) user.bio = bio;
 
     if (deleteAvatar === "true") {
@@ -114,6 +129,24 @@ export const getUserByUsername = async (req, res) => {
 
     const userObj = targetUser.toObject();
 
+    if (
+      targetUser.isDeleted ||
+      targetUser.username.startsWith("deleted_user_")
+    ) {
+      return res.status(200).json({
+        _id: targetUser._id,
+        username: "Deleted User",
+        fullName: "Account Deleted",
+        isDeleted: true,
+        avatar: "",
+        bio: "This account has been deleted.",
+        followersCount: 0,
+        followingCount: 0,
+        isFollowing: false,
+        isMe: false,
+      });
+    }
+
     userObj.followersCount = targetUser.followers?.length || 0;
     userObj.followingCount = targetUser.following?.length || 0;
 
@@ -139,7 +172,11 @@ export const getAllUsers = async (req, res) => {
   try {
     const currentUserId = req.user?.userId || req.user?.id || req.user?._id;
 
-    const users = await User.find({ _id: { $ne: currentUserId } })
+    const users = await User.find({
+      _id: { $ne: currentUserId },
+      isDeleted: { $ne: true },
+      username: { $not: /^deleted_user_/ },
+    })
       .select("-password")
       .sort({ username: -1 });
 
@@ -151,6 +188,7 @@ export const getAllUsers = async (req, res) => {
       .json({ message: "Server error while fetching users" });
   }
 };
+
 export const toggleFollow = async (req, res) => {
   try {
     const currentUserId = req.user?.userId || req.user?.id || req.user?._id;
@@ -252,14 +290,18 @@ export const getFollowers = async (req, res) => {
     const { id } = req.params;
     const user = await User.findById(id).populate(
       "followers",
-      "username fullName avatar",
+      "username fullName avatar isDeleted",
     );
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.status(200).json(user.followers || []);
+    const activeFollowers = (user.followers || []).filter(
+      (f) => !f.isDeleted && !f.username?.startsWith("deleted_user_"),
+    );
+
+    res.status(200).json(activeFollowers);
   } catch (error) {
     console.error("Get Followers Error:", error);
     res.status(500).json({ message: "Server error while fetching followers" });
@@ -271,14 +313,18 @@ export const getFollowing = async (req, res) => {
     const { id } = req.params;
     const user = await User.findById(id).populate(
       "following",
-      "username fullName avatar",
+      "username fullName avatar isDeleted",
     );
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.status(200).json(user.following || []);
+    const activeFollowing = (user.following || []).filter(
+      (f) => !f.isDeleted && !f.username?.startsWith("deleted_user_"),
+    );
+
+    res.status(200).json(activeFollowing);
   } catch (error) {
     console.error("Get Following Error:", error);
     res.status(500).json({ message: "Server error while fetching followings" });
@@ -288,6 +334,8 @@ export const getFollowing = async (req, res) => {
 const deleteCloudinaryImage = async (imageUrl) => {
   if (!imageUrl || !imageUrl.includes("cloudinary.com")) return;
   try {
+    if (imageUrl.includes("/demo/image/upload/")) return;
+
     const parts = imageUrl.split("/");
     const filenameWithExt = parts.pop();
     const folder = parts.pop();
@@ -296,7 +344,7 @@ const deleteCloudinaryImage = async (imageUrl) => {
     await cloudinary.uploader.destroy(publicId);
     console.log(`Deleted Cloudinary asset: ${publicId}`);
   } catch (err) {
-    console.error("Cloudinary cleanup error:", err);
+    console.error("Cloudinary cleanup error:", err?.message || err);
   }
 };
 
@@ -323,9 +371,7 @@ export const deleteProfile = async (req, res) => {
       });
     }
 
-    console.log(
-      `=== DELETING USER, MESSAGES & CLEANING CLOUDINARY: ${user.username} ===`,
-    );
+    console.log(`=== ANONYMIZING USER (GHOST MODE): ${user.username} ===`);
 
     if (user.avatar) {
       await deleteCloudinaryImage(user.avatar);
@@ -337,8 +383,8 @@ export const deleteProfile = async (req, res) => {
         await deleteCloudinaryImage(post.url);
       }
     }
-
     await Post.deleteMany({ user: userId });
+
     await Post.updateMany({}, { $pull: { comments: { user: userId } } });
     await Post.updateMany({ likes: userId }, { $pull: { likes: userId } });
 
@@ -357,44 +403,27 @@ export const deleteProfile = async (req, res) => {
 
     const io = req.app.get("io");
 
-    await Message.updateMany(
-      { "reactions.users": userId },
-      { $pull: { "reactions.$.users": userId } },
-    );
+    if (io) {
+      io.emit("user account deleted", { userId: userId.toString() });
 
-    const personalChats = await Chat.find({
-      isGroupChat: false,
-      users: userId,
-    });
-
-    for (const chat of personalChats) {
-      if (!chat.deletedFor.includes(userId)) {
-        chat.deletedFor.push(userId);
-      }
-      chat.users = chat.users.filter(
-        (id) => id.toString() !== userId.toString(),
-      );
-      await chat.save();
-
-      if (io) {
-        io.to(chat._id.toString()).emit("chat deleted", {
-          chatId: chat._id,
-          userDeletedAccount: true,
-        });
-      }
+      const userSockets = await io.in(userId.toString()).fetchSockets();
+      userSockets.forEach((s) => s.disconnect(true));
     }
 
-    await Chat.updateMany(
-      { isGroupChat: true, users: userId },
-      { $pull: { users: userId } },
-    );
+    user.username = `deleted_user_${user._id}`;
+    user.fullName = "Account Deleted";
+    user.email = `deleted_${user._id}@deleted.local`;
+    user.avatar = "";
+    user.bio = "This account has been deleted.";
+    user.website = "";
+    user.followers = [];
+    user.following = [];
+    user.isDeleted = true;
 
-    await Chat.deleteMany({ users: { $size: 0 } });
-
-    await User.findByIdAndDelete(userId);
+    await user.save();
 
     res.status(200).json({
-      message: "Profile and all associated data deleted successfully",
+      message: "Profile anonymized and deleted successfully",
       isGuestReset: false,
       isSeededReset: false,
     });

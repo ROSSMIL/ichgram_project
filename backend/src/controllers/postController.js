@@ -41,8 +41,8 @@ export const createPost = async (req, res) => {
     const savedPost = await newPost.save();
 
     const populatedPost = await Post.findById(savedPost._id)
-      .populate("user", "username avatar fullName")
-      .populate("comments.user", "username avatar");
+      .populate("user", "username avatar fullName isDeleted")
+      .populate("comments.user", "username avatar isDeleted");
 
     res.status(201).json(populatedPost);
   } catch (error) {
@@ -57,11 +57,18 @@ export const createPost = async (req, res) => {
 export const getAllPosts = async (req, res) => {
   try {
     const posts = await Post.find()
-      .populate("user", "username avatar fullName")
-      .populate("comments.user", "username avatar")
+      .populate("user", "username avatar fullName isDeleted")
+      .populate("comments.user", "username avatar isDeleted")
       .sort({ createdAt: -1 });
 
-    res.status(200).json(posts);
+    const activePosts = posts.filter(
+      (post) =>
+        post.user &&
+        !post.user.isDeleted &&
+        !post.user.username?.startsWith("deleted_user_"),
+    );
+
+    res.status(200).json(activePosts);
   } catch (error) {
     console.error("Error fetching all posts:", error);
     res.status(500).json({ message: "Server error while fetching all posts" });
@@ -72,8 +79,8 @@ export const getPostById = async (req, res) => {
   try {
     const { postId } = req.params;
     const post = await Post.findById(postId)
-      .populate("user", "username avatar fullName")
-      .populate("comments.user", "username avatar");
+      .populate("user", "username avatar fullName isDeleted")
+      .populate("comments.user", "username avatar isDeleted");
 
     if (!post) {
       return res.status(404).json({ message: "Post not found" });
@@ -124,8 +131,8 @@ export const updatePost = async (req, res) => {
     await post.save();
 
     const populatedPost = await Post.findById(post._id)
-      .populate("user", "username avatar fullName")
-      .populate("comments.user", "username avatar");
+      .populate("user", "username avatar fullName isDeleted")
+      .populate("comments.user", "username avatar isDeleted");
 
     res.status(200).json(populatedPost);
   } catch (error) {
@@ -143,9 +150,13 @@ export const getPostsByUsername = async (req, res) => {
       return res.status(404).json({ message: "User not found in database" });
     }
 
+    if (user.isDeleted || user.username.startsWith("deleted_user_")) {
+      return res.status(200).json([]);
+    }
+
     const posts = await Post.find({ user: user._id })
-      .populate("user", "username avatar fullName")
-      .populate("comments.user", "username avatar")
+      .populate("user", "username avatar fullName isDeleted")
+      .populate("comments.user", "username avatar isDeleted")
       .sort({ createdAt: -1 });
 
     res.status(200).json(posts);
@@ -205,8 +216,8 @@ export const addCommentToPost = async (req, res) => {
     }
 
     const updatedPost = await Post.findById(postId)
-      .populate("user", "username avatar fullName")
-      .populate("comments.user", "username avatar");
+      .populate("user", "username avatar fullName isDeleted")
+      .populate("comments.user", "username avatar isDeleted");
 
     res.status(201).json(updatedPost);
   } catch (error) {
@@ -275,8 +286,8 @@ export const toggleLikePost = async (req, res) => {
     await post.save();
 
     const updatedPost = await Post.findById(postId)
-      .populate("user", "username avatar fullName")
-      .populate("comments.user", "username avatar");
+      .populate("user", "username avatar fullName isDeleted")
+      .populate("comments.user", "username avatar isDeleted");
 
     res.status(200).json(updatedPost);
   } catch (error) {
@@ -332,8 +343,8 @@ export const deleteComment = async (req, res) => {
     }
 
     const updatedPost = await Post.findById(postId)
-      .populate("user", "username avatar fullName")
-      .populate("comments.user", "username avatar");
+      .populate("user", "username avatar fullName isDeleted")
+      .populate("comments.user", "username avatar isDeleted");
 
     res.status(200).json(updatedPost);
   } catch (error) {

@@ -1,17 +1,58 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
+import PropTypes from "prop-types";
 import { io } from "socket.io-client";
 import API from "../api/axios.js";
 import { SocketContext } from "./SocketContextInstance.js";
+import styles from "./SocketBanner.module.css";
 
 const ENDPOINT = import.meta.env.VITE_SOCKET_URL || "http://localhost:3333";
+
+// Окремий компонент для банера "Connecting to server..." з підтримкою анімації виходу
+const ConnectingBanner = ({ active }) => {
+  const [shouldRender, setShouldRender] = useState(active);
+  const [isExiting, setIsExiting] = useState(false);
+
+  if (active && !shouldRender) {
+    setShouldRender(true);
+    setIsExiting(false);
+  } else if (!active && shouldRender && !isExiting) {
+    setIsExiting(true);
+  }
+
+  if (!shouldRender) return null;
+
+  return (
+    <div
+      className={`${styles.floatingBanner} ${
+        isExiting ? styles.bannerExit : styles.bannerEnter
+      }`}
+      onAnimationEnd={() => {
+        if (isExiting) {
+          setShouldRender(false);
+          setIsExiting(false);
+        }
+      }}
+    >
+      <div className={styles.spinner} />
+      <span>Connecting to server...</span>
+    </div>
+  );
+};
+
+ConnectingBanner.propTypes = {
+  active: PropTypes.bool.isRequired,
+};
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState({});
   const [isDisconnected, setIsDisconnected] = useState(false);
+
+  // Стейт для банера відновлення (Connection restored!)
   const [showRestored, setShowRestored] = useState(false);
+  const [isRestoredExiting, setIsRestoredExiting] = useState(false);
 
   const location = useLocation();
   const activeChatIdRef = useRef(null);
@@ -29,43 +70,59 @@ export const SocketProvider = ({ children }) => {
   }, []);
 
   const fetchProfile = useCallback(async () => {
-    if (!token) return;
+    const currentToken = localStorage.getItem("token");
+    if (!currentToken) {
+      setCurrentUser((prev) => (prev ? null : prev));
+      return;
+    }
+
     try {
       const { data } = await API.get("/api/users/profile");
       setCurrentUser(data);
     } catch (err) {
       console.error("Error fetching user profile for socket:", err);
-      if (err.response?.status === 401) {
+      if (err.response?.status === 401 || err.response?.status === 404) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("guest_device_id");
         setCurrentUser(null);
       }
     }
-  }, [token]);
+  }, []);
 
+  // Завантаження профілю
   useEffect(() => {
-    let isMounted = true;
+    let isSubscribed = true;
 
     if (token) {
-
-      Promise.resolve().then(() => {
-        if (isMounted) {
-          fetchProfile();
+      queueMicrotask(async () => {
+        if (isSubscribed) {
+          await fetchProfile();
+        }
+      });
+    } else {
+      queueMicrotask(() => {
+        if (isSubscribed) {
+          setCurrentUser((prev) => (prev === null ? prev : null));
         }
       });
     }
 
     return () => {
-      isMounted = false;
+      isSubscribed = false;
     };
   }, [token, fetchProfile]);
 
+  // Підключення Socket.io
   useEffect(() => {
-    if (!token || !currentUser) return;
+    if (!token || !currentUser) {
+      return;
+    }
 
     const s = io(ENDPOINT, {
       transports: ["websocket", "polling"],
       withCredentials: true,
       reconnection: true,
-      reconnectionAttempts: Infinity,
+      reconnectionAttempts: 5,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       timeout: 30000,
@@ -82,21 +139,27 @@ export const SocketProvider = ({ children }) => {
       setIsDisconnected((prev) => {
         if (prev) {
           setShowRestored(true);
-          setTimeout(() => setShowRestored(false), 3000);
+          setIsRestoredExiting(false);
+
+          setTimeout(() => {
+            setIsRestoredExiting(true);
+          }, 2500);
         }
         return false;
       });
     });
 
     s.on("disconnect", (reason) => {
-      if (reason !== "io client disconnect") {
+      if (reason !== "io client disconnect" && localStorage.getItem("token")) {
         setIsDisconnected(true);
         setShowRestored(false);
       }
     });
 
     s.on("connect_error", () => {
-      setIsDisconnected(true);
+      if (localStorage.getItem("token")) {
+        setIsDisconnected(true);
+      }
     });
 
     s.on("presence update", (usersMap) => {
@@ -113,6 +176,7 @@ export const SocketProvider = ({ children }) => {
     };
   }, [token, currentUser]);
 
+  // Примусове відновлення сокета
   useEffect(() => {
     const handleForceReconnect = async () => {
       await fetchProfile();
@@ -134,9 +198,10 @@ export const SocketProvider = ({ children }) => {
     };
   }, [socket, currentUser, fetchProfile]);
 
+  // Відновлення фокусу
   useEffect(() => {
     const handleFocus = () => {
-      if (socket) {
+      if (socket && localStorage.getItem("token")) {
         if (!socket.connected) {
           socket.connect();
         } else if (currentUser) {
@@ -169,6 +234,7 @@ export const SocketProvider = ({ children }) => {
     return "online";
   }, []);
 
+  // Трекінг активності
   useEffect(() => {
     if (!socket || !currentUser) return;
 
@@ -193,6 +259,7 @@ export const SocketProvider = ({ children }) => {
   }, [location.pathname, currentUser, socket, getActivityTypeByPath]);
 
   const effectiveUser = token ? currentUser : null;
+  const shouldShowDisconnected = isDisconnected && !!token && !!currentUser;
 
   return (
     <SocketContext.Provider
@@ -200,32 +267,41 @@ export const SocketProvider = ({ children }) => {
         socket,
         currentUser: effectiveUser,
         onlineUsers,
-        isDisconnected,
+        isDisconnected: shouldShowDisconnected,
       }}
     >
       {children}
 
-      {isDisconnected && (
-        <div style={floatingBannerStyle}>
-          <div style={spinnerStyle} />
-          <span>Connecting to server...</span>
-        </div>
-      )}
+      {/* РЕКОННЕКТ БАНЕР (ізольований підкомпонент) */}
+      <ConnectingBanner active={shouldShowDisconnected} />
 
+      {/* ВІДНОВЛЕНО БАНЕР */}
       {showRestored && (
-        <div style={restoredBannerStyle}>
-          <svg
-            viewBox="0 0 24 24"
-            width="16"
-            height="16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
+        <div
+          className={`${styles.floatingBanner} ${styles.restoredBanner} ${
+            isRestoredExiting ? styles.bannerExit : styles.bannerEnter
+          }`}
+          onAnimationEnd={() => {
+            if (isRestoredExiting) {
+              setShowRestored(false);
+              setIsRestoredExiting(false);
+            }
+          }}
+        >
+          <div className={styles.restoredIcon}>
+            <svg
+              viewBox="0 0 24 24"
+              width="15"
+              height="15"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
           <span>Connection restored!</span>
         </div>
       )}
@@ -233,57 +309,6 @@ export const SocketProvider = ({ children }) => {
   );
 };
 
-const floatingBannerStyle = {
-  position: "fixed",
-  top: "16px",
-  left: "50%",
-  transform: "translateX(-50%)",
-  zIndex: 999999,
-  backgroundColor: "rgba(22, 22, 26, 0.88)",
-  color: "#ffffff",
-  border: "1px solid rgba(255, 255, 255, 0.12)",
-  backdropFilter: "blur(12px)",
-  WebkitBackdropFilter: "blur(12px)",
-  padding: "8px 18px",
-  borderRadius: "30px",
-  fontSize: "13px",
-  fontWeight: "600",
-  display: "flex",
-  alignItems: "center",
-  gap: "10px",
-  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.4)",
-  animation: "fadeInBanner 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
-  pointerEvents: "none",
+SocketProvider.propTypes = {
+  children: PropTypes.node.isRequired,
 };
-
-const restoredBannerStyle = {
-  ...floatingBannerStyle,
-  backgroundColor: "rgba(16, 185, 129, 0.9)",
-  color: "#ffffff",
-  border: "1px solid rgba(255, 255, 255, 0.2)",
-};
-
-const spinnerStyle = {
-  width: "12px",
-  height: "12px",
-  border: "2px solid rgba(255, 255, 255, 0.2)",
-  borderTopColor: "#ff9500",
-  borderRadius: "50%",
-  animation: "spin 0.8s linear infinite",
-};
-
-if (
-  typeof document !== "undefined" &&
-  !document.getElementById("reconnect-banner-styles")
-) {
-  const styleSheet = document.createElement("style");
-  styleSheet.id = "reconnect-banner-styles";
-  styleSheet.innerText = `
-    @keyframes spin { to { transform: rotate(360deg); } }
-    @keyframes fadeInBanner {
-      from { opacity: 0; transform: translate(-50%, -10px) scale(0.95); }
-      to { opacity: 1; transform: translate(-50%, 0) scale(1); }
-    }
-  `;
-  document.head.appendChild(styleSheet);
-}

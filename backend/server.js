@@ -8,6 +8,7 @@ import http from "http";
 import connectDB from "./src/config/db.js";
 import seedDatabase from "./src/config/seeder.js";
 import { apiLimiter, authLimiter } from "./src/middlewares/rateLimiter.js";
+import multer from "multer";
 
 import authRoutes from "./src/routes/authRoutes.js";
 import userRoutes from "./src/routes/userRoutes.js";
@@ -55,6 +56,22 @@ app.use("/api/posts", postRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/message", messageRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json({
+        message: "File is too large! Maximum allowed size is 10MB.",
+      });
+    }
+    return res.status(400).json({ message: `Upload error: ${err.message}` });
+  }
+
+  if (err) {
+    return res.status(500).json({ message: err.message || "Server error" });
+  }
+
+  next();
+});
 
 app.get("/", (req, res) => {
   res.send("API is running smoothly with ES Modules & Socket.io...");

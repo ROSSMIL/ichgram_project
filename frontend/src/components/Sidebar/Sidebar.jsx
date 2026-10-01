@@ -47,6 +47,8 @@ const Sidebar = ({
       } catch (e) {
         console.error("Failed to load user inside Sidebar:", e);
       }
+    } else {
+      setCurrentUser(null);
     }
   }, []);
 
@@ -383,7 +385,7 @@ const Sidebar = ({
               width="24"
             >
               <path
-                d="M2 12v10a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v10Z"
+                d="M2 12v10a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V2a1 1 0 0 1-1-1H3a1 1 0 0 1-1 1v10Z"
                 fill="none"
                 stroke="currentColor"
                 strokeLinecap="round"

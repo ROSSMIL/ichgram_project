@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 import API from "../../api/axios";
 import styles from "./EditProfilePage.module.css";
 import Avatar from "../../components/Avatar/Avatar";
@@ -18,11 +19,25 @@ const SEEDED_EMAILS = [
   "volley@example.com",
 ];
 
+const SEEDED_USERNAMES = [
+  "itcareerhub",
+  "tonia_art",
+  "society_vibe",
+  "pixel_master",
+  "gamer_pro",
+  "nature_lover",
+  "foodie_joy",
+  "sound_wave",
+  "ninja_code",
+  "volley_star",
+];
+
 const EditProfilePage = () => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     username: "",
+    fullName: "",
     website: "",
     bio: "",
     email: "",
@@ -39,10 +54,12 @@ const EditProfilePage = () => {
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [shouldDeleteAvatar, setShouldDeleteAvatar] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleteModalClosing, setIsDeleteModalClosing] = useState(false);
 
-  const isGuest = formData.email === "guest@example.com";
-
-  const isSeeded = SEEDED_EMAILS.includes((formData.email || "").toLowerCase());
+  const isSeeded = Boolean(
+    SEEDED_EMAILS.includes((formData.email || "").toLowerCase()) ||
+    SEEDED_USERNAMES.includes((formData.username || "").toLowerCase()),
+  );
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -50,18 +67,19 @@ const EditProfilePage = () => {
         const token = localStorage.getItem("token");
         if (!token) return navigate("/login");
 
-        const { data } = await API.get("/api/users/profile", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const { data } = await API.get("/api/users/profile");
 
         setFormData({
           username: data.username || "",
+          fullName: data.fullName || "",
           website: data.website || "",
           bio: data.bio || "",
           email: data.email || "",
         });
 
-        setDbAvatar(data.avatar || "");
+        if (data.avatar) {
+          setDbAvatar(data.avatar);
+        }
       } catch (error) {
         console.error("Error fetching profile", error);
       }
@@ -70,18 +88,60 @@ const EditProfilePage = () => {
     fetchProfile();
   }, [navigate]);
 
+  const handleCloseDeleteModal = useCallback(() => {
+    if (isDeleteModalClosing) return;
+    setIsDeleteModalClosing(true);
+    setTimeout(() => {
+      setIsDeleteModalOpen(false);
+      setIsDeleteModalClosing(false);
+    }, 200);
+  }, [isDeleteModalClosing]);
+
+  useEffect(() => {
+    if (!isDeleteModalOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        handleCloseDeleteModal();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isDeleteModalOpen, handleCloseDeleteModal]);
+
   const handleChange = (e) => {
+    if (isSeeded) return;
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleModalUpload = (file) => {
+    if (isSeeded) return;
+    const MAX_SIZE = 10 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      setMessage({
+        type: "error",
+        text: "Selected image is too large (max 10MB). Please select a smaller photo.",
+      });
+      return;
+    }
+
     setAvatarFile(file);
     const previewUrl = URL.createObjectURL(file);
     setAvatarPreview(previewUrl);
     setShouldDeleteAvatar(false);
+    setMessage(null);
   };
 
   const handleModalRemove = () => {
+    if (isSeeded) return;
     setAvatarFile(null);
     setAvatarPreview(null);
     setDbAvatar("");
@@ -90,6 +150,8 @@ const EditProfilePage = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    if (isSeeded) return;
+
     setLoading(true);
     setMessage(null);
 
@@ -98,6 +160,7 @@ const EditProfilePage = () => {
 
       const dataToSend = new FormData();
       dataToSend.append("username", formData.username);
+      dataToSend.append("fullName", formData.fullName);
       dataToSend.append("website", formData.website);
       dataToSend.append("bio", formData.bio);
 
@@ -112,6 +175,7 @@ const EditProfilePage = () => {
       await API.put("/api/users/edit", dataToSend, {
         headers: {
           Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
         },
       });
 
@@ -129,19 +193,20 @@ const EditProfilePage = () => {
   };
 
   const handleDeleteConfirm = async () => {
+    if (isSeeded) return;
+
     setDeleteLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const { data } = await API.delete("/api/users/profile", {
+      await API.delete("/api/users/profile", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       localStorage.removeItem("token");
-      window.dispatchEvent(new Event("profileUpdated"));
+      localStorage.removeItem("guest_device_id");
 
-      if (data.isGuestReset || data.isSeededReset) {
-        console.log("Demo profile reset successfully!");
-      }
+      window.dispatchEvent(new CustomEvent("auth:logout"));
+      window.dispatchEvent(new Event("profileUpdated"));
 
       navigate("/login");
     } catch (error) {
@@ -150,7 +215,7 @@ const EditProfilePage = () => {
         type: "error",
         text: error.response?.data?.message || "Failed to process request",
       });
-      setIsDeleteModalOpen(false);
+      handleCloseDeleteModal();
     } finally {
       setDeleteLoading(false);
     }
@@ -221,10 +286,10 @@ const EditProfilePage = () => {
           <div className={styles.bannerLeft}>
             <div
               className={styles.avatarWrapper}
-              onClick={() => setIsPhotoModalOpen(true)}
-              style={{ cursor: "pointer" }}
+              onClick={() => !isSeeded && setIsPhotoModalOpen(true)}
+              style={{ cursor: isSeeded ? "not-allowed" : "pointer" }}
             >
-              <Avatar user={avatarUser} size={48} />
+              <Avatar user={avatarUser} size={48} showStatus={false} />
             </div>
 
             <div className={styles.bannerInfo}>
@@ -237,16 +302,31 @@ const EditProfilePage = () => {
             </div>
           </div>
 
-          <button
-            type="button"
-            className={styles.newPhotoBtn}
-            onClick={() => setIsPhotoModalOpen(true)}
-          >
-            Change photo
-          </button>
+          {!isSeeded && (
+            <button
+              type="button"
+              className={styles.newPhotoBtn}
+              onClick={() => setIsPhotoModalOpen(true)}
+            >
+              Change photo
+            </button>
+          )}
         </div>
 
         <form onSubmit={handleSave} className={styles.editForm}>
+          <div className={styles.inputGroup}>
+            <label className={styles.label}>Name</label>
+            <input
+              type="text"
+              name="fullName"
+              value={formData.fullName}
+              onChange={handleChange}
+              className={styles.input}
+              placeholder="Full Name"
+              disabled={isSeeded}
+            />
+          </div>
+
           <div className={styles.inputGroup}>
             <label className={styles.label}>Username</label>
             <div className={styles.disabledInputWrapper}>
@@ -294,6 +374,8 @@ const EditProfilePage = () => {
               value={formData.website}
               onChange={handleChange}
               className={styles.input}
+              placeholder="https://yourwebsite.com"
+              disabled={isSeeded}
             />
           </div>
 
@@ -306,6 +388,8 @@ const EditProfilePage = () => {
                 onChange={handleChange}
                 className={styles.textarea}
                 maxLength={150}
+                placeholder="Write a short bio..."
+                disabled={isSeeded}
               />
               <span className={styles.charCounter}>
                 {(formData.bio || "").length} / 150
@@ -323,27 +407,29 @@ const EditProfilePage = () => {
             </p>
           )}
 
-          <div className={styles.actionButtonsRow}>
-            <button
-              type="submit"
-              className={styles.saveButton}
-              disabled={loading}
-            >
-              {loading ? "Saving..." : "Save"}
-            </button>
+          {!isSeeded && (
+            <div className={styles.actionButtonsRow}>
+              <button
+                type="submit"
+                className={styles.saveButton}
+                disabled={loading}
+              >
+                {loading ? "Saving..." : "Save"}
+              </button>
 
-            <button
-              type="button"
-              className={styles.deleteAccountBtn}
-              onClick={() => setIsDeleteModalOpen(true)}
-            >
-              {isGuest || isSeeded ? "Reset account" : "Delete account"}
-            </button>
-          </div>
+              <button
+                type="button"
+                className={styles.deleteAccountBtn}
+                onClick={() => setIsDeleteModalOpen(true)}
+              >
+                Delete account
+              </button>
+            </div>
+          )}
         </form>
       </main>
 
-      {isPhotoModalOpen && (
+      {isPhotoModalOpen && !isSeeded && (
         <AvatarViewModal
           user={avatarUser}
           isOwnProfile={true}
@@ -354,37 +440,22 @@ const EditProfilePage = () => {
         />
       )}
 
-      {isDeleteModalOpen && (
-        <div
-          className={styles.modalOverlay}
-          onClick={() => setIsDeleteModalOpen(false)}
-        >
+      {isDeleteModalOpen &&
+        !isSeeded &&
+        createPortal(
           <div
-            className={styles.confirmModal}
-            onClick={(e) => e.stopPropagation()}
+            className={`${styles.modalOverlay} ${
+              isDeleteModalClosing ? styles.modalOverlayClosing : ""
+            }`}
+            onClick={handleCloseDeleteModal}
           >
             <div
-              className={`${styles.modalIconBadge} ${
-                isGuest || isSeeded ? styles.badgeSeeded : styles.badgeDanger
+              className={`${styles.confirmModal} ${
+                isDeleteModalClosing ? styles.modalContentClosing : ""
               }`}
+              onClick={(e) => e.stopPropagation()}
             >
-              {isGuest || isSeeded ? (
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                  <path d="M3 3v5h5" />
-                  <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-                  <path d="M16 21h5v-5" />
-                </svg>
-              ) : (
+              <div className={`${styles.modalIconBadge} ${styles.badgeDanger}`}>
                 <svg
                   width="24"
                   height="24"
@@ -399,70 +470,42 @@ const EditProfilePage = () => {
                   <line x1="12" y1="9" x2="12" y2="13" />
                   <line x1="12" y1="17" x2="12.01" y2="17" />
                 </svg>
-              )}
+              </div>
+
+              <h3 className={styles.modalTitle}>Delete Account?</h3>
+
+              <p className={styles.modalText}>
+                Are you sure you want to delete your account?
+                <span className={styles.warningBoxText}>
+                  <strong>Warning:</strong> All your posts, comments, likes, and
+                  profile data will be permanently removed. This action cannot
+                  be undone.
+                </span>
+              </p>
+
+              <div className={styles.modalActions}>
+                <button
+                  type="button"
+                  className={styles.cancelModalBtn}
+                  onClick={handleCloseDeleteModal}
+                  disabled={deleteLoading}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  className={styles.confirmDeleteBtn}
+                  onClick={handleDeleteConfirm}
+                  disabled={deleteLoading}
+                >
+                  {deleteLoading ? "Processing..." : "Delete"}
+                </button>
+              </div>
             </div>
-
-            <h3 className={styles.modalTitle}>
-              {isGuest
-                ? "Reset Guest Account?"
-                : isSeeded
-                  ? "Reset Seed Account?"
-                  : "Delete Account?"}
-            </h3>
-
-            <p className={styles.modalText}>
-              {isGuest ? (
-                <>
-                  Are you sure you want to reset the Guest account?
-                  <br />
-                  <span className={styles.easterEggText}>
-                    <strong>Fun fact:</strong> Guest accounts are immortal!
-                    Triggering a reset will clear session changes and restore it
-                    back to factory defaults.
-                  </span>
-                </>
-              ) : isSeeded ? (
-                <>
-                  Are you sure you want to reset this profile?
-                  <br />
-                  <span className={styles.easterEggText}>
-                    <strong>Fun fact:</strong> It's nice to see you here! (You
-                    actually found the password? *cough*)... But demo accounts
-                    are immortal as well! Triggering a reset will clear session
-                    changes and restore it back to factory defaults.
-                  </span>
-                </>
-              ) : (
-                "Are you sure you want to delete your account? All your posts, comments, likes, and profile data will be permanently removed. This action cannot be undone."
-              )}
-            </p>
-
-            <div className={styles.modalActions}>
-              <button
-                type="button"
-                className={styles.cancelModalBtn}
-                onClick={() => setIsDeleteModalOpen(false)}
-                disabled={deleteLoading}
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                className={styles.confirmDeleteBtn}
-                onClick={handleDeleteConfirm}
-                disabled={deleteLoading}
-              >
-                {deleteLoading
-                  ? "Processing..."
-                  : isGuest || isSeeded
-                    ? "Reset & Wipe"
-                    : "Delete"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };

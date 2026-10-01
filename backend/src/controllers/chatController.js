@@ -53,6 +53,17 @@ export const accessChat = async (req, res) => {
   }
 
   try {
+    const targetUser = await User.findById(userId);
+    if (
+      !targetUser ||
+      targetUser.isDeleted ||
+      targetUser.username?.startsWith("deleted_user_")
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Cannot start a chat with a deleted account" });
+    }
+
     let isChat = await Chat.find({
       isGroupChat: false,
       $and: [
@@ -69,18 +80,7 @@ export const accessChat = async (req, res) => {
     });
 
     if (isChat.length > 0) {
-      const existingChat = isChat[0];
-      if (existingChat.deletedFor?.includes(currentUserId)) {
-        await Chat.findByIdAndUpdate(existingChat._id, {
-          $pull: { deletedFor: currentUserId },
-        });
-      }
-
-      const updatedChat = await Chat.findById(existingChat._id)
-        .populate("users", "-password")
-        .populate("latestMessage");
-
-      return res.status(200).json(updatedChat || existingChat);
+      return res.status(200).json(isChat[0]);
     }
 
     const chatData = {
@@ -110,6 +110,35 @@ export const accessChat = async (req, res) => {
   }
 };
 
+export const restoreChat = async (req, res) => {
+  const chatId = req.params.chatId || req.body.chatId;
+  const currentUserId = getUserId(req);
+
+  if (!chatId) {
+    return res.status(400).json({ message: "Chat ID is required" });
+  }
+
+  try {
+    const updatedChat = await Chat.findByIdAndUpdate(
+      chatId,
+      {
+        $pull: { deletedFor: currentUserId },
+      },
+      { returnDocument: "after" },
+    )
+      .populate("users", "-password")
+      .populate("latestMessage");
+
+    if (!updatedChat) {
+      return res.status(404).json({ message: "Chat not found" });
+    }
+
+    res.status(200).json(updatedChat);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const fetchChats = async (req, res) => {
   const currentUserId = getUserId(req);
 
@@ -133,10 +162,44 @@ export const fetchChats = async (req, res) => {
 
     chats = await User.populate(chats, {
       path: "latestMessage.sender",
-      select: "username avatar fullName",
+      select: "username avatar fullName isDeleted",
     });
 
-    res.status(200).send(chats);
+    const sanitizedChats = chats.map((chat) => {
+      const chatObj = chat.toObject();
+
+      if (chatObj.users) {
+        chatObj.users = chatObj.users.map((u) => {
+          if (u.isDeleted || u.username?.startsWith("deleted_user_")) {
+            return {
+              ...u,
+              username: "Deleted User",
+              fullName: "Deleted User",
+              avatar: "",
+              isDeleted: true,
+            };
+          }
+          return u;
+        });
+      }
+
+      if (chatObj.latestMessage && chatObj.latestMessage.sender) {
+        const s = chatObj.latestMessage.sender;
+        if (s.isDeleted || s.username?.startsWith("deleted_user_")) {
+          chatObj.latestMessage.sender = {
+            ...s,
+            username: "Deleted User",
+            fullName: "Deleted User",
+            avatar: "",
+            isDeleted: true,
+          };
+        }
+      }
+
+      return chatObj;
+    });
+
+    res.status(200).send(sanitizedChats);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -259,6 +322,17 @@ export const addToGroup = async (req, res) => {
       return res.status(403).json({ message: "Only admins can add members" });
     }
 
+    const targetUser = await User.findById(userId);
+    if (
+      !targetUser ||
+      targetUser.isDeleted ||
+      targetUser.username?.startsWith("deleted_user_")
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Cannot add a deleted account to the group" });
+    }
+
     const added = await Chat.findByIdAndUpdate(
       chatId,
       {
@@ -271,8 +345,7 @@ export const addToGroup = async (req, res) => {
       .populate("groupAdmin", "-password")
       .populate("latestMessage");
 
-    const addedUser = await User.findById(userId);
-    const addedName = addedUser ? addedUser.username : "a user";
+    const addedName = targetUser ? targetUser.username : "a user";
 
     await createAndSendSystemMessage(
       req,
@@ -315,7 +388,7 @@ export const removeFromGroup = async (req, res) => {
         .json({ message: "Only admins can remove members" });
     }
 
-    const removed = await Chat.findByIdAndUpdate(
+    let removed = await Chat.findByIdAndUpdate(
       chatId,
       {
         $pull: { users: userId },
@@ -329,7 +402,17 @@ export const removeFromGroup = async (req, res) => {
       .populate("latestMessage");
 
     const targetUser = await User.findById(userId);
-    const targetName = targetUser ? targetUser.username : "A user";
+
+    const isTargetDeleted =
+      !targetUser ||
+      targetUser.isDeleted ||
+      targetUser.username?.startsWith("deleted_user_");
+
+    const targetName = isTargetDeleted
+      ? "Deleted User"
+      : targetUser
+        ? targetUser.username
+        : "A user";
 
     const isSelfLeave = userId === currentUserId.toString();
     const systemText = isSelfLeave
@@ -338,19 +421,35 @@ export const removeFromGroup = async (req, res) => {
 
     await createAndSendSystemMessage(req, chatId, systemText);
 
+    const chatObj = removed.toObject();
+    if (chatObj.users) {
+      chatObj.users = chatObj.users.map((u) => {
+        if (u.isDeleted || u.username?.startsWith("deleted_user_")) {
+          return {
+            ...u,
+            username: "Deleted User",
+            fullName: "Deleted User",
+            avatar: "",
+            isDeleted: true,
+          };
+        }
+        return u;
+      });
+    }
+
     const io = req.app.get("io");
     if (io) {
-      io.to(userId.toString()).emit("group updated", removed);
+      io.to(userId.toString()).emit("group updated", chatObj);
 
       if (removed.users) {
         removed.users.forEach((u) => {
           const uId = (u._id || u).toString();
-          io.to(uId).emit("group updated", removed);
+          io.to(uId).emit("group updated", chatObj);
         });
       }
     }
 
-    res.status(200).json(removed);
+    res.status(200).json(chatObj);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -406,17 +505,6 @@ export const deleteChat = async (req, res) => {
       ...(chat.leftUsers || []).map((u) => u.toString()),
     ];
 
-    if (io) {
-      allMembers.forEach((mId) => {
-        if (mId !== currentUserId.toString()) {
-          io.to(mId).emit("partner deleted chat", {
-            chatId,
-            deletedBy: currentUserId,
-          });
-        }
-      });
-    }
-
     const allUsersDeleted = allMembers.every((uId) =>
       updatedChat.deletedFor.some((delId) => delId.toString() === uId),
     );
@@ -424,11 +512,51 @@ export const deleteChat = async (req, res) => {
     if (allUsersDeleted) {
       await Message.deleteMany({ chat: chatId });
       await Chat.findByIdAndDelete(chatId);
+
+      if (io) {
+        allMembers.forEach((uId) => {
+          io.to(uId).emit("chat deleted", { chatId });
+        });
+      }
     }
 
     res.status(200).json({
-      message: "Chat deleted for you successfully",
+      message: "Chat hidden successfully",
       chatId,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const permanentlyDeleteChat = async (req, res) => {
+  const { chatId } = req.params;
+
+  try {
+    const chat = await Chat.findById(chatId);
+    if (!chat) {
+      return res.status(404).json({ message: "Chat not found" });
+    }
+
+    const usersToNotify = [
+      ...chat.users.map((u) => u.toString()),
+      ...(chat.leftUsers || []).map((u) => u.toString()),
+    ];
+
+    await Message.deleteMany({ chat: chatId });
+    await Chat.findByIdAndDelete(chatId);
+
+    const io = req.app.get("io");
+    if (io) {
+      usersToNotify.forEach((uId) => {
+        io.to(uId).emit("chat deleted", { chatId });
+      });
+    }
+
+    res.status(200).json({
+      message: "Chat permanently deleted for all participants",
+      chatId,
+      usersToNotify,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

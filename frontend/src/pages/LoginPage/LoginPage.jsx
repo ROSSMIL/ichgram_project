@@ -66,11 +66,13 @@ const LoginPage = () => {
       setIsLoading(false);
     }
   };
-
   const handleGuestLogin = async () => {
     setError("");
     try {
       setIsGuestLoading(true);
+
+      localStorage.removeItem("token");
+
       let guestDeviceId = localStorage.getItem("guest_device_id");
       if (!guestDeviceId) {
         guestDeviceId = crypto.randomUUID
@@ -91,6 +93,8 @@ const LoginPage = () => {
         navigate("/dashboard");
       }
     } catch (err) {
+      localStorage.removeItem("guest_device_id");
+
       let serverMessage = "Failed to log in as guest. Please try again.";
 
       if (err.code === "ECONNABORTED" || !err.response) {

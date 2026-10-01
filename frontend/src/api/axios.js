@@ -17,7 +17,26 @@ API.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    const status = error.response?.status;
 
+    // 1. Якщо це помилка авторизації або видаленого користувача — НЕ тригеримо Maintenance!
+    if (status === 401) {
+      if (localStorage.getItem("token")) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("guest_device_id");
+        window.location.href = "/login";
+      }
+      return Promise.reject(error);
+    }
+
+    if (status === 404 && originalRequest.url?.includes("/api/users/profile")) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("guest_device_id");
+      window.location.href = "/login";
+      return Promise.reject(error);
+    }
+
+    // 2. Ретрай ТІЛЬКИ для реальних падінь мережі чи 5xx (і не для 4xx)
     if (
       (error.code === "ECONNABORTED" ||
         !error.response ||
@@ -29,20 +48,20 @@ API.interceptors.response.use(
         await new Promise((resolve) => setTimeout(resolve, 2000));
         return await API(originalRequest);
       } catch (retryError) {
-        window.dispatchEvent(new CustomEvent("globalServerMaintenance"));
+        // Тригеримо Maintenance тільки якщо сервер дійсно недоступний
+        if (
+          !retryError.response ||
+          [502, 503, 504].includes(retryError.response.status)
+        ) {
+          window.dispatchEvent(new CustomEvent("globalServerMaintenance"));
+        }
         return Promise.reject(retryError);
       }
     }
 
-    if (error.response && [502, 503, 504].includes(error.response.status)) {
+    // 3. Серверні помилки 502/503/504
+    if (status && [502, 503, 504].includes(status)) {
       window.dispatchEvent(new CustomEvent("globalServerMaintenance"));
-    }
-
-    if (error.response && error.response.status === 401) {
-      if (localStorage.getItem("token")) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
     }
 
     return Promise.reject(error);

@@ -18,11 +18,47 @@ export const getStorageKey = () => {
 export const getSavedRecentlyViewed = () => {
   const key = getStorageKey();
   const saved = localStorage.getItem(key);
-  return saved ? JSON.parse(saved) : [];
+  if (!saved) return [];
+
+  try {
+    const parsed = JSON.parse(saved);
+
+    return parsed.map((user) => {
+      const isDeleted =
+        user.isDeleted ||
+        user.username?.toLowerCase().startsWith("deleted_user_") ||
+        user.fullName === "Account Deleted" ||
+        user.fullName === "Deleted User";
+
+      if (isDeleted) {
+        return {
+          ...user,
+          username: "Deleted User",
+          fullName: "Account Deleted",
+          avatar: "",
+          isDeleted: true,
+        };
+      }
+      return user;
+    });
+  } catch (e) {
+    console.error("Failed to parse recently viewed storage:", e);
+    return [];
+  }
 };
 
 export const saveToRecentlyViewed = (user) => {
   if (!user || !user._id) return;
+
+  const isDeleted =
+    user.isDeleted ||
+    user.username?.toLowerCase().startsWith("deleted_user_") ||
+    user.fullName === "Account Deleted" ||
+    user.fullName === "Deleted User";
+
+  if (isDeleted) {
+    return;
+  }
 
   const currentUsername = getLoggedInUsername();
   if (
