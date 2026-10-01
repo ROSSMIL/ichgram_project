@@ -14,7 +14,8 @@ const Sidebar = memo(
     setSidebarSearch,
     filteredChats,
     filteredGlobalUsers,
-    unreadCounts,
+    unreadCounts = {},
+    reactionUnreadCounts = {},
     socketDeletedChatId,
     getChatSender,
     handleSelectChat,
@@ -155,16 +156,21 @@ const Sidebar = memo(
 
                   const isSelected = selectedChat?._id === chat._id;
                   const unreadCount = unreadCounts[chat._id] || 0;
+                  const reactionCount = reactionUnreadCounts[chat._id] || 0;
+
                   const hasUnread = !isSelected && unreadCount > 0;
+                  const hasUnreadReactions = !isSelected && reactionCount > 0;
 
                   return (
                     <div
                       key={chat._id}
                       className={`${styles.chatItem} ${
                         isSelected ? styles.selectedChatItem : ""
-                      } ${hasUnread ? styles.unreadChatItem : ""} ${
-                        isPartnerDeleted ? styles.partnerDeletedItem : ""
-                      }`}
+                      } ${
+                        hasUnread || hasUnreadReactions
+                          ? styles.unreadChatItem
+                          : ""
+                      } ${isPartnerDeleted ? styles.partnerDeletedItem : ""}`}
                       onClick={() => {
                         handleSelectChat(chat);
                         handleClosePortalAnimated();
@@ -219,11 +225,28 @@ const Sidebar = memo(
                         </span>
                       </div>
 
-                      {hasUnread && (
-                        <div key={unreadCount} className={styles.unreadBadge}>
-                          {unreadCount > 99 ? "99+" : unreadCount}
-                        </div>
-                      )}
+                      <div className={styles.badgesWrapper}>
+                        {/* 🩷 Рожевий каунтер реакцій */}
+                        {hasUnreadReactions && (
+                          <div
+                            key={`reaction-${reactionCount}`}
+                            className={styles.reactionBadgeCounter}
+                            title="New reactions"
+                          >
+                            {reactionCount > 99 ? "99+" : reactionCount}
+                          </div>
+                        )}
+
+                        {/* 💙 Синій каунтер повідомлень */}
+                        {hasUnread && (
+                          <div
+                            key={`msg-${unreadCount}`}
+                            className={styles.unreadBadge}
+                          >
+                            {unreadCount > 99 ? "99+" : unreadCount}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -279,6 +302,7 @@ Sidebar.propTypes = {
   filteredChats: PropTypes.array,
   filteredGlobalUsers: PropTypes.array,
   unreadCounts: PropTypes.object,
+  reactionUnreadCounts: PropTypes.object,
   socketDeletedChatId: PropTypes.string,
   getChatSender: PropTypes.func,
   handleSelectChat: PropTypes.func,
