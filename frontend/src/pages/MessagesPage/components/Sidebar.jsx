@@ -226,7 +226,6 @@ const Sidebar = memo(
                       </div>
 
                       <div className={styles.badgesWrapper}>
-                        {/* 🩷 Рожевий каунтер реакцій */}
                         {hasUnreadReactions && (
                           <div
                             key={`reaction-${reactionCount}`}
@@ -237,7 +236,6 @@ const Sidebar = memo(
                           </div>
                         )}
 
-                        {/* 💙 Синій каунтер повідомлень */}
                         {hasUnread && (
                           <div
                             key={`msg-${unreadCount}`}
