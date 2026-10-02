@@ -23,6 +23,9 @@ const Sidebar = ({
   const socketContext = useSocket();
   const socket = socketContext?.socket;
 
+  const pagesWithTopBar = ["/dashboard", "/explore"];
+  const showMobileTopBar = pagesWithTopBar.includes(location.pathname);
+
   const fetchUnreadCounts = useCallback(async () => {
     try {
       const { data } = await API.get("/api/notifications/unread-count");
@@ -158,74 +161,60 @@ const Sidebar = ({
   };
 
   return (
-    <div
-      className={`${styles.sidebar} ${
-        isSearchOpen || isNotificationsOpen ? styles.sidebarActive : ""
-      }`}
-    >
-      <div className={styles.logoContainer}>
-        <Logo onClick={handleLogoClick} size="small" />
-      </div>
+    <>
+     
+      {showMobileTopBar && (
+        <div className={styles.mobileTopBar}>
+          <button
+            type="button"
+            className={`${styles.mobileTopBtn} ${
+              isNotificationsOpen ? styles.active : ""
+            }`}
+            onClick={handleNotificationsClick}
+            aria-label="Notifications"
+          >
+            <span className={styles.iconWrapper}>
+              <svg
+                aria-label="Notifications"
+                color="currentColor"
+                fill="currentColor"
+                height="20"
+                role="img"
+                viewBox="0 0 24 24"
+                width="20"
+              >
+                <path
+                  d="M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.65 5.618-5.91 8.526L12 21l-3.59-3.352C5.15 14.74 2.5 12.194 2.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941L12 7.428l1.117-1.775a4.21 4.21 0 0 1 3.675-1.949Z"
+                  fill={isNotificationsOpen ? "currentColor" : "none"}
+                  stroke="currentColor"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                />
+              </svg>
+              {unreadNotifsCount > 0 && (
+                <span className={styles.badgeCounter}>
+                  {unreadNotifsCount > 99 ? "99+" : unreadNotifsCount}
+                </span>
+              )}
+            </span>
+          </button>
 
-      <nav className={styles.navMenu}>
-        {/* Home */}
-        <NavLink
-          to="/dashboard"
-          data-nav="home"
-          onClick={handleHomeClick}
-          className={({ isActive }) =>
-            isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
-          }
-        >
-          {({ isActive }) => (
-            <>
-              <span className={styles.icon}>
-                <svg
-                  aria-label="Home"
-                  color="currentColor"
-                  fill="currentColor"
-                  height="24"
-                  role="img"
-                  viewBox="0 0 24 24"
-                  width="24"
-                >
-                  {isActive ? (
-                    <path d="M22 23h-6.001a1 1 0 0 1-1-1v-5.455a2.81 2.81 0 0 0-5.998 0V22a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V11.543a1.002 1.002 0 0 1 .31-.724l10-9.543a1.001 1.001 0 0 1 1.38 0l10 9.543a1.002 1.002 0 0 1 .31.724V22a1 1 0 0 1-1 1Z" />
-                  ) : (
-                    <path
-                      d="M9 16.5 A3 3 0 0 1 15 16.5 V22 H22 V11.5 L12 2 L2 11.5 V22 H9 Z"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                    />
-                  )}
-                </svg>
-              </span>
-              <span className={styles.text}>Home</span>
-            </>
-          )}
-        </NavLink>
-
-        {/* Search */}
-        <div
-          data-nav="search"
-          onClick={onSearchToggle}
-          className={
-            isSearchOpen ? `${styles.navItem} ${styles.active}` : styles.navItem
-          }
-          style={{ cursor: "pointer" }}
-        >
-          <span className={styles.icon}>
+          <button
+            type="button"
+            className={`${styles.mobileTopBtn} ${
+              isSearchOpen ? styles.active : ""
+            }`}
+            onClick={onSearchToggle}
+            aria-label="Search"
+          >
             <svg
               aria-label="Search"
               color="currentColor"
               fill="currentColor"
-              height="24"
+              height="20"
               role="img"
               viewBox="0 0 24 24"
-              width="24"
+              width="20"
             >
               <path
                 d="M19 10.5A8.5 8.5 0 1 1 10.5 2a8.5 8.5 0 0 1 8.5 8.5Z"
@@ -247,71 +236,34 @@ const Sidebar = ({
                 y2="22"
               />
             </svg>
-          </span>
-          <span className={styles.text}>Search</span>
+          </button>
+        </div>
+      )}
+
+      <aside
+        className={`${styles.sidebar} ${
+          isSearchOpen || isNotificationsOpen ? styles.sidebarActive : ""
+        }`}
+      >
+        <div className={styles.logoContainer}>
+          <Logo onClick={handleLogoClick} size="small" />
         </div>
 
-        {/* Explore */}
-        <NavLink
-          to="/explore"
-          data-nav="explore"
-          onClick={handleExploreClick}
-          className={({ isActive }) =>
-            isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
-          }
-        >
-          {({ isActive }) => (
-            <>
-              <span className={styles.icon}>
-                <svg
-                  aria-label="Explore"
-                  color="currentColor"
-                  fill="currentColor"
-                  height="24"
-                  role="img"
-                  viewBox="0 0 24 24"
-                  width="24"
-                >
-                  <polygon
-                    fill={isActive ? "currentColor" : "none"}
-                    points="13.941 13.953 7.581 16.424 10.06 10.056 16.42 7.585 13.941 13.953"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                  />
-                  <circle
-                    fill="none"
-                    cx="12.004"
-                    cy="12.004"
-                    r="10.5"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                  />
-                </svg>
-              </span>
-              <span className={styles.text}>Explore</span>
-            </>
-          )}
-        </NavLink>
-
-        {/* Messages */}
-        <NavLink
-          to="/messages"
-          data-nav="messages"
-          onClick={handleMessagesClick}
-          className={({ isActive }) =>
-            isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
-          }
-        >
-          {({ isActive }) => (
-            <>
-              <span className={styles.iconWrapper}>
+        <nav className={styles.navMenu}>
+          {/* Home */}
+          <NavLink
+            to="/dashboard"
+            data-nav="home"
+            onClick={handleHomeClick}
+            className={({ isActive }) =>
+              isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
+            }
+          >
+            {({ isActive }) => (
+              <>
                 <span className={styles.icon}>
                   <svg
-                    aria-label="Direct"
+                    aria-label="Home"
                     color="currentColor"
                     fill="currentColor"
                     height="24"
@@ -319,51 +271,39 @@ const Sidebar = ({
                     viewBox="0 0 24 24"
                     width="24"
                   >
-                    <line
-                      fill="none"
-                      stroke="currentColor"
-                      strokeLinejoin="round"
-                      strokeWidth={isActive ? "2.5" : "2"}
-                      x1="22"
-                      x2="9.218"
-                      y1="2"
-                      y2="10.083"
-                    />
-                    <polygon
-                      fill={isActive ? "currentColor" : "none"}
-                      points="22 2 1.93 9.312 8.781 12.656 12.125 19.507 22 2"
-                      stroke="currentColor"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                    />
+                    {isActive ? (
+                      <path d="M22 23h-6.001a1 1 0 0 1-1-1v-5.455a2.81 2.81 0 0 0-5.998 0V22a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V11.543a1.002 1.002 0 0 1 .31-.724l10-9.543a1.001 1.001 0 0 1 1.38 0l10 9.543a1.002 1.002 0 0 1 .31.724V22a1 1 0 0 1-1 1Z" />
+                    ) : (
+                      <path
+                        d="M9 16.5 A3 3 0 0 1 15 16.5 V22 H22 V11.5 L12 2 L2 11.5 V22 H9 Z"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                      />
+                    )}
                   </svg>
                 </span>
-                {unreadMessagesCount > 0 && (
-                  <span className={styles.badgeCounter}>
-                    {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
-                  </span>
-                )}
-              </span>
-              <span className={styles.text}>Messages</span>
-            </>
-          )}
-        </NavLink>
+                <span className={styles.text}>Home</span>
+              </>
+            )}
+          </NavLink>
 
-        {/* Notifications */}
-        <div
-          data-nav="notifications"
-          onClick={handleNotificationsClick}
-          className={
-            isNotificationsOpen
-              ? `${styles.navItem} ${styles.active}`
-              : styles.navItem
-          }
-          style={{ cursor: "pointer" }}
-        >
-          <span className={styles.iconWrapper}>
+          {/* Search */}
+          <div
+            data-nav="search"
+            onClick={onSearchToggle}
+            className={
+              isSearchOpen
+                ? `${styles.navItem} ${styles.active}`
+                : styles.navItem
+            }
+            style={{ cursor: "pointer" }}
+          >
             <span className={styles.icon}>
               <svg
-                aria-label="Notifications"
+                aria-label="Search"
                 color="currentColor"
                 fill="currentColor"
                 height="24"
@@ -372,91 +312,236 @@ const Sidebar = ({
                 width="24"
               >
                 <path
-                  d="M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.65 5.618-5.91 8.526L12 21l-3.59-3.352C5.15 14.74 2.5 12.194 2.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941L12 7.428l1.117-1.775a4.21 4.21 0 0 1 3.675-1.949Z"
-                  fill={isNotificationsOpen ? "currentColor" : "none"}
+                  d="M19 10.5A8.5 8.5 0 1 1 10.5 2a8.5 8.5 0 0 1 8.5 8.5Z"
+                  fill="none"
                   stroke="currentColor"
+                  strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeWidth="2"
+                  strokeWidth={isSearchOpen ? "3" : "2"}
+                />
+                <line
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={isSearchOpen ? "3" : "2"}
+                  x1="16.511"
+                  x2="22"
+                  y1="16.511"
+                  y2="22"
                 />
               </svg>
             </span>
-            {unreadNotifsCount > 0 && (
-              <span className={styles.badgeCounter}>
-                {unreadNotifsCount > 99 ? "99+" : unreadNotifsCount}
-              </span>
-            )}
-          </span>
-          <span className={styles.text}>Notifications</span>
-        </div>
-
-        {/* Create */}
-        <div
-          data-nav="create"
-          onClick={openCreateModal}
-          className={styles.navItem}
-          style={{ cursor: "pointer" }}
-        >
-          <span className={styles.icon}>
-            <svg
-              aria-label="New post"
-              color="currentColor"
-              fill="currentColor"
-              height="24"
-              role="img"
-              viewBox="0 0 24 24"
-              width="24"
-            >
-              <path
-                d="M2 12v10a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V2a1 1 0 0 1-1-1H3a1 1 0 0 1-1 1v10Z"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-              />
-              <line
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                x1="6.525"
-                x2="17.478"
-                y1="12"
-                y2="12"
-              />
-              <line
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                x1="12.001"
-                x2="12.001"
-                y1="6.525"
-                y2="17.478"
-              />
-            </svg>
-          </span>
-          <span className={styles.text}>Create</span>
-        </div>
-
-        {/* Profile */}
-        <NavLink
-          to="/profile"
-          data-nav="profile"
-          className={({ isActive }) =>
-            isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
-          }
-          id={styles.profile}
-        >
-          <div className={styles.avatarWrapper}>
-            <Avatar user={currentUser} size={24} showStatus={false} />
+            <span className={styles.text}>Search</span>
           </div>
-          <span className={styles.text}>Profile</span>
-        </NavLink>
-      </nav>
-    </div>
+
+          {/* Explore */}
+          <NavLink
+            to="/explore"
+            data-nav="explore"
+            onClick={handleExploreClick}
+            className={({ isActive }) =>
+              isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <span className={styles.icon}>
+                  <svg
+                    aria-label="Explore"
+                    color="currentColor"
+                    fill="currentColor"
+                    height="24"
+                    role="img"
+                    viewBox="0 0 24 24"
+                    width="24"
+                  >
+                    <polygon
+                      fill={isActive ? "currentColor" : "none"}
+                      points="13.941 13.953 7.581 16.424 10.06 10.056 16.42 7.585 13.941 13.953"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                    />
+                    <circle
+                      fill="none"
+                      cx="12.004"
+                      cy="12.004"
+                      r="10.5"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                    />
+                  </svg>
+                </span>
+                <span className={styles.text}>Explore</span>
+              </>
+            )}
+          </NavLink>
+
+          {/* Messages */}
+          <NavLink
+            to="/messages"
+            data-nav="messages"
+            onClick={handleMessagesClick}
+            className={({ isActive }) =>
+              isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <span className={styles.iconWrapper}>
+                  <span className={styles.icon}>
+                    <svg
+                      aria-label="Direct"
+                      color="currentColor"
+                      fill="currentColor"
+                      height="24"
+                      role="img"
+                      viewBox="0 0 24 24"
+                      width="24"
+                    >
+                      <line
+                        fill="none"
+                        stroke="currentColor"
+                        strokeLinejoin="round"
+                        strokeWidth={isActive ? "2.5" : "2"}
+                        x1="22"
+                        x2="9.218"
+                        y1="2"
+                        y2="10.083"
+                      />
+                      <polygon
+                        fill={isActive ? "currentColor" : "none"}
+                        points="22 2 1.93 9.312 8.781 12.656 12.125 19.507 22 2"
+                        stroke="currentColor"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                      />
+                    </svg>
+                  </span>
+                  {unreadMessagesCount > 0 && (
+                    <span className={styles.badgeCounter}>
+                      {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
+                    </span>
+                  )}
+                </span>
+                <span className={styles.text}>Messages</span>
+              </>
+            )}
+          </NavLink>
+
+          {/* Notifications */}
+          <div
+            data-nav="notifications"
+            onClick={handleNotificationsClick}
+            className={
+              isNotificationsOpen
+                ? `${styles.navItem} ${styles.active}`
+                : styles.navItem
+            }
+            style={{ cursor: "pointer" }}
+          >
+            <span className={styles.iconWrapper}>
+              <span className={styles.icon}>
+                <svg
+                  aria-label="Notifications"
+                  color="currentColor"
+                  fill="currentColor"
+                  height="24"
+                  role="img"
+                  viewBox="0 0 24 24"
+                  width="24"
+                >
+                  <path
+                    d="M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.65 5.618-5.91 8.526L12 21l-3.59-3.352C5.15 14.74 2.5 12.194 2.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941L12 7.428l1.117-1.775a4.21 4.21 0 0 1 3.675-1.949Z"
+                    fill={isNotificationsOpen ? "currentColor" : "none"}
+                    stroke="currentColor"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                  />
+                </svg>
+              </span>
+              {unreadNotifsCount > 0 && (
+                <span className={styles.badgeCounter}>
+                  {unreadNotifsCount > 99 ? "99+" : unreadNotifsCount}
+                </span>
+              )}
+            </span>
+            <span className={styles.text}>Notifications</span>
+          </div>
+
+          {/* Create */}
+          <div
+            data-nav="create"
+            onClick={openCreateModal}
+            className={styles.navItem}
+            style={{ cursor: "pointer" }}
+          >
+            <span className={styles.icon}>
+              <svg
+                aria-label="New post"
+                color="currentColor"
+                fill="currentColor"
+                height="24"
+                role="img"
+                viewBox="0 0 24 24"
+                width="24"
+              >
+                <path
+                  d="M2 12v10a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V2a1 1 0 0 1-1-1H3a1 1 0 0 1-1 1v10Z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                />
+                <line
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  x1="6.525"
+                  x2="17.478"
+                  y1="12"
+                  y2="12"
+                />
+                <line
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  x1="12.001"
+                  x2="12.001"
+                  y1="6.525"
+                  y2="17.478"
+                />
+              </svg>
+            </span>
+            <span className={styles.text}>Create</span>
+          </div>
+
+          {/* Profile */}
+          <NavLink
+            to="/profile"
+            data-nav="profile"
+            className={({ isActive }) =>
+              isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
+            }
+            id={styles.profile}
+          >
+            <div className={styles.avatarWrapper}>
+              <Avatar user={currentUser} size={24} showStatus={false} />
+            </div>
+            <span className={styles.text}>Profile</span>
+          </NavLink>
+        </nav>
+      </aside>
+    </>
   );
 };
 
