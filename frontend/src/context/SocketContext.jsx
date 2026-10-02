@@ -6,7 +6,10 @@ import API from "../api/axios.js";
 import { SocketContext } from "./SocketContextInstance.js";
 import styles from "./SocketBanner.module.css";
 
-const ENDPOINT = import.meta.env.VITE_SOCKET_URL || "http://localhost:3333";
+const RAW_API_URL = import.meta.env.VITE_API_URL || "http://localhost:3333";
+
+const ENDPOINT =
+  import.meta.env.VITE_SOCKET_URL || RAW_API_URL.replace(/\/api\/?$/, "");
 
 const ConnectingBanner = ({ active }) => {
   const [shouldRender, setShouldRender] = useState(active);
