@@ -187,6 +187,15 @@ body {
 
 @media (max-width: 768px) {
   .left-column {
-    display: none;
+    position: fixed;
+    top: auto;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    width: calc(100% - 24px);
+    max-height: none;
+    height: auto;
+    z-index: 1000;
+    pointer-events: auto;
   }
 }

@@ -109,7 +109,8 @@
 }
 
 .text {
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: -0.2px;
   white-space: nowrap;
   color: var(--text-primary);
 }
@@ -155,6 +156,42 @@
   display: none !important;
 }
 
+.iconWrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badgeCounter {
+  position: absolute;
+  top: -4px;
+  right: -7px;
+  background-color: #ff3b30;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border: 2px solid var(--bg-card);
+  animation: badgePop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes badgePop {
+  0% {
+    transform: scale(0);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 @media (max-width: 1024px) {
   .sidebar {
     width: 68px;
@@ -183,17 +220,20 @@
 
 @media (max-width: 768px) {
   .sidebar {
-    width: calc(100% - 24px);
+    width: 100%;
     height: 62px;
     top: auto;
-    bottom: 12px;
-    left: 12px;
+    bottom: 0;
+    left: 0;
     border-radius: 20px;
     border: 1px solid var(--border-color);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
     flex-direction: row;
     align-items: center;
     padding: 0 12px;
+    background-color: var(--bg-card);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
   }
 
   .sidebar:hover,
@@ -215,6 +255,10 @@
     border-radius: 10px;
   }
 
+  .navItem:active {
+    transform: scale(0.88);
+  }
+
   .navItem[data-nav="home"] {
     order: 1;
   }
@@ -228,7 +272,6 @@
     order: 4;
     display: flex !important;
   }
-
   .navItem[data-nav="profile"],
   #profile {
     display: flex !important;
@@ -390,46 +433,5 @@
   }
   to {
     transform: translateY(100%);
-  }
-}
-@media (max-width: 768px) {
-  .navItem[data-nav="messages"] {
-    display: flex !important;
-    order: 4;
-  }
-}
-.iconWrapper {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.badgeCounter {
-  position: absolute;
-  top: -4px;
-  right: -7px;
-  background-color: #ff3b30;
-  color: #ffffff;
-  font-size: 10px;
-  font-weight: 700;
-  min-width: 16px;
-  height: 16px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 4px;
-  box-sizing: border-box;
-  border: 2px solid var(--bg-card);
-  animation: badgePop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-@keyframes badgePop {
-  0% {
-    transform: scale(0);
-  }
-  100% {
-    transform: scale(1);
   }
 }
