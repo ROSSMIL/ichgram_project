@@ -198,4 +198,11 @@ body {
     z-index: 1000;
     pointer-events: auto;
   }
+  .app-content {
+    flex: 1;
+    padding: 0px 10px;
+    background-color: var(--bg-main);
+    animation: fadeInPage 0.25s ease-out forwards;
+    transition: background-color 0.4s ease;
+  }
 }

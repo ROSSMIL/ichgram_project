@@ -5,9 +5,9 @@ import API from "../../api/axios";
 import PostModal from "../../components/PostModal/PostModal";
 import PostCard from "../../components/PostCard/PostCard";
 import FeedFilterPill from "../../components/FeedFilterPill/FeedFilterPill";
+import Logo from "../../components/Logo/Logo";
 import styles from "./DashboardPage.module.css";
 import { useSocket } from "../../context/useSocket";
-import logoImg from "../../assets/logo.png";
 
 const AllCaughtUpCard = ({ onScrollToTop }) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -371,19 +371,18 @@ const DashboardPage = () => {
 
   return (
     <div className={styles.container}>
+      <header className={styles.mobileHeader}>
+        <Logo
+          size="small"
+          onClick={handleLogoClick}
+          className={styles.mobileHeaderLogo}
+        />
+      </header>
+
       <FeedFilterPill
         activeFilter={activeFilter}
         onFilterChange={handleFilterChange}
       />
-
-      <header className={styles.mobileHeader}>
-        <img
-          src={logoImg}
-          alt="ICHGRAM"
-          className={styles.mobileLogo}
-          onClick={handleLogoClick}
-        />
-      </header>
 
       {loading && posts.length === 0 ? (
         <div className={styles.feedList}>
