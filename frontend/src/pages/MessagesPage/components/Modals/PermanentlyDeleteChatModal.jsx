@@ -1,13 +1,54 @@
-import { memo } from "react";
+// src/pages/MessagesPage/components/Modals/PermanentlyDeleteChatModal.jsx
+import { memo, useState, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import PropTypes from "prop-types";
 import styles from "../../MessagesPage.module.css";
 
 const PermanentlyDeleteChatModal = memo(
   ({ handleConfirmDeleteChat, onClose, isPartnerDeleted }) => {
-    return (
-      <div className={styles.modalOverlay} onClick={onClose}>
+    const [isClosing, setIsClosing] = useState(false);
+
+    useEffect(() => {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }, []);
+
+    const handleClose = useCallback(() => {
+      if (isClosing) return;
+      setIsClosing(true);
+      setTimeout(() => {
+        onClose();
+      }, 200);
+    }, [isClosing, onClose]);
+
+    useEffect(() => {
+      const handleKeyDown = (e) => {
+        if (e.key === "Escape") {
+          handleClose();
+        }
+      };
+
+      window.addEventListener("keydown", handleKeyDown);
+      return () => {
+        window.removeEventListener("keydown", handleKeyDown);
+      };
+    }, [handleClose]);
+
+    return createPortal(
+      <div
+        className={`${styles.modalOverlay} ${
+          isClosing ? styles.modalOverlayClosing : ""
+        }`}
+        onClick={handleClose}
+      >
         <div
-          className={styles.modalContent}
+          className={`${styles.modalContent} ${
+            isClosing ? styles.modalContentClosing : ""
+          }`}
           onClick={(e) => e.stopPropagation()}
         >
           <div className={styles.modalHeader}>
@@ -16,7 +57,7 @@ const PermanentlyDeleteChatModal = memo(
             <button
               type="button"
               className={styles.closeModalBtn}
-              onClick={onClose}
+              onClick={handleClose}
             >
               ✕
             </button>
@@ -61,7 +102,7 @@ const PermanentlyDeleteChatModal = memo(
             <button
               type="button"
               className={styles.cancelBtn}
-              onClick={onClose}
+              onClick={handleClose}
             >
               Cancel
             </button>
@@ -69,13 +110,19 @@ const PermanentlyDeleteChatModal = memo(
             <button
               type="button"
               className={styles.dangerConfirmBtn}
-              onClick={handleConfirmDeleteChat}
+              onClick={() => {
+                handleClose();
+                setTimeout(() => {
+                  handleConfirmDeleteChat();
+                }, 200);
+              }}
             >
               Permanently Delete
             </button>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body,
     );
   },
 );
