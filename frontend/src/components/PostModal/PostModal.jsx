@@ -386,7 +386,7 @@ const PostModal = ({
   };
 
   const handleSendComment = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!newComment.trim() || isSubmitting) return;
 
     try {
@@ -406,11 +406,23 @@ const PostModal = ({
 
       setNewComment("");
       setShowEmojiPicker(false);
+      if (commentInputRef.current) {
+        commentInputRef.current.style.height = "20px";
+      }
       setTimeout(scrollToBottom, 50);
     } catch (error) {
       console.error("Error adding comment:", error);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleKeyDownInput = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (newComment.trim() && !isSubmitting) {
+        handleSendComment(e);
+      }
     }
   };
 
@@ -930,6 +942,7 @@ const PostModal = ({
                     e.target.style.height = `${Math.min(e.target.scrollHeight, 100)}px`;
                   }
                 }}
+                onKeyDown={handleKeyDownInput}
                 onFocus={handleFocusCommentInput}
                 disabled={isSubmitting}
                 autoFocus={autoFocusComment}

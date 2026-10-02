@@ -154,6 +154,16 @@ const Sidebar = memo(
                       ) ||
                       socketDeletedChatId === chat._id);
 
+                  const displayPartner = isPartnerDeleted
+                    ? {
+                        ...partner,
+                        username: "Deleted User",
+                        fullName: "Account Deleted",
+                        avatar: "",
+                        isDeleted: true,
+                      }
+                    : partner;
+
                   const isSelected = selectedChat?._id === chat._id;
                   const unreadCount = unreadCounts[chat._id] || 0;
                   const reactionCount = reactionUnreadCounts[chat._id] || 0;
@@ -195,7 +205,7 @@ const Sidebar = memo(
                             </svg>
                           </div>
                         ) : (
-                          <Avatar user={partner} size={42} />
+                          <Avatar user={displayPartner} size={42} />
                         )}
                       </div>
 
@@ -204,8 +214,7 @@ const Sidebar = memo(
                           <span className={styles.chatName}>
                             {chat.isGroupChat
                               ? chat.chatName
-                              : partner?.isDeleted ||
-                                  partner?.username?.startsWith("deleted_user_")
+                              : isPartnerDeleted
                                 ? "Deleted User"
                                 : partner?.username || "Deleted User"}
                           </span>

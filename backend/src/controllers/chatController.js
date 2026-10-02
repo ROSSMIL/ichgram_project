@@ -1,6 +1,7 @@
 import Chat from "../models/chatModel.js";
 import User from "../models/userModel.js";
 import Message from "../models/messageModel.js";
+import Notification from "../models/notificationModel.js";
 
 const getUserId = (req) => {
   return (
@@ -9,6 +10,48 @@ const getUserId = (req) => {
     req.user?.id ||
     (typeof req.user === "string" ? req.user : null)
   );
+};
+
+const createAndSendGroupNotification = async (
+  req,
+  { recipients, senderId, targetUserId, chatId, systemAction, messageText },
+) => {
+  try {
+    const io = req.app.get("io");
+
+    const notificationsToCreate = recipients
+      .filter((rId) => rId && rId.toString() !== senderId.toString())
+      .map((rId) => ({
+        recipient: rId,
+        sender: senderId,
+        targetUser: targetUserId || null,
+        type: "group_system",
+        systemAction,
+        chat: chatId,
+        messageText,
+        isRead: false,
+      }));
+
+    if (notificationsToCreate.length === 0) return;
+
+    const createdNotifs = await Notification.insertMany(notificationsToCreate);
+
+    if (io) {
+      for (const notif of createdNotifs) {
+        const populatedNotif = await Notification.findById(notif._id)
+          .populate("sender", "username avatar fullName")
+          .populate("targetUser", "username avatar fullName")
+          .populate("chat", "chatName isGroupChat");
+
+        io.to(notif.recipient.toString()).emit(
+          "new notification",
+          populatedNotif,
+        );
+      }
+    }
+  } catch (err) {
+    console.error("Error creating group system notification:", err);
+  }
 };
 
 const createAndSendSystemMessage = async (req, chatId, content) => {
@@ -218,9 +261,9 @@ export const createGroupChat = async (req, res) => {
       : req.body.users;
 
   if (users.length < 2) {
-    return res
-      .status(400)
-      .json({ message: "More than 2 users are required to form a group chat" });
+    return res.status(400).json({
+      message: "More than 2 users are required to form a group chat",
+    });
   }
 
   users.push(currentUserId);
@@ -242,6 +285,15 @@ export const createGroupChat = async (req, res) => {
       groupChat._id,
       `${creatorName} created group "${req.body.name}"`,
     );
+
+    await createAndSendGroupNotification(req, {
+      recipients: users,
+      senderId: currentUserId,
+      targetUserId: null,
+      chatId: groupChat._id,
+      systemAction: "created",
+      messageText: `created group "${req.body.name}"`,
+    });
 
     const fullGroupChat = await Chat.findOne({ _id: groupChat._id })
       .populate("users", "-password")
@@ -295,6 +347,15 @@ export const renameGroup = async (req, res) => {
       chatId,
       `${adminName} changed the group name to "${chatName}"`,
     );
+
+    await createAndSendGroupNotification(req, {
+      recipients: updatedChat.users.map((u) => u._id || u),
+      senderId: currentUserId,
+      targetUserId: null,
+      chatId: chatId,
+      systemAction: "renamed",
+      messageText: `changed group name to "${chatName}"`,
+    });
 
     const io = req.app.get("io");
     if (io && updatedChat.users) {
@@ -352,6 +413,15 @@ export const addToGroup = async (req, res) => {
       chatId,
       `${addedName} was added to the group`,
     );
+
+    await createAndSendGroupNotification(req, {
+      recipients: added.users.map((u) => u._id || u),
+      senderId: currentUserId,
+      targetUserId: userId,
+      chatId: chatId,
+      systemAction: "added",
+      messageText: `added ${addedName} to the group`,
+    });
 
     const io = req.app.get("io");
     if (io && added.users) {
@@ -421,6 +491,21 @@ export const removeFromGroup = async (req, res) => {
 
     await createAndSendSystemMessage(req, chatId, systemText);
 
+    const recipients = isSelfLeave
+      ? removed.users.map((u) => u._id || u)
+      : [...removed.users.map((u) => u._id || u), userId];
+
+    await createAndSendGroupNotification(req, {
+      recipients,
+      senderId: currentUserId,
+      targetUserId: isSelfLeave ? null : userId,
+      chatId,
+      systemAction: isSelfLeave ? "left" : "removed",
+      messageText: isSelfLeave
+        ? "left the group"
+        : `removed ${targetName} from the group`,
+    });
+
     const chatObj = removed.toObject();
     if (chatObj.users) {
       chatObj.users = chatObj.users.map((u) => {
@@ -454,7 +539,6 @@ export const removeFromGroup = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 export const deleteChat = async (req, res) => {
   const { chatId } = req.params;
   const currentUserId = getUserId(req);
@@ -471,13 +555,22 @@ export const deleteChat = async (req, res) => {
       chat.isGroupChat &&
       chat.groupAdmin.toString() === currentUserId.toString()
     ) {
-      await Message.deleteMany({ chat: chatId });
-      await Chat.findByIdAndDelete(chatId);
-
       const usersToNotify = [
         ...chat.users.map((u) => u.toString()),
         ...(chat.leftUsers || []).map((u) => u.toString()),
       ];
+
+      await createAndSendGroupNotification(req, {
+        recipients: usersToNotify,
+        senderId: currentUserId,
+        targetUserId: null,
+        chatId: chatId,
+        systemAction: "deleted",
+        messageText: `deleted group "${chat.chatName || "Group Chat"}"`,
+      });
+
+      await Message.deleteMany({ chat: chatId });
+      await Chat.findByIdAndDelete(chatId);
 
       if (io) {
         usersToNotify.forEach((uId) => {

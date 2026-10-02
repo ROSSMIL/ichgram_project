@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import API from "../../api/axios";
 import styles from "./EditProfilePage.module.css";
 import Avatar from "../../components/Avatar/Avatar";
 import AvatarViewModal from "../../components/AvatarViewModal/AvatarViewModal";
+import { SocketContext } from "../../context/SocketContextInstance";
 
 const SEEDED_EMAILS = [
   "hub@itcareer.com",
@@ -34,6 +35,7 @@ const SEEDED_USERNAMES = [
 
 const EditProfilePage = () => {
   const navigate = useNavigate();
+  const { socket } = useContext(SocketContext);
 
   const [formData, setFormData] = useState({
     username: "",
@@ -191,11 +193,15 @@ const EditProfilePage = () => {
       setLoading(false);
     }
   };
-
   const handleDeleteConfirm = async () => {
     if (isSeeded) return;
 
     setDeleteLoading(true);
+
+    if (socket) {
+      socket.disconnect();
+    }
+
     try {
       const token = localStorage.getItem("token");
       await API.delete("/api/users/profile", {
@@ -208,7 +214,14 @@ const EditProfilePage = () => {
       window.dispatchEvent(new CustomEvent("auth:logout"));
       window.dispatchEvent(new Event("profileUpdated"));
 
-      navigate("/login");
+      setIsDeleteModalClosing(true);
+
+      setTimeout(() => {
+        setIsDeleteModalOpen(false);
+        setIsDeleteModalClosing(false);
+
+        navigate("/login", { state: { accountDeleted: true }, replace: true });
+      }, 200);
     } catch (error) {
       console.error("Delete account error:", error);
       setMessage({

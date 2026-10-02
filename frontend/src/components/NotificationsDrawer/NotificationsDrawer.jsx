@@ -161,17 +161,67 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
     if (!socket) return;
 
     const handleNewNotif = (newNotif) => {
-      if (newNotif.type === "message") return;
+      if (
+        newNotif.type === "message" ||
+        newNotif.type === "group_system" ||
+        newNotif.type === "message_reaction"
+      ) {
+        return;
+      }
+
       const incomingNotif = {
         ...newNotif,
         isRead: false,
       };
-      setNotifications((prev) => [incomingNotif, ...prev]);
+
+      setNotifications((prev) => {
+        const filtered = prev.filter((item) => {
+          if (item._id && incomingNotif._id && item._id === incomingNotif._id) {
+            return false;
+          }
+          if (
+            item.type === "follow" &&
+            incomingNotif.type === "follow" &&
+            (item.sender?._id || item.sender)?.toString() ===
+              (incomingNotif.sender?._id || incomingNotif.sender)?.toString()
+          ) {
+            return false;
+          }
+          return true;
+        });
+
+        return [incomingNotif, ...filtered];
+      });
+    };
+
+    const handleNotifDeleted = (data) => {
+      setNotifications((prev) =>
+        prev.filter((item) => {
+          if (
+            data?.notificationId &&
+            item._id?.toString() === data.notificationId.toString()
+          ) {
+            return false;
+          }
+          if (
+            data?.type === "follow" &&
+            item.type === "follow" &&
+            (item.sender?._id || item.sender)?.toString() ===
+              data.senderId?.toString()
+          ) {
+            return false;
+          }
+          return true;
+        }),
+      );
     };
 
     socket.on("new notification", handleNewNotif);
+    socket.on("notification deleted", handleNotifDeleted);
+
     return () => {
       socket.off("new notification", handleNewNotif);
+      socket.off("notification deleted", handleNotifDeleted);
     };
   }, [socket]);
 
@@ -250,7 +300,14 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
   };
 
   const filteredNotifications = notifications.filter((item) => {
-    if (item.type === "message") return false;
+    if (
+      item.type === "message" ||
+      item.type === "group_system" ||
+      item.type === "message_reaction"
+    ) {
+      return false;
+    }
+
     if (activeTab === "follows") return item.type === "follow";
     if (activeTab === "comments") return item.type === "comment";
     if (activeTab === "interactions")

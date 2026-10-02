@@ -112,7 +112,11 @@ const ActivityWidget = () => {
 
   useEffect(() => {
     const handleClearAllMessages = () => {
-      setActivities((prev) => prev.filter((item) => item.type !== "message"));
+      setActivities((prev) =>
+        prev.filter(
+          (item) => item.type !== "message" && item.type !== "group_system",
+        ),
+      );
       window.dispatchEvent(new CustomEvent("unreadCountsUpdated"));
     };
 
@@ -195,7 +199,7 @@ const ActivityWidget = () => {
 
       if (
         isMessagesPage &&
-        newNotif.type === "message" &&
+        (newNotif.type === "message" || newNotif.type === "group_system") &&
         currentOpenChatId &&
         currentOpenChatId.toString() === incomingChatId
       ) {
@@ -226,42 +230,73 @@ const ActivityWidget = () => {
     };
 
     const handleNotificationDeleted = (data) => {
-      setActivities((prev) =>
-        prev.filter((item) => {
-          if (data.notificationId && item._id === data.notificationId) {
+      setActivities((prev) => {
+        let removed = false;
+
+        return prev.filter((item) => {
+          if (removed) return true;
+
+          if (
+            data?.notificationId &&
+            item._id?.toString() === data.notificationId.toString()
+          ) {
+            removed = true;
             return false;
           }
 
           if (
-            data.type &&
-            item.type === data.type &&
-            data.senderId &&
+            data?.type === "follow" &&
+            item.type === "follow" &&
+            data?.senderId &&
             (item.sender?._id || item.sender)?.toString() ===
               data.senderId.toString()
           ) {
-            if (data.postId) {
-              const itemPostId = (item.post?._id || item.post)?.toString();
-              if (itemPostId === data.postId.toString()) return false;
-            } else if (data.chatId) {
-              const itemChatId = (item.chat?._id || item.chat)?.toString();
-              if (itemChatId === data.chatId.toString()) return false;
-            } else if (data.type === "follow") {
-              return false;
+            removed = true;
+            return false;
+          }
+
+          if (
+            (data?.type === "message_reaction" ||
+              item.type === "message_reaction") &&
+            data?.chatId &&
+            (item.chat?._id || item.chat)?.toString() === data.chatId.toString()
+          ) {
+            if (data.reactionEmoji && item.reactionEmoji) {
+              if (item.reactionEmoji === data.reactionEmoji) {
+                removed = true;
+                return false;
+              }
+              return true;
             }
+            removed = true;
+            return false;
+          }
+
+          if (
+            data?.type === "message" &&
+            item.type === "message" &&
+            data?.chatId &&
+            (item.chat?._id || item.chat)?.toString() === data.chatId.toString()
+          ) {
+            removed = true;
+            return false;
           }
 
           return true;
-        }),
-      );
+        });
+      });
+
       window.dispatchEvent(new CustomEvent("unreadCountsUpdated"));
     };
 
     socket.on("new notification", handleNewNotif);
     socket.on("notification deleted", handleNotificationDeleted);
+    socket.on("reaction notification removed", handleNotificationDeleted);
 
     return () => {
       socket.off("new notification", handleNewNotif);
       socket.off("notification deleted", handleNotificationDeleted);
+      socket.off("reaction notification removed", handleNotificationDeleted);
       if (ringTimerRef.current) clearTimeout(ringTimerRef.current);
     };
   }, [socket, isMessagesPage, triggerBorderBurst]);
@@ -282,7 +317,11 @@ const ActivityWidget = () => {
             ? `comment_${postId}`
             : type === "message"
               ? `msg_${chatId || senderId}`
-              : `${type}_${senderId}_${item._id}`;
+              : type === "message_reaction"
+                ? `react_${chatId}_${item._id}`
+                : type === "group_system"
+                  ? `group_sys_${chatId}_${item._id}`
+                  : `${type}_${senderId}_${item._id}`;
 
       if (map.has(groupKey)) {
         const existingGroup = map.get(groupKey);
@@ -304,8 +343,11 @@ const ActivityWidget = () => {
         map.set(groupKey, {
           _id: groupKey,
           type: item.type,
+          systemAction: item.systemAction,
+          targetUser: item.targetUser,
           post: item.post,
           chat: item.chat,
+          reactionEmoji: item.reactionEmoji,
           createdAt: item.createdAt,
           items: [item],
           senders: item.sender ? [item.sender] : [],
@@ -353,17 +395,25 @@ const ActivityWidget = () => {
       console.error("Error marking notifications read on click:", err);
     }
 
-    if (group.type === "message") {
+    if (
+      group.type === "message" ||
+      group.type === "group_system" ||
+      group.type === "message_reaction"
+    ) {
       const chatId = group.chat?._id || group.chat;
       const senderId = item.sender?._id || item.sender;
+      const msgId = item.message?._id || item.message || item.messageId;
 
-      navigate("/messages", {
-        state: {
-          openChatId: chatId ? chatId.toString() : null,
-          partnerId: senderId ? senderId.toString() : null,
-        },
-        replace: true,
-      });
+      if (chatId) {
+        navigate("/messages", {
+          state: {
+            openChatId: chatId.toString(),
+            partnerId: senderId ? senderId.toString() : null,
+            targetMessageId: msgId ? msgId.toString() : null,
+          },
+          replace: true,
+        });
+      }
     } else if (group.type === "like" || group.type === "comment") {
       const targetPostId = group.post?._id || group.post;
       if (targetPostId) {
@@ -383,7 +433,7 @@ const ActivityWidget = () => {
     }
   };
 
-  const renderBadgeIcon = (type) => {
+  const renderBadgeIcon = (type, systemAction) => {
     switch (type) {
       case "like":
         return (
@@ -426,16 +476,70 @@ const ActivityWidget = () => {
             </svg>
           </span>
         );
+      case "message_reaction":
+        return (
+          <span className={`${styles.badge} ${styles.badgeLike}`}>
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="m11.645 20.91-.007-.003-.022-.012a15.247 15.247 0 0 1-.383-.218 25.18 25.18 0 0 1-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0 1 12 5.052 5.5 5.5 0 0 1 16.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 0 1-4.244 3.17 15.247 15.247 0 0 1-.383.219l-.022.012-.007.004-.003.001a.752.752 0 0 1-.704 0l-.003-.001Z" />
+            </svg>
+          </span>
+        );
+      case "group_system":
+        return (
+          <span
+            className={`${styles.badge} ${
+              systemAction === "removed" || systemAction === "deleted"
+                ? styles.badgeDanger
+                : styles.badgeGroupSystem
+            }`}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+            >
+              {systemAction === "removed" || systemAction === "deleted" ? (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6h12m-2-5l4 4m0-4l-4 4"
+                />
+              ) : (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                />
+              )}
+            </svg>
+          </span>
+        );
       default:
         return null;
     }
   };
 
   const renderGroupText = (group) => {
-    const { type, senders, count, latestItem, chat } = group;
+    const {
+      type,
+      senders,
+      count,
+      latestItem,
+      chat,
+      systemAction,
+      targetUser,
+      reactionEmoji,
+    } = group;
+
     const primaryUsername = senders[0]?.username || "Someone";
+    const targetUsername = targetUser?.username;
     const isGroupChat = Boolean(chat?.isGroupChat);
-    const groupName = chat?.chatName || "Group Chat";
+    const groupName =
+      chat?.chatName ||
+      latestItem?.messageText ||
+      latestItem?.content ||
+      "Group Chat";
 
     if (type === "like") {
       if (senders.length > 1) {
@@ -508,6 +612,74 @@ const ActivityWidget = () => {
         <>
           <strong>{primaryUsername}</strong>: &quot;
           {latestItem.messageText || latestItem.content || "..."}&quot;
+        </>
+      );
+    }
+
+    if (type === "message_reaction") {
+      const emoji = reactionEmoji || latestItem.reactionEmoji || "❤️";
+      return (
+        <>
+          <strong>{primaryUsername}</strong> reacted {emoji} to your message:
+          &quot;
+          {latestItem.messageText || "..."}&quot;
+        </>
+      );
+    }
+
+    if (type === "group_system") {
+      if (systemAction === "added") {
+        return (
+          <>
+            <strong>{primaryUsername}</strong> added{" "}
+            {targetUsername ? <strong>{targetUsername}</strong> : "you"} to{" "}
+            <strong>{groupName}</strong>
+          </>
+        );
+      }
+      if (systemAction === "removed") {
+        return (
+          <>
+            <strong>{primaryUsername}</strong> removed{" "}
+            {targetUsername ? <strong>{targetUsername}</strong> : "you"} from{" "}
+            <strong>{groupName}</strong>
+          </>
+        );
+      }
+      if (systemAction === "left") {
+        return (
+          <>
+            <strong>{primaryUsername}</strong> left <strong>{groupName}</strong>
+          </>
+        );
+      }
+      if (systemAction === "created") {
+        return (
+          <>
+            <strong>{primaryUsername}</strong> created group{" "}
+            <strong>{groupName}</strong>
+          </>
+        );
+      }
+      if (systemAction === "renamed") {
+        return (
+          <>
+            <strong>{primaryUsername}</strong> changed group name to{" "}
+            <strong>{groupName}</strong>
+          </>
+        );
+      }
+      if (systemAction === "deleted") {
+        return (
+          <>
+            <strong>{primaryUsername}</strong> deleted group{" "}
+            <strong>{groupName}</strong>
+          </>
+        );
+      }
+      return (
+        <>
+          System action in <strong>{groupName}</strong>
         </>
       );
     }
@@ -643,7 +815,7 @@ const ActivityWidget = () => {
                       onClick={() => handleItemClick(group)}
                     >
                       <div className={styles.avatarWrapper}>
-                        {isGroupChat ? (
+                        {isGroupChat && group.type !== "group_system" ? (
                           <div className={styles.groupAvatarBadge}>
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
@@ -677,7 +849,7 @@ const ActivityWidget = () => {
                             <Avatar user={group.senders[0]} size={34} />
                           </Link>
                         )}
-                        {renderBadgeIcon(group.type)}
+                        {renderBadgeIcon(group.type, group.systemAction)}
                       </div>
 
                       <div className={styles.textContent}>

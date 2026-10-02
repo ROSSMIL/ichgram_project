@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { createPortal } from "react-dom";
 import API from "../../api/axios.js";
 import Input from "../../components/Input/Input.jsx";
 import Button from "../../components/Button/Button.jsx";
@@ -18,7 +19,25 @@ const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isGuestLoading, setIsGuestLoading] = useState(false);
 
+  const [showDeletedModal, setShowDeletedModal] = useState(false);
+
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.accountDeleted) {
+      const timer = setTimeout(() => {
+        setShowDeletedModal(true);
+      }, 120); 
+
+      return () => clearTimeout(timer);
+    }
+  }, [location.state]);
+
+  const handleCloseDeletedModal = () => {
+    setShowDeletedModal(false);
+    navigate("/login", { replace: true, state: {} });
+  };
 
   const handleEmailOrUsernameChange = (e) => {
     setEmailOrUsername(e.target.value);
@@ -66,6 +85,7 @@ const LoginPage = () => {
       setIsLoading(false);
     }
   };
+
   const handleGuestLogin = async () => {
     setError("");
     try {
@@ -229,6 +249,54 @@ const LoginPage = () => {
           </p>
         </div>
       </div>
+
+      {showDeletedModal &&
+        createPortal(
+          <div className={styles.modalOverlay}>
+            <div
+              className={styles.confirmModal}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div
+                className={`${styles.modalIconBadge} ${styles.badgeSuccess}`}
+              >
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </div>
+
+              <h3 className={styles.modalTitle}>Account Deleted</h3>
+
+              <p className={styles.modalText}>
+                Your account and personal data have been successfully removed.
+                <span className={styles.infoBoxText}>
+                  We're sad to see you go! You can create a new account anytime
+                  to continue exploring Ichgram.
+                </span>
+              </p>
+
+              <div className={styles.modalActions}>
+                <button
+                  type="button"
+                  className={styles.saveModalBtn}
+                  onClick={handleCloseDeletedModal}
+                >
+                  Got it
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };

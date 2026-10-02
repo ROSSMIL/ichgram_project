@@ -8,7 +8,6 @@ import styles from "./SocketBanner.module.css";
 
 const ENDPOINT = import.meta.env.VITE_SOCKET_URL || "http://localhost:3333";
 
-// Окремий компонент для банера "Connecting to server..." з підтримкою анімації виходу
 const ConnectingBanner = ({ active }) => {
   const [shouldRender, setShouldRender] = useState(active);
   const [isExiting, setIsExiting] = useState(false);
@@ -50,7 +49,6 @@ export const SocketProvider = ({ children }) => {
   const [onlineUsers, setOnlineUsers] = useState({});
   const [isDisconnected, setIsDisconnected] = useState(false);
 
-  // Стейт для банера відновлення (Connection restored!)
   const [showRestored, setShowRestored] = useState(false);
   const [isRestoredExiting, setIsRestoredExiting] = useState(false);
 
@@ -85,11 +83,13 @@ export const SocketProvider = ({ children }) => {
         localStorage.removeItem("token");
         localStorage.removeItem("guest_device_id");
         setCurrentUser(null);
+
+        setIsDisconnected(false);
+        setShowRestored(false);
       }
     }
   }, []);
 
-  // Завантаження профілю
   useEffect(() => {
     let isSubscribed = true;
 
@@ -103,6 +103,9 @@ export const SocketProvider = ({ children }) => {
       queueMicrotask(() => {
         if (isSubscribed) {
           setCurrentUser((prev) => (prev === null ? prev : null));
+
+          setIsDisconnected(false);
+          setShowRestored(false);
         }
       });
     }
@@ -112,7 +115,6 @@ export const SocketProvider = ({ children }) => {
     };
   }, [token, fetchProfile]);
 
-  // Підключення Socket.io
   useEffect(() => {
     if (!token || !currentUser) {
       return;
@@ -173,10 +175,11 @@ export const SocketProvider = ({ children }) => {
       s.off("presence update");
       s.disconnect();
       setSocket(null);
+      setIsDisconnected(false);
+      setShowRestored(false);
     };
   }, [token, currentUser]);
 
-  // Примусове відновлення сокета
   useEffect(() => {
     const handleForceReconnect = async () => {
       await fetchProfile();
@@ -198,7 +201,6 @@ export const SocketProvider = ({ children }) => {
     };
   }, [socket, currentUser, fetchProfile]);
 
-  // Відновлення фокусу
   useEffect(() => {
     const handleFocus = () => {
       if (socket && localStorage.getItem("token")) {
@@ -234,7 +236,6 @@ export const SocketProvider = ({ children }) => {
     return "online";
   }, []);
 
-  // Трекінг активності
   useEffect(() => {
     if (!socket || !currentUser) return;
 
@@ -272,10 +273,8 @@ export const SocketProvider = ({ children }) => {
     >
       {children}
 
-      {/* РЕКОННЕКТ БАНЕР (ізольований підкомпонент) */}
       <ConnectingBanner active={shouldShowDisconnected} />
 
-      {/* ВІДНОВЛЕНО БАНЕР */}
       {showRestored && (
         <div
           className={`${styles.floatingBanner} ${styles.restoredBanner} ${

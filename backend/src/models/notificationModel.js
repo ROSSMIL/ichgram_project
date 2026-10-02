@@ -13,10 +13,27 @@ const notificationSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    targetUser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
     type: {
       type: String,
-      enum: ["like", "comment", "follow", "message"],
+      enum: [
+        "like",
+        "comment",
+        "follow",
+        "message",
+        "group_system",
+        "message_reaction",
+      ],
       required: true,
+    },
+    systemAction: {
+      type: String,
+      enum: ["added", "removed", "left", "created", "renamed", "deleted", null],
+      default: null,
     },
     post: {
       type: mongoose.Schema.Types.ObjectId,
@@ -33,6 +50,10 @@ const notificationSchema = new mongoose.Schema(
       default: "",
     },
     messageText: {
+      type: String,
+      default: "",
+    },
+    reactionEmoji: {
       type: String,
       default: "",
     },

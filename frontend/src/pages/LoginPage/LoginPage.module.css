@@ -410,4 +410,138 @@
   .formBox {
     padding: 1.8rem 1.4rem;
   }
+} 
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.65);
+  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(0px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100000;
+  padding: 20px;
+  box-sizing: border-box;
+  will-change: backdrop-filter, opacity;
+  animation: smoothBlurIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.confirmModal {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  padding: 28px 24px;
+  max-width: 420px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
+  will-change: transform, opacity;
+  animation: smoothPopUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes smoothBlurIn {
+  from {
+    opacity: 0;
+    -webkit-backdrop-filter: blur(0px);
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+}
+
+@keyframes smoothPopUp {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modalIconBadge {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  border: 1px solid;
+}
+
+.badgeSuccess {
+  background-color: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #22c55e;
+}
+
+.modalTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 10px 0;
+}
+
+.modalText {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0 0 24px 0;
+}
+
+.infoBoxText {
+  display: block;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background-color: var(--bg-hover, rgba(255, 255, 255, 0.04));
+  border: 1px dashed var(--border-color);
+  border-radius: 14px;
+  font-size: 12.5px;
+  color: var(--text-primary);
+  line-height: 1.45;
+  text-align: left;
+}
+
+.modalActions {
+  display: flex;
+  width: 100%;
+}
+
+.saveModalBtn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 14px;
+  border: none;
+  background-color: var(--text-primary);
+  color: var(--bg-card);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  transition:
+    transform 0.2s ease,
+    filter 0.2s ease;
+}
+
+.saveModalBtn:hover {
+  transform: scale(1.02);
+  filter: brightness(1.05);
+}
+
+.saveModalBtn:active {
+  transform: scale(0.96);
 }

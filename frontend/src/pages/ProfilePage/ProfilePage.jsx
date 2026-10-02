@@ -211,6 +211,22 @@ const ProfilePage = () => {
     SEEDED_USERNAMES.includes((user?.username || "").toLowerCase()),
   );
 
+  useEffect(() => {
+    const isAnyModalOpen =
+      isSettingsOpen ||
+      Boolean(activeModal) ||
+      isAvatarModalOpen ||
+      Boolean(selectedPost);
+
+    if (isAnyModalOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isSettingsOpen, activeModal, isAvatarModalOpen, selectedPost]);
+
   const handleLogout = useCallback(() => {
     localStorage.removeItem("token");
     navigate("/login");
@@ -802,30 +818,59 @@ const ProfilePage = () => {
             >
               <div className={styles.settingsModalHeader}>
                 <h3>Account Options</h3>
-              </div>
-              <button
-                onClick={handleLogout}
-                className={`${styles.modalAction} ${styles.danger}`}
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+                <button
+                  type="button"
+                  className={styles.closeModalBtn}
+                  onClick={closeSettings}
+                  aria-label="Close modal"
                 >
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                  <polyline points="16 17 21 12 16 7" />
-                  <line x1="21" y1="12" x2="9" y2="12" />
-                </svg>
-                <span>Log out</span>
-              </button>
-              <button onClick={closeSettings} className={styles.modalAction}>
-                Cancel
-              </button>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className={styles.settingsModalBody}>
+                <div className={styles.settingsActionStack}>
+                  <button
+                    onClick={handleLogout}
+                    className={`${styles.modalAction} ${styles.danger}`}
+                  >
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                      <polyline points="16 17 21 12 16 7" />
+                      <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                    <span>Log out</span>
+                  </button>
+
+                  <button
+                    onClick={closeSettings}
+                    className={styles.modalAction}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
             </div>
           </div>,
           document.body,

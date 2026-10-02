@@ -64,6 +64,8 @@ const Sidebar = ({
         setUnreadMessagesCount((prev) =>
           Math.max(0, prev - unreadCountForChat),
         );
+      } else {
+        fetchUnreadCounts();
       }
     };
 
@@ -81,32 +83,52 @@ const Sidebar = ({
   useEffect(() => {
     if (!socket) return;
 
+    const currentUserIdStr = (
+      currentUser?._id ||
+      currentUser?.userId ||
+      currentUser?.id
+    )?.toString();
+
     const handleNewNotif = (newNotif) => {
-      if (newNotif.type === "message") {
-        if (!location.pathname.startsWith("/messages")) {
-          setUnreadMessagesCount((prev) => prev + 1);
-        }
-      } else {
-        if (!isNotificationsOpen) {
-          setUnreadNotifsCount((prev) => prev + 1);
-        }
+      const senderId = (
+        newNotif.sender?._id ||
+        newNotif.sender ||
+        newNotif.userId
+      )?.toString();
+
+      if (senderId && currentUserIdStr && senderId === currentUserIdStr) {
+        return;
       }
+      fetchUnreadCounts();
+    };
+
+    const handleNotifOrMsgDeleted = () => {
+      fetchUnreadCounts();
     };
 
     socket.on("new notification", handleNewNotif);
+    socket.on("notification deleted", handleNotifOrMsgDeleted);
+    socket.on("reaction notification removed", handleNotifOrMsgDeleted);
+    socket.on("chat deleted", handleNotifOrMsgDeleted);
+    socket.on("message deleted", handleNotifOrMsgDeleted);
 
     return () => {
       socket.off("new notification", handleNewNotif);
+      socket.off("notification deleted", handleNotifOrMsgDeleted);
+      socket.off("reaction notification removed", handleNotifOrMsgDeleted);
+      socket.off("chat deleted", handleNotifOrMsgDeleted);
+      socket.off("message deleted", handleNotifOrMsgDeleted);
     };
-  }, [socket, location.pathname, isNotificationsOpen]);
+  }, [socket, fetchUnreadCounts, currentUser]);
 
-  const handleNotificationsClick = () => {
+  const handleNotificationsClick = async () => {
     setUnreadNotifsCount(0);
     onNotificationsToggle();
+    window.dispatchEvent(new CustomEvent("unreadCountsUpdated"));
   };
 
   const handleMessagesClick = () => {
-    window.dispatchEvent(new CustomEvent("clearAllMessageNotifications"));
+    fetchUnreadCounts();
   };
 
   const triggerDashboardRefresh = () => {

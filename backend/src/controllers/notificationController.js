@@ -16,6 +16,7 @@ export const getNotifications = async (req, res) => {
 
     const notifications = await Notification.find(query)
       .populate("sender", "username avatar fullName")
+      .populate("targetUser", "username avatar fullName")
       .populate("post", "url")
       .populate({
         path: "chat",
@@ -104,7 +105,7 @@ export const getUnreadCounts = async (req, res) => {
     const unreadNotifications = await Notification.countDocuments({
       recipient: userObjectId,
       isRead: false,
-      type: { $ne: "message" },
+      type: { $in: ["like", "comment", "follow"] },
     });
 
     const userChats = await Chat.find({ users: userObjectId }).select("_id");
@@ -113,11 +114,19 @@ export const getUnreadCounts = async (req, res) => {
     let unreadMessages = 0;
 
     if (chatIds.length > 0) {
-      unreadMessages = await Message.countDocuments({
+      const unreadMsgsCount = await Message.countDocuments({
         chat: { $in: chatIds },
         sender: { $ne: userObjectId },
         readBy: { $ne: userObjectId },
       });
+
+      const unreadReactionsCount = await Notification.countDocuments({
+        recipient: userObjectId,
+        isRead: false,
+        type: "message_reaction",
+      });
+
+      unreadMessages = unreadMsgsCount + unreadReactionsCount;
     }
 
     res.status(200).json({
@@ -153,23 +162,16 @@ export const deleteNotificationsByChat = async (req, res) => {
       .json({ message: "Server error while deleting chat notifications" });
   }
 };
-
 export const getUnreadCountsByChat = async (req, res) => {
   try {
     const userId = req.user?.userId || req.user?.id || req.user?._id;
-
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
     const userObjectId = new mongoose.Types.ObjectId(userId.toString());
-
     const userChats = await Chat.find({ users: userObjectId }).select("_id");
     const chatIds = userChats.map((c) => c._id);
 
-    if (chatIds.length === 0) {
-      return res.status(200).json({});
-    }
+    if (chatIds.length === 0) return res.status(200).json({});
 
     const unreadMsgs = await Message.aggregate([
       {
@@ -189,14 +191,76 @@ export const getUnreadCountsByChat = async (req, res) => {
 
     const unreadMap = {};
     unreadMsgs.forEach((item) => {
-      if (item._id) {
-        unreadMap[item._id.toString()] = item.count;
-      }
+      if (item._id) unreadMap[item._id.toString()] = item.count;
     });
 
     res.status(200).json(unreadMap);
   } catch (error) {
     console.error("Error fetching unread counts by chat:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const getUnreadReactionsByChat = async (req, res) => {
+  try {
+    const userId = req.user?.userId || req.user?.id || req.user?._id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const userObjectId = new mongoose.Types.ObjectId(userId.toString());
+    const userChats = await Chat.find({ users: userObjectId }).select("_id");
+    const chatIds = userChats.map((c) => c._id);
+
+    if (chatIds.length === 0) return res.status(200).json({});
+
+    const unreadReactions = await Notification.aggregate([
+      {
+        $match: {
+          recipient: userObjectId,
+          isRead: false,
+          type: "message_reaction",
+          chat: { $in: chatIds },
+        },
+      },
+      {
+        $group: {
+          _id: "$chat",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const reactionsMap = {};
+    unreadReactions.forEach((item) => {
+      if (item._id) {
+        reactionsMap[item._id.toString()] = item.count;
+      }
+    });
+
+    res.status(200).json(reactionsMap);
+  } catch (error) {
+    console.error("Error fetching unread reaction counts by chat:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+export const readChatNotifications = async (req, res) => {
+  try {
+    const userId = req.user?.userId || req.user?.id || req.user?._id;
+    const { chatId } = req.params;
+
+    await Notification.updateMany(
+      {
+        recipient: userId,
+        chat: chatId,
+        isRead: false,
+      },
+      { $set: { isRead: true } },
+    );
+
+    res
+      .status(200)
+      .json({ message: "Chat notifications marked as read", chatId });
+  } catch (error) {
+    console.error("Error marking chat notifications as read:", error);
     res.status(500).json({ message: "Server error" });
   }
 };

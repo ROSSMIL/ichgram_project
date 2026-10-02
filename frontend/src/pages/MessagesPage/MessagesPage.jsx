@@ -45,6 +45,7 @@ const MessagesPage = () => {
   const typingBannerTimeoutRef = useRef(null);
 
   const [unreadCounts, setUnreadCounts] = useState({});
+  const [reactionUnreadCounts, setReactionUnreadCounts] = useState({});
   const [socketDeletedChatId, setSocketDeletedChatId] = useState(null);
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editingContent, setEditingContent] = useState("");
@@ -89,6 +90,42 @@ const MessagesPage = () => {
       document.body.style.overflow = "unset";
     };
   }, []);
+
+  const bumpChatToTop = useCallback((chatId, latestMsg = null) => {
+    setChats((prevChats) => {
+      const chatIndex = prevChats.findIndex((c) => c._id === chatId);
+      if (chatIndex === -1) return prevChats;
+
+      const targetChat = { ...prevChats[chatIndex] };
+      if (latestMsg) {
+        targetChat.latestMessage = latestMsg;
+      }
+
+      const updatedList = [...prevChats];
+      updatedList.splice(chatIndex, 1);
+      return [targetChat, ...updatedList];
+    });
+  }, []);
+
+  const fetchUnreadReactions = useCallback(async () => {
+    try {
+      const { data } = await API.get(
+        "/api/notifications/unread-reactions-by-chat",
+      );
+      if (data) {
+        setReactionUnreadCounts(data);
+      }
+    } catch (err) {
+      console.error("Error fetching unread reactions:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("unreadCountsUpdated", fetchUnreadReactions);
+    return () => {
+      window.removeEventListener("unreadCountsUpdated", fetchUnreadReactions);
+    };
+  }, [fetchUnreadReactions]);
 
   useEffect(() => {
     if (typingBannerTimeoutRef.current) {
@@ -245,6 +282,10 @@ const MessagesPage = () => {
 
       if (chat?._id) {
         setUnreadCounts((prev) => ({
+          ...prev,
+          [chat._id]: 0,
+        }));
+        setReactionUnreadCounts((prev) => ({
           ...prev,
           [chat._id]: 0,
         }));
@@ -406,17 +447,24 @@ const MessagesPage = () => {
 
     const loadChatsAndUsers = async () => {
       try {
-        const [chatsRes, usersRes, unreadRes] = await Promise.all([
-          API.get("/api/chat"),
-          API.get("/api/users/search/all"),
-          API.get("/api/notifications/unread-by-chat"),
-        ]);
+        const [chatsRes, usersRes, unreadRes, reactionsUnreadRes] =
+          await Promise.all([
+            API.get("/api/chat"),
+            API.get("/api/users/search/all"),
+            API.get("/api/notifications/unread-by-chat"),
+            API.get("/api/notifications/unread-reactions-by-chat").catch(
+              () => ({ data: {} }),
+            ),
+          ]);
 
         if (isMounted) {
           setChats(chatsRes.data);
           setAllGlobalUsers(usersRes.data);
           if (unreadRes.data) {
             setUnreadCounts(unreadRes.data);
+          }
+          if (reactionsUnreadRes.data) {
+            setReactionUnreadCounts(reactionsUnreadRes.data);
           }
         }
       } catch (err) {
@@ -492,6 +540,11 @@ const MessagesPage = () => {
             [selectedChat._id]: 0,
           }));
 
+          setReactionUnreadCounts((prev) => ({
+            ...prev,
+            [selectedChat._id]: 0,
+          }));
+
           const firstUnread = data.find((msg) => {
             const senderId = (msg.sender?._id || msg.sender)?.toString();
             const isIncoming = senderId !== myIdStr;
@@ -534,6 +587,11 @@ const MessagesPage = () => {
         }
 
         await API.put(`/api/message/mark-read/${selectedChat._id}`);
+        await API.put(`/api/notifications/read-chat/${selectedChat._id}`).catch(
+          () => {},
+        );
+
+        window.dispatchEvent(new CustomEvent("unreadCountsUpdated"));
 
         if (socket) {
           socket.emit("join chat", selectedChat._id);
@@ -602,6 +660,10 @@ const MessagesPage = () => {
         newMessageReceived.chat?._id || newMessageReceived.chat
       )?.toString();
 
+      if (incomingChatId) {
+        bumpChatToTop(incomingChatId, newMessageReceived);
+      }
+
       if (activeChat && activeChat._id.toString() === incomingChatId) {
         const container = messagesContainerRef.current;
         let isUserAtBottom = true;
@@ -648,15 +710,51 @@ const MessagesPage = () => {
           }));
         }
       }
-
-      refreshChats();
     };
 
+    const handleNewNotification = (notif) => {
+      const chatId = (notif.chat?._id || notif.chat)?.toString();
+      if (!chatId) return;
+
+      bumpChatToTop(chatId);
+
+      if (notif.type === "message_reaction") {
+        const activeChat = selectedChatRef.current;
+        if (activeChat && activeChat._id.toString() === chatId) {
+          API.put(`/api/notifications/read-chat/${chatId}`).catch(() => {});
+        } else {
+          setReactionUnreadCounts((prev) => ({
+            ...prev,
+            [chatId]: (prev[chatId] || 0) + 1,
+          }));
+        }
+      }
+    };
+
+    const handleNotificationDeleted = (data) => {
+      if (data?.chatId) {
+        setReactionUnreadCounts((prev) => {
+          const currentCount = prev[data.chatId];
+          if (!currentCount || currentCount <= 0) return prev; 
+
+          return {
+            ...prev,
+            [data.chatId]: Math.max(0, currentCount - 1),
+          };
+        });
+      } else {
+        fetchUnreadReactions();
+      }
+    };
     const handleMessageReaction = (updatedMessage) => {
       const activeChat = selectedChatRef.current;
       const incomingChatId = (
         updatedMessage.chat?._id || updatedMessage.chat
       )?.toString();
+
+      if (incomingChatId) {
+        bumpChatToTop(incomingChatId);
+      }
 
       if (activeChat && activeChat._id.toString() === incomingChatId) {
         setMessages((prev) =>
@@ -664,9 +762,21 @@ const MessagesPage = () => {
             msg._id === updatedMessage._id ? updatedMessage : msg,
           ),
         );
+
+        API.put(`/api/notifications/read-chat/${activeChat._id}`)
+          .then(() => {
+            setReactionUnreadCounts((prev) => ({
+              ...prev,
+              [activeChat._id]: 0,
+            }));
+            window.dispatchEvent(new CustomEvent("unreadCountsUpdated"));
+          })
+          .catch(() => {});
+      } else {
+        
+        fetchUnreadReactions();
       }
     };
-
     const handleMessageEdited = (updatedMessage) => {
       const activeChat = selectedChatRef.current;
       const incomingChatId = (
@@ -845,6 +955,8 @@ const MessagesPage = () => {
     socket.on("chat created", handleChatCreated);
     socket.on("group updated", handleGroupUpdated);
     socket.on("message received", handleMessageReceived);
+    socket.on("new notification", handleNewNotification);
+    socket.on("notification deleted", handleNotificationDeleted);
     socket.on("message reaction", handleMessageReaction);
     socket.on("message edited", handleMessageEdited);
     socket.on("message deleted", handleMessageDeleted);
@@ -859,6 +971,8 @@ const MessagesPage = () => {
       socket.off("chat created", handleChatCreated);
       socket.off("group updated", handleGroupUpdated);
       socket.off("message received", handleMessageReceived);
+      socket.off("new notification", handleNewNotification);
+      socket.off("notification deleted", handleNotificationDeleted);
       socket.off("message reaction", handleMessageReaction);
       socket.off("message edited", handleMessageEdited);
       socket.off("message deleted", handleMessageDeleted);
@@ -869,7 +983,14 @@ const MessagesPage = () => {
       socket.off("stop typing", handleStopTyping);
       socket.off("user account deleted", handleUserAccountDeleted);
     };
-  }, [socket, myId, myIdStr, refreshChats]);
+  }, [
+    socket,
+    myId,
+    myIdStr,
+    bumpChatToTop,
+    refreshChats,
+    fetchUnreadReactions,
+  ]);
 
   const handleConfirmHideChat = async () => {
     if (!selectedChat) return;
@@ -1108,6 +1229,8 @@ const MessagesPage = () => {
       });
     }
 
+    bumpChatToTop(selectedChat._id, optimisticMessage);
+
     try {
       const { data } = await API.post("/api/message", {
         content: messageContent,
@@ -1126,11 +1249,7 @@ const MessagesPage = () => {
         ),
       );
 
-      setChats((prevChats) =>
-        prevChats.map((c) =>
-          c._id === selectedChat._id ? { ...c, latestMessage: data } : c,
-        ),
-      );
+      bumpChatToTop(selectedChat._id, data);
     } catch (err) {
       console.error("Error sending message:", err);
       setMessages((prev) => prev.filter((msg) => msg._id !== tempId));
@@ -1480,6 +1599,7 @@ const MessagesPage = () => {
 
       <Sidebar
         selectedChat={selectedChat}
+        currentUser={currentUser}
         loadingChats={loadingChats}
         isSearchingUsers={isSearchingUsers}
         sidebarSearch={sidebarSearch}
@@ -1487,6 +1607,7 @@ const MessagesPage = () => {
         filteredChats={filteredChats}
         filteredGlobalUsers={filteredGlobalUsers}
         unreadCounts={unreadCounts}
+        reactionUnreadCounts={reactionUnreadCounts}
         socketDeletedChatId={socketDeletedChatId}
         getChatSender={getChatSender}
         handleSelectChat={handleSelectChat}

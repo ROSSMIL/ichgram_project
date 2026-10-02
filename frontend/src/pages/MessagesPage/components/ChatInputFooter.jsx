@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useRef, useEffect } from "react";
 import PropTypes from "prop-types";
 import styles from "../MessagesPage.module.css";
 
@@ -13,6 +13,33 @@ const ChatInputFooter = memo(
     handleTypingInput,
     handleInputKeyDown,
   }) => {
+    const textareaRef = useRef(null);
+
+    useEffect(() => {
+      if (textareaRef.current) {
+        if (!newMessage) {
+          textareaRef.current.style.height = "auto";
+        } else {
+          textareaRef.current.style.height = "auto";
+          textareaRef.current.style.height = `${Math.min(
+            textareaRef.current.scrollHeight,
+            120,
+          )}px`;
+        }
+      }
+    }, [newMessage]);
+
+    const onKeyDown = (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (newMessage.trim()) {
+          handleSendMessage(e);
+        }
+      } else if (handleInputKeyDown) {
+        handleInputKeyDown(e);
+      }
+    };
+
     if (isPartnerAccountDeleted) {
       return (
         <div className={styles.deletedNoticeBanner}>
@@ -93,13 +120,15 @@ const ChatInputFooter = memo(
     return (
       <form className={styles.inputFooter} onSubmit={handleSendMessage}>
         <div className={styles.inputPill}>
-          <input
-            type="text"
+          <textarea
+            ref={textareaRef}
+            rows={1}
             placeholder="Write a message..."
             value={newMessage}
             onChange={handleTypingInput}
-            onKeyDown={handleInputKeyDown}
+            onKeyDown={onKeyDown}
             className={styles.commentInput}
+            style={{ resize: "none" }}
           />
 
           <button

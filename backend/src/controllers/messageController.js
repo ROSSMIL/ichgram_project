@@ -198,18 +198,20 @@ export const deleteMessage = async (req, res) => {
       chat: chatId,
       sender: userId,
       type: "message",
-      messageText: message.content,
-    });
+      isRead: false,
+    }).sort({ createdAt: -1 });
 
     if (io && message.chat?.users) {
       message.chat.users.forEach((recipientUser) => {
         const recipientId = (recipientUser._id || recipientUser).toString();
         if (recipientId !== userId.toString()) {
           io.to(recipientId).emit("notification deleted", {
-            notificationId: deletedNotif?._id,
+            notificationId: deletedNotif?._id
+              ? deletedNotif._id.toString()
+              : null,
             type: "message",
-            senderId: userId,
-            chatId: chatId,
+            senderId: userId.toString(),
+            chatId: chatId.toString(),
           });
         }
       });
@@ -339,6 +341,53 @@ export const toggleReaction = async (req, res) => {
           select: "username avatar fullName email isDeleted",
         },
       });
+
+    const currentUserIdStr = userId.toString();
+    const chatId = (message.chat?._id || message.chat)?.toString();
+    const messageSenderId = (message.sender?._id || message.sender)?.toString();
+    const io = req.app.get("io");
+
+    if (messageSenderId && messageSenderId !== currentUserIdStr) {
+      if (!userAlreadyHadThisEmoji) {
+        const newNotif = await Notification.create({
+          recipient: messageSenderId,
+          sender: currentUserIdStr,
+          type: "message_reaction",
+          chat: chatId,
+          reactionEmoji: emoji,
+          messageText: message.content || "message",
+          isRead: false,
+        });
+
+        const populatedNotif = await Notification.findById(newNotif._id)
+          .populate("sender", "username avatar fullName")
+          .populate("chat", "chatName isGroupChat");
+
+        if (io) {
+          io.to(messageSenderId).emit("new notification", populatedNotif);
+        }
+      } else {
+        const deletedNotif = await Notification.findOneAndDelete({
+          recipient: messageSenderId,
+          sender: currentUserIdStr,
+          type: "message_reaction",
+          chat: chatId,
+          reactionEmoji: emoji,
+        });
+
+        if (io) {
+          io.to(messageSenderId).emit("notification deleted", {
+            notificationId: deletedNotif?._id
+              ? deletedNotif._id.toString()
+              : null,
+            type: "message_reaction",
+            senderId: currentUserIdStr,
+            chatId: chatId,
+            reactionEmoji: emoji,
+          });
+        }
+      }
+    }
 
     return res.status(200).json(updatedMessage);
   } catch (error) {

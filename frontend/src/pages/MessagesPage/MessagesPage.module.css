@@ -3520,4 +3520,39 @@
 
 .memberUserLink:hover .selectUsername {
   color: var(--link-color, #0095f6);
+} 
+.badgesWrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.reactionBadgeCounter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 21px;
+  height: 21px;
+  padding: 0 6px;
+  background: linear-gradient(135deg, #ff2a6d 0%, #e0004d 100%);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(255, 42, 109, 0.4);
+  will-change: transform, opacity;
+  animation: badgePop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.chatItem:hover .reactionBadgeCounter {
+  transform: scale(1.08);
+  box-shadow: 0 4px 12px rgba(255, 42, 109, 0.55);
+}
+
+.chatItem:active .reactionBadgeCounter {
+  transform: scale(0.92);
 }

@@ -188,7 +188,6 @@ export const getAllUsers = async (req, res) => {
       .json({ message: "Server error while fetching users" });
   }
 };
-
 export const toggleFollow = async (req, res) => {
   try {
     const currentUserId = req.user?.userId || req.user?.id || req.user?._id;
@@ -230,7 +229,7 @@ export const toggleFollow = async (req, res) => {
         (id) => id !== targetUserId.toString(),
       );
 
-      await Notification.findOneAndDelete({
+      const deletedNotif = await Notification.findOneAndDelete({
         recipient: targetUserId,
         sender: currentUserId,
         type: "follow",
@@ -238,8 +237,11 @@ export const toggleFollow = async (req, res) => {
 
       if (io) {
         io.to(targetUserId.toString()).emit("notification deleted", {
+          notificationId: deletedNotif?._id
+            ? deletedNotif._id.toString()
+            : null,
           type: "follow",
-          senderId: currentUserId,
+          senderId: currentUserId.toString(),
         });
       }
     } else {
@@ -247,6 +249,12 @@ export const toggleFollow = async (req, res) => {
       cleanFollowing.push(targetUserId.toString());
       targetUser.followers = cleanFollowers;
       currentUser.following = cleanFollowing;
+
+      await Notification.deleteMany({
+        recipient: targetUserId,
+        sender: currentUserId,
+        type: "follow",
+      });
 
       const notif = await Notification.create({
         recipient: targetUserId,
