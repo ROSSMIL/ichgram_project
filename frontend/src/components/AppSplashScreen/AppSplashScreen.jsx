@@ -51,7 +51,6 @@ const AppSplashScreen = ({
 }) => {
   const [shouldRender, setShouldRender] = useState(true);
   const [isLeaving, setIsLeaving] = useState(false);
-
   const [showHints, setShowHints] = useState(testMode);
 
   useEffect(() => {
@@ -65,20 +64,30 @@ const AppSplashScreen = ({
   }, [testMode]);
 
   useEffect(() => {
-    if (testMode || !isFinished) return;
+    if (testMode) return;
 
-    const animationFrame = requestAnimationFrame(() => {
+    let timer;
+    let fallbackTimer;
+
+    const dismissSplash = () => {
       setIsLeaving(true);
-    });
+      timer = setTimeout(() => {
+        setShouldRender(false);
+        if (onAnimationComplete) onAnimationComplete();
+      }, 600);
+    };
 
-    const timer = setTimeout(() => {
-      setShouldRender(false);
-      if (onAnimationComplete) onAnimationComplete();
-    }, 600);
+    if (isFinished) {
+      dismissSplash();
+    } else {
+      fallbackTimer = setTimeout(() => {
+        dismissSplash();
+      }, 9000);
+    }
 
     return () => {
-      cancelAnimationFrame(animationFrame);
       clearTimeout(timer);
+      clearTimeout(fallbackTimer);
     };
   }, [isFinished, onAnimationComplete, testMode]);
 

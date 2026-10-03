@@ -15,3 +15,7 @@ Thumbs.db
 # Environment variables 
 .env
 .env.local
+
+# AI Context Pack
+repomix-output.xml
+repomix-output.md

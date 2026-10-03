@@ -83,6 +83,25 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  transform-style: preserve-3d;
+  animation: orbitRotate 7s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+}
+
+@keyframes orbitRotate {
+  0%,
+  38% {
+    transform: rotate(0deg);
+  }
+  40% {
+    transform: rotate(0deg);
+  }
+  70% {
+    transform: rotate(360deg);
+  }
+  72%,
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .orbitChar {
@@ -92,6 +111,7 @@
   font-weight: 400;
   color: var(--text-primary, #ffffff);
   user-select: none;
+  backface-visibility: hidden;
   will-change: transform, opacity, filter;
   text-shadow: 0 4px 18px rgba(255, 255, 255, 0.15);
 
@@ -117,8 +137,8 @@
   }
 
   70% {
-    transform: rotate(calc(var(--angle) + 360deg)) translateY(-55px)
-      rotate(calc(-1 * (var(--angle) + 360deg))) scale(0.95);
+    transform: rotate(var(--angle)) translateY(-55px)
+      rotate(calc(-1 * var(--angle) - 360deg)) scale(0.95);
   }
 
   82% {
@@ -132,18 +152,19 @@
 
 .cornerHintsWrapper {
   position: absolute;
-  bottom: 28px;
-  right: 28px;
-  width: 100%;
-  max-width: 340px;
+  bottom: clamp(20px, 3vh, 36px);
+  right: clamp(20px, 3vw, 36px);
+  left: auto;
+  transform: none;
+  width: clamp(280px, 25vw, 360px);
   z-index: 10;
-  animation: fadeInHint 0.4s ease-out forwards;
+  animation: fadeInHintDesktop 0.4s ease-out forwards;
 }
 
-@keyframes fadeInHint {
+@keyframes fadeInHintDesktop {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -153,14 +174,63 @@
 
 @media (max-width: 600px) {
   .orbitChar {
-    font-size: 30px;
+    font-size: 28px;
+  }
+
+  @keyframes seamlessLogoMorph {
+    0% {
+      transform: translate(calc(var(--x-offset) * 0.75), 0px) rotate(0deg)
+        scale(1);
+      filter: blur(0px);
+    }
+
+    18% {
+      transform: translate(calc(var(--x-offset) * 0.75), -3px) rotate(0deg)
+        scale(1.02);
+    }
+    28% {
+      transform: translate(calc(var(--x-offset) * 0.75), 0px) rotate(0deg)
+        scale(1);
+    }
+
+    40% {
+      transform: rotate(var(--angle)) translateY(-42px)
+        rotate(calc(-1 * var(--angle))) scale(0.95);
+    }
+
+    70% {
+      transform: rotate(var(--angle)) translateY(-42px)
+        rotate(calc(-1 * var(--angle) - 360deg)) scale(0.95);
+    }
+
+    82% {
+      transform: translate(calc(var(--x-offset) * 0.75), 0px) rotate(0deg)
+        scale(1);
+      filter: blur(0px);
+    }
+    100% {
+      transform: translate(calc(var(--x-offset) * 0.75), 0px) rotate(0deg)
+        scale(1);
+    }
   }
 
   .cornerHintsWrapper {
-    bottom: 20px;
-    right: 50%;
-    transform: translateX(50%);
-    width: calc(100% - 40px);
-    max-width: 360px;
+    bottom: clamp(16px, 4vh, 24px);
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: min(calc(100vw - 32px), 340px);
+    animation: fadeInHintMobile 0.4s ease-out forwards;
+  }
+
+  @keyframes fadeInHintMobile {
+    from {
+      opacity: 0;
+      transform: translate(-50%, 12px);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
   }
 }

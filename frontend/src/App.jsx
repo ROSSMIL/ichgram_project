@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -80,6 +80,7 @@ const ProtectedRoute = ({ children }) => {
       setEditingPost(null);
       setIsCreateModalOpen(true);
     };
+
     const handleOpenPostModal = async (e) => {
       const { postId, post, focusComment } = e.detail || {};
       const isMobile = window.innerWidth <= 768;
@@ -226,6 +227,12 @@ function App() {
   const [isServerError, setIsServerError] = useState(false);
   const [retryTrigger, setRetryTrigger] = useState(0);
 
+  const isAppReadyRef = useRef(isAppReady);
+
+  useEffect(() => {
+    isAppReadyRef.current = isAppReady;
+  }, [isAppReady]);
+
   useEffect(() => {
     const handleGlobalMaintenance = () => {
       setIsServerError(true);
@@ -246,14 +253,13 @@ function App() {
 
     const runHealthCheck = async () => {
       const token = localStorage.getItem("token");
-
       const minDisplayTime = new Promise((resolve) =>
         setTimeout(resolve, 1200),
       );
 
       try {
         if (token) {
-          await API.get("/api/users/profile");
+          await API.get("/api/users/profile", { timeout: 6000 });
         }
       } catch (e) {
         console.warn("Server warmup check error:", e);
@@ -277,8 +283,17 @@ function App() {
 
     runHealthCheck();
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && !isAppReadyRef.current) {
+        runHealthCheck();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       isMounted = false;
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [retryTrigger]);
 
