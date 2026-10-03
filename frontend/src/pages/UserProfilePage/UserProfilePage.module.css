@@ -662,44 +662,189 @@
   justify-content: center;
   align-items: center;
   width: 100%;
-  padding: 80px 20px;
+  padding: 0px 16px 60px 16px;
+  box-sizing: border-box;
 }
 
-.noPostsContainer {
+.noPostsCard {
+  width: 100%;
+  max-width: 440px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 28px;
+  padding: 40px 28px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  max-width: 400px;
-  margin: 0 auto;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  box-sizing: border-box;
+
+  animation: emptyProfileCardFadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity, border-color, box-shadow;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease,
+    transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.cameraIconWrapper {
+.noPostsCard:hover {
+  border-color: var(--text-secondary);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.24);
+  transform: translateY(-2px);
+}
+
+@keyframes emptyProfileCardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.noPostsIconWrapper {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 22px;
+  background-color: var(--bg-hover, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--border-color);
   display: flex;
-  justify-content: center;
   align-items: center;
-  width: 82px;
-  height: 82px;
-  border: 2px solid var(--text-primary);
-  border-radius: 50%;
-  margin-bottom: 22px;
+  justify-content: center;
   color: var(--text-primary);
+  margin-bottom: 20px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+  transition:
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-color 0.3s ease;
+}
+
+.noPostsIconPulse {
+  position: absolute;
+  inset: -4px;
+  border-radius: 26px;
+  border: 1.5px solid var(--text-primary);
+  opacity: 0;
+  transform: scale(0.85);
+  pointer-events: none;
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.noPostsCard:hover .noPostsIconWrapper {
+  transform: scale(1.08) rotate(-5deg);
+  border-color: var(--text-secondary);
+}
+
+.noPostsCard:hover .noPostsIconPulse {
+  opacity: 0.15;
+  transform: scale(1.05);
 }
 
 .noPostsTitle {
   font-size: 32px;
   font-weight: 800;
   line-height: 36px;
-  margin: 0 0 12px 0;
   color: var(--text-primary);
+  margin: 0 0 12px 0;
+  letter-spacing: -0.5px;
+  text-align: center;
 }
 
 .noPostsSubtitle {
-  font-size: 15px;
-  font-weight: 400;
-  line-height: 20px;
+  font-size: 14px;
+  line-height: 1.5;
   color: var(--text-secondary);
-  margin: 0;
+  margin: 0 0 24px 0;
+  max-width: 340px;
+  font-weight: 400;
+}
+
+.emptyCardActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  justify-content: center;
+}
+
+.emptyFollowBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: var(--link-color, #0095f6);
+  color: #ffffff;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  padding: 11px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 149, 246, 0.25);
+  will-change: transform, background-color, box-shadow;
+  transition:
+    background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.15s ease,
+    box-shadow 0.25s ease;
+}
+
+.emptyFollowBtn:hover {
+  background-color: var(--link-hover, #00376b);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(0, 149, 246, 0.35);
+}
+
+.emptyFollowBtn:active {
+  transform: scale(0.96) translateY(0);
+  box-shadow: none;
+}
+
+.emptyFollowBtn.followingActive {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  box-shadow: none;
+}
+
+.emptyFollowBtn.followingActive:hover {
+  background-color: rgba(237, 73, 86, 0.1);
+  border-color: rgba(237, 73, 86, 0.4);
+  color: #ed4956;
+}
+
+@media (max-width: 768px) {
+  .emptyGridWrapper {
+    padding: 16px 10px 40px 10px;
+  }
+
+  .noPostsCard {
+    padding: 30px 18px;
+    border-radius: 22px;
+  }
+
+  .noPostsTitle {
+    font-size: 24px;
+    line-height: 28px;
+  }
+
+  .noPostsSubtitle {
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+
+  .emptyFollowBtn {
+    width: 100%;
+  }
 }
 
 .modalOverlay {

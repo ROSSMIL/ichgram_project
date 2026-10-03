@@ -963,41 +963,75 @@ const UserProfilePage = () => {
             />
           ))
         ) : (
-          <div className={styles.noPostsContainer}>
-            <div className={styles.cameraIconWrapper}>
+          <div className={styles.noPostsCard}>
+            <div className={styles.noPostsIconWrapper}>
+              <div className={styles.noPostsIconPulse} />
               <svg
-                aria-label="Camera"
-                color="currentColor"
-                fill="currentColor"
-                height="44"
-                role="img"
+                width="32"
+                height="32"
                 viewBox="0 0 24 24"
-                width="44"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                <circle
-                  cx="12.001"
-                  cy="12.005"
-                  fill="none"
-                  r="4.3"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                />
-                <path
-                  d="M19.336 10.425a1.895 1.895 0 1 1-1.896-1.897 1.896 1.896 0 0 1 1.896 1.897ZM5.65 7.424l.951-2.28a1.91 1.91 0 0 1 1.758-1.144h7.284a1.91 1.91 0 0 1 1.758 1.144l.95 2.28h2.649a2.002 2.002 0 0 1 2 2v10a2.002 2.002 0 0 1-2 2H3a2.002 2.002 0 0 1-2-2v-10a2.002 2.002 0 0 1 2-2Z"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                />
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                <circle cx="12" cy="13" r="4" />
               </svg>
             </div>
-            <h3 className={styles.noPostsTitle}>No posts yet</h3>
+
+            <h3 className={styles.noPostsTitle}>No posts shared yet</h3>
+
             <p className={styles.noPostsSubtitle}>
-              When this user shares photos, they will appear here.
+              When {user.username} shares photos or updates, they&apos;ll show
+              up here. Follow them to stay tuned!
             </p>
+
+            <div className={styles.emptyCardActions}>
+              <button
+                type="button"
+                className={`${styles.emptyFollowBtn} ${
+                  isFollowing ? styles.followingActive : ""
+                }`}
+                onClick={handleFollowToggle}
+              >
+                {isFollowing ? (
+                  <>
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span>Following</span>
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    <span>Follow {user.username}</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         )}
       </div>
