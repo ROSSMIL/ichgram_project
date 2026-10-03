@@ -143,13 +143,11 @@ const DashboardPage = () => {
   const { userId: currentUserId } = getLoggedInData();
 
   const fetchFeedData = useCallback(
-    async (isRefreshing = false) => {
+    async (isShuffleRequired = false) => {
       if (!token) return;
 
       try {
-        if (!isRefreshing) {
-          setLoading(true);
-        }
+        setLoading(true);
 
         const [postsRes, profileRes] = await Promise.all([
           API.get("/api/posts"),
@@ -157,7 +155,7 @@ const DashboardPage = () => {
         ]);
 
         setPosts((prevPosts) => {
-          if (prevPosts.length > 0) {
+          if (!isShuffleRequired && prevPosts.length > 0) {
             const fetchedPostsMap = new Map(
               postsRes.data.map((p) => [p._id, p]),
             );
@@ -203,7 +201,7 @@ const DashboardPage = () => {
 
   useEffect(() => {
     if (prevDisconnectedRef.current === true && isDisconnected === false) {
-      fetchFeedData(true);
+      fetchFeedData(false);
     }
     prevDisconnectedRef.current = isDisconnected;
   }, [isDisconnected, fetchFeedData]);
@@ -213,7 +211,7 @@ const DashboardPage = () => {
   useEffect(() => {
     if (token && !hasInitialLoadedRef.current) {
       hasInitialLoadedRef.current = true;
-      fetchFeedData();
+      fetchFeedData(false);
     }
   }, [token, fetchFeedData]);
 
@@ -251,9 +249,28 @@ const DashboardPage = () => {
 
   useEffect(() => {
     const handleRefresh = () => {
-      scrollToTop();
-      if (token) {
-        fetchFeedData(true);
+      const mainContent =
+        document.querySelector(".app-content") ||
+        document.querySelector("main");
+
+      const mainScroll = mainContent ? mainContent.scrollTop : 0;
+      const winScroll =
+        window.scrollY ||
+        document.documentElement.scrollTop ||
+        document.body.scrollTop;
+
+      const isAtTop = mainScroll <= 5 && winScroll <= 5;
+
+      if (!isAtTop) {
+        scrollToTop();
+        if (mainContent) {
+          mainContent.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      } else {
+        if (token) {
+          setPosts([]);
+          fetchFeedData(true);
+        }
       }
     };
 
@@ -347,6 +364,12 @@ const DashboardPage = () => {
 
   const handleLogoClick = () => {
     scrollToTop();
+    const mainContent =
+      document.querySelector(".app-content") || document.querySelector("main");
+    if (mainContent) {
+      mainContent.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    setPosts([]);
     fetchFeedData(true);
   };
 

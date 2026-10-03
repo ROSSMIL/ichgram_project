@@ -14,6 +14,99 @@ const shuffleArray = (array) => {
   return shuffled;
 };
 
+const AllCaughtUpCard = ({ onScrollToTop }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const cardRef = useRef(null);
+
+  useEffect(() => {
+    const currentCard = cardRef.current;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          if (currentCard) observer.unobserve(currentCard);
+        }
+      },
+      {
+        threshold: 0.15,
+        rootMargin: "0px 0px -20px 0px",
+      },
+    );
+
+    if (currentCard) {
+      observer.observe(currentCard);
+    }
+
+    return () => {
+      if (currentCard) observer.unobserve(currentCard);
+    };
+  }, []);
+
+  return (
+    <div
+      ref={cardRef}
+      className={`${styles.allCaughtUp} ${
+        isVisible ? styles.caughtUpVisible : ""
+      }`}
+    >
+      <div className={styles.caughtUpHeader}>
+        <div className={styles.sparkleIconWrapper}>
+          <svg
+            viewBox="0 0 24 24"
+            className={styles.sparkleIcon}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+            <path d="M5 3v4" />
+            <path d="M19 17v4" />
+            <path d="M3 5h4" />
+            <path d="M17 19h4" />
+          </svg>
+        </div>
+        <h3 className={styles.caughtUpTitle}>You’re All Caught Up</h3>
+      </div>
+
+      <p className={styles.caughtUpSubtitle}>
+        You&apos;ve explored all available posts from the community.
+      </p>
+
+      <button
+        type="button"
+        className={styles.caughtUpScrollBtn}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onScrollToTop();
+        }}
+      >
+        <span>Back to top</span>
+        <svg
+          viewBox="0 0 24 24"
+          width="16"
+          height="16"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={styles.arrowIcon}
+        >
+          <polyline points="18 15 12 9 6 15" />
+        </svg>
+      </button>
+    </div>
+  );
+};
+
+AllCaughtUpCard.propTypes = {
+  onScrollToTop: PropTypes.func.isRequired,
+};
+
 const ExploreItem = memo(({ post, index, onOpenModal }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -191,40 +284,37 @@ const ExplorePage = () => {
 
   const { userId: currentUserId } = getLoggedInData();
 
-  const fetchExploreData = useCallback(
-    async (isRefreshing = false) => {
-      try {
-        if (isRefreshing) {
-          setLoading(true);
-        }
+  const fetchExploreData = useCallback(async () => {
+    try {
+      setLoading(true);
 
-        const postsRes = await API.get("/api/posts", {
+      const [postsRes, profileRes] = await Promise.all([
+        API.get("/api/posts", {
           headers: { Authorization: `Bearer ${token}` },
-        });
-        const randomizedPosts = shuffleArray(postsRes.data);
-        setPosts(randomizedPosts);
-
-        const profileRes = await API.get("/api/users/profile", {
+        }),
+        API.get("/api/users/profile", {
           headers: { Authorization: `Bearer ${token}` },
-        });
+        }),
+      ]);
 
-        const followingIds =
-          profileRes.data.following
-            ?.map((f) => {
-              const id = typeof f === "string" ? f : f._id || f.id;
-              return id ? id.toString() : "";
-            })
-            .filter(Boolean) || [];
+      const randomizedPosts = shuffleArray(postsRes.data);
+      setPosts(randomizedPosts);
 
-        setCurrentUserFollowing(followingIds);
-      } catch (error) {
-        console.error("Error loading explore data:", error);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [token],
-  );
+      const followingIds =
+        profileRes.data.following
+          ?.map((f) => {
+            const id = typeof f === "string" ? f : f._id || f.id;
+            return id ? id.toString() : "";
+          })
+          .filter(Boolean) || [];
+
+      setCurrentUserFollowing(followingIds);
+    } catch (error) {
+      console.error("Error loading explore data:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
   useEffect(() => {
     let isMounted = true;
@@ -268,12 +358,39 @@ const ExplorePage = () => {
     };
   }, [handlePostUpdate]);
 
+  const scrollToTop = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    document.documentElement.scrollTo({ top: 0, behavior: "smooth" });
+    document.body.scrollTo({ top: 0, behavior: "smooth" });
+
+    const mainContent =
+      document.querySelector(".app-content") || document.querySelector("main");
+    if (mainContent) {
+      mainContent.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, []);
+
   useEffect(() => {
     const handleRefresh = () => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      const mainContent =
+        document.querySelector(".app-content") ||
+        document.querySelector("main");
 
-      if (token) {
-        fetchExploreData(true);
+      const mainScroll = mainContent ? mainContent.scrollTop : 0;
+      const winScroll =
+        window.scrollY ||
+        document.documentElement.scrollTop ||
+        document.body.scrollTop;
+
+      const isAtTop = mainScroll <= 5 && winScroll <= 5;
+
+      if (!isAtTop) {
+        scrollToTop();
+      } else {
+        if (token) {
+          setPosts([]);
+          fetchExploreData();
+        }
       }
     };
 
@@ -282,7 +399,7 @@ const ExplorePage = () => {
     return () => {
       window.removeEventListener("refreshExplore", handleRefresh);
     };
-  }, [fetchExploreData, token]);
+  }, [fetchExploreData, token, scrollToTop]);
 
   const handleFollowToggle = useCallback(
     async (targetUserId) => {
@@ -376,13 +493,14 @@ const ExplorePage = () => {
     return true;
   });
 
-  if (loading) {
-    return (
-      <div className={styles.exploreContainer}>
-        <FeedFilterPill
-          activeFilter={activeFilter}
-          onFilterChange={setActiveFilter}
-        />
+  return (
+    <div className={styles.exploreContainer}>
+      <FeedFilterPill
+        activeFilter={activeFilter}
+        onFilterChange={setActiveFilter}
+      />
+
+      {loading && posts.length === 0 ? (
         <div className={styles.postsGrid}>
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
             <div
@@ -391,28 +509,21 @@ const ExplorePage = () => {
             />
           ))}
         </div>
-      </div>
-    );
-  }
+      ) : filteredPosts.length > 0 ? (
+        <>
+          <div className={styles.postsGrid}>
+            {filteredPosts.map((post, idx) => (
+              <ExploreItem
+                key={post._id}
+                post={post}
+                index={idx}
+                onOpenModal={handleOpenModal}
+              />
+            ))}
+          </div>
 
-  return (
-    <div className={styles.exploreContainer}>
-      <FeedFilterPill
-        activeFilter={activeFilter}
-        onFilterChange={setActiveFilter}
-      />
-
-      {filteredPosts.length > 0 ? (
-        <div className={styles.postsGrid}>
-          {filteredPosts.map((post, idx) => (
-            <ExploreItem
-              key={post._id}
-              post={post}
-              index={idx}
-              onOpenModal={handleOpenModal}
-            />
-          ))}
-        </div>
+          <AllCaughtUpCard onScrollToTop={scrollToTop} />
+        </>
       ) : (
         <div className={styles.emptyGridWrapper}>
           {activeFilter === "following" && (

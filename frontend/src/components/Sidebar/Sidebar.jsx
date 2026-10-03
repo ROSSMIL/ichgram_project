@@ -124,7 +124,7 @@ const Sidebar = ({
     };
   }, [socket, fetchUnreadCounts, currentUser]);
 
-  const handleNotificationsClick = async () => {
+  const handleNotificationsClick = () => {
     setUnreadNotifsCount(0);
     onNotificationsToggle();
     window.dispatchEvent(new CustomEvent("unreadCountsUpdated"));
@@ -134,35 +134,30 @@ const Sidebar = ({
     fetchUnreadCounts();
   };
 
-  const triggerDashboardRefresh = () => {
-    window.dispatchEvent(new CustomEvent("refreshDashboard"));
+  const handleHomeNav = (e) => {
+    if (location.pathname === "/dashboard") {
+      if (e) e.preventDefault();
+      window.dispatchEvent(new CustomEvent("refreshDashboard"));
+    }
   };
 
-  const handleHomeClick = (e) => {
-    if (location.pathname === "/dashboard") {
-      e.preventDefault();
-      triggerDashboardRefresh();
+  const handleExploreNav = (e) => {
+    if (location.pathname === "/explore") {
+      if (e) e.preventDefault();
+      window.dispatchEvent(new CustomEvent("refreshExplore"));
     }
   };
 
   const handleLogoClick = () => {
     if (location.pathname === "/dashboard") {
-      triggerDashboardRefresh();
+      handleHomeNav();
     } else {
       navigate("/dashboard");
     }
   };
 
-  const handleExploreClick = (e) => {
-    if (location.pathname === "/explore") {
-      e.preventDefault();
-      window.dispatchEvent(new CustomEvent("refreshExplore"));
-    }
-  };
-
   return (
     <>
-     
       {showMobileTopBar && (
         <div className={styles.mobileTopBar}>
           <button
@@ -254,7 +249,7 @@ const Sidebar = ({
           <NavLink
             to="/dashboard"
             data-nav="home"
-            onClick={handleHomeClick}
+            onClick={handleHomeNav}
             className={({ isActive }) =>
               isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
             }
@@ -339,7 +334,7 @@ const Sidebar = ({
           <NavLink
             to="/explore"
             data-nav="explore"
-            onClick={handleExploreClick}
+            onClick={handleExploreNav}
             className={({ isActive }) =>
               isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
             }
