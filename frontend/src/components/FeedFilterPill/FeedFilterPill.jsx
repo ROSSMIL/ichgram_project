@@ -72,12 +72,9 @@ const FeedFilterPill = ({ activeFilter, onFilterChange }) => {
   const handleTabClick = (filterName) => {
     onFilterChange(filterName);
 
-    if (window.scrollY > 0) {
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      });
-    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    document.documentElement.scrollTo({ top: 0, behavior: "smooth" });
+    document.body.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return createPortal(
