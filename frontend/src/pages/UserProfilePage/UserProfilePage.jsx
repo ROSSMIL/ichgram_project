@@ -18,6 +18,7 @@ import AvatarViewModal from "../../components/AvatarViewModal/AvatarViewModal";
 import PageHeader from "../../components/PageHeader/PageHeader";
 
 import { saveToRecentlyViewed } from "../../utils/recentlyViewed.js";
+import { usePreventBodyScroll } from "../../hooks/usePreventBodyScroll";
 
 const renderActivityStatus = (statusKey) => {
   const iconProps = {
@@ -405,6 +406,20 @@ const UserProfilePage = () => {
 
   const [isClosingUsersModal, setIsClosingUsersModal] = useState(false);
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+
+  const usersListRef = useRef(null);
+
+  const closeUsersModal = useCallback(() => {
+    setIsClosingUsersModal(true);
+    setTimeout(() => {
+      setActiveModal(null);
+      setModalUsersList([]);
+      setIsClosingUsersModal(false);
+    }, 150);
+  }, []);
+
+  usePreventBodyScroll(Boolean(activeModal), usersListRef, closeUsersModal);
+
   useEffect(() => {
     const fetchUserProfileAndPosts = async () => {
       try {
@@ -469,6 +484,7 @@ const UserProfilePage = () => {
       fetchUserProfileAndPosts();
     }
   }, [username, navigate]);
+
   const handleOpenChat = async () => {
     if (!user) return;
     try {
@@ -492,6 +508,7 @@ const UserProfilePage = () => {
       console.error("Error opening chat with user:", err);
     }
   };
+
   const handleFollowToggle = useCallback(async () => {
     if (!user) return;
 
@@ -577,15 +594,6 @@ const UserProfilePage = () => {
     [user],
   );
 
-  const closeUsersModal = useCallback(() => {
-    setIsClosingUsersModal(true);
-    setTimeout(() => {
-      setActiveModal(null);
-      setModalUsersList([]);
-      setIsClosingUsersModal(false);
-    }, 150);
-  }, []);
-
   const openUsersModal = useCallback(
     async (type) => {
       if (!user) return;
@@ -626,7 +634,6 @@ const UserProfilePage = () => {
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
-        if (activeModal && !isClosingUsersModal) closeUsersModal();
         if (selectedPost) setSelectedPost(null);
         if (isAvatarModalOpen) setIsAvatarModalOpen(false);
       }
@@ -636,13 +643,7 @@ const UserProfilePage = () => {
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [
-    activeModal,
-    isClosingUsersModal,
-    selectedPost,
-    isAvatarModalOpen,
-    closeUsersModal,
-  ]);
+  }, [selectedPost, isAvatarModalOpen]);
 
   const userIdStr = (user?._id || user?.id)?.toString();
   const rawPresence = onlineUsers?.[userIdStr];
@@ -1080,7 +1081,7 @@ const UserProfilePage = () => {
                 </button>
               </div>
 
-              <div className={styles.modalBody}>
+              <div ref={usersListRef} className={styles.modalBody}>
                 {loadingModalList ? (
                   <div className={styles.modalLoading}>
                     <div className={styles.spinner} />
