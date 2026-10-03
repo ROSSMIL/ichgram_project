@@ -481,15 +481,126 @@ const DashboardPage = () => {
               />
             ))
           ) : (
-            <div className={styles.emptyFeed}>
-              <h2>No posts to show</h2>
-              <p>
-                {activeFilter === "following"
-                  ? "No posts from accounts you follow yet."
-                  : activeFilter === "discover"
-                    ? "No new creators to explore right now."
-                    : "Follow some creators or upload your first photo!"}
-              </p>
+            <div className={styles.emptyFeedContainer}>
+              {activeFilter === "following" && (
+                <div className={styles.emptyFeedCard}>
+                  <div className={styles.emptyFeedIconWrapper}>
+                    <svg
+                      width="32"
+                      height="32"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <line x1="19" y1="8" x2="19" y2="14" />
+                      <line x1="22" y1="11" x2="16" y2="11" />
+                    </svg>
+                  </div>
+                  <h3 className={styles.emptyFeedTitle}>
+                    No posts from following
+                  </h3>
+                  <p className={styles.emptyFeedSubtitle}>
+                    You are not following anyone yet, or creators you follow
+                    haven&apos;t shared any moments.
+                  </p>
+                  <button
+                    type="button"
+                    className={styles.emptyFeedActionBtn}
+                    onClick={() => handleFilterChange("discover")}
+                  >
+                    <span>Explore New Creators</span>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                      <polyline points="12 5 19 12 12 19" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+
+              {activeFilter === "discover" && (
+                <div className={styles.emptyFeedCard}>
+                  <div className={styles.emptyFeedIconWrapper}>
+                    <svg
+                      width="32"
+                      height="32"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+                    </svg>
+                  </div>
+                  <h3 className={styles.emptyFeedTitle}>
+                    You&apos;ve explored everything
+                  </h3>
+                  <p className={styles.emptyFeedSubtitle}>
+                    There are no new unique creators to discover right now.
+                  </p>
+                  <button
+                    type="button"
+                    className={styles.emptyFeedActionBtn}
+                    onClick={() => handleFilterChange("all")}
+                  >
+                    <span>Back to All Feed</span>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                      <polyline points="12 5 19 12 12 19" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+
+              {activeFilter === "all" && (
+                <div className={styles.emptyFeedCard}>
+                  <div className={styles.emptyFeedIconWrapper}>
+                    <svg
+                      width="32"
+                      height="32"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <polyline points="21 15 16 10 5 21" />
+                    </svg>
+                  </div>
+                  <h3 className={styles.emptyFeedTitle}>No posts to show</h3>
+                  <p className={styles.emptyFeedSubtitle}>
+                    Be the first one to share a photo with the community!
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

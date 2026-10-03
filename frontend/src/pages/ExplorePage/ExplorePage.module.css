@@ -227,21 +227,145 @@
   height: 16px;
   display: block;
 }
-
 .emptyGridWrapper {
   display: flex;
   justify-content: center;
   align-items: center;
   width: 100%;
-  padding: 80px 20px;
+  padding: 60px 16px;
+  box-sizing: border-box;
 }
 
-.noPostsContainer {
+.emptyFeedCard {
+  width: 100%;
+  max-width: 480px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 28px;
+  padding: 40px 32px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  max-width: 400px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  box-sizing: border-box;
+
+  animation: emptyCardFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity, border-color, box-shadow;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease,
+    transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.emptyFeedCard:hover {
+  border-color: var(--text-secondary);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.24);
+  transform: translateY(-2px);
+}
+
+@keyframes emptyCardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.emptyFeedIconWrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 22px;
+  background-color: var(--bg-hover, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.emptyFeedCard:hover .emptyFeedIconWrapper {
+  transform: scale(1.1) rotate(6deg);
+  border-color: var(--text-secondary);
+}
+
+.emptyFeedTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 10px 0;
+  letter-spacing: -0.3px;
+}
+
+.emptyFeedSubtitle {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  margin: 0 0 26px 0;
+  max-width: 360px;
+}
+
+.emptyFeedActionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background-color: var(--text-primary);
+  color: var(--bg-card);
+  border: none;
+  border-radius: 16px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  will-change: transform, box-shadow;
+  transition:
+    transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.25s ease,
+    opacity 0.2s ease;
+}
+
+.emptyFeedActionBtn svg {
+  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.emptyFeedActionBtn:hover {
+  opacity: 0.92;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+}
+
+.emptyFeedActionBtn:hover svg {
+  transform: translateX(3px);
+}
+
+.emptyFeedActionBtn:active {
+  transform: scale(0.96);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 768px) {
+  .emptyFeedCard {
+    padding: 32px 20px;
+    border-radius: 22px;
+  }
+
+  .emptyFeedTitle {
+    font-size: 18px;
+  }
+
+  .emptyFeedSubtitle {
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
 }
 
 .cameraIconWrapper {

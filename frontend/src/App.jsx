@@ -76,6 +76,10 @@ const ProtectedRoute = ({ children }) => {
       setIsCreateModalOpen(true);
     };
 
+    const handleOpenCreate = () => {
+      setEditingPost(null);
+      setIsCreateModalOpen(true);
+    };
     const handleOpenPostModal = async (e) => {
       const { postId, post, focusComment } = e.detail || {};
       const isMobile = window.innerWidth <= 768;
@@ -104,10 +108,12 @@ const ProtectedRoute = ({ children }) => {
     };
 
     window.addEventListener("openEditPost", handleOpenEdit);
+    window.addEventListener("openCreatePostModal", handleOpenCreate);
     window.addEventListener("openPostModal", handleOpenPostModal);
 
     return () => {
       window.removeEventListener("openEditPost", handleOpenEdit);
+      window.removeEventListener("openCreatePostModal", handleOpenCreate);
       window.removeEventListener("openPostModal", handleOpenPostModal);
     };
   }, [navigate]);
