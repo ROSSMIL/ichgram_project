@@ -5,6 +5,7 @@ import styles from "./NotificationsDrawer.module.css";
 import Avatar from "../Avatar/Avatar";
 import API from "../../api/axios";
 import { useSocket } from "../../context/useSocket";
+import { usePreventBodyScroll } from "../../hooks/usePreventBodyScroll";
 
 const TABS = [
   { id: "all", label: "All" },
@@ -24,6 +25,10 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
 
   const touchStartY = useRef(0);
   const prevIsOpenRef = useRef(isOpen);
+
+  const resultsContainerRef = useRef(null);
+
+  usePreventBodyScroll(isOpen, resultsContainerRef, onClose);
 
   const socketContext = useSocket();
   const socket = socketContext?.socket;
@@ -84,25 +89,6 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
 
     return () => clearTimeout(timer);
   }, [isOpen, fetchNotifications]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    document.body.style.overflow = "hidden";
-
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = "unset";
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, onClose]);
 
   const prevPathRef = useRef(location.pathname);
   useEffect(() => {
@@ -395,7 +381,7 @@ const NotificationsDrawer = ({ isOpen, onClose }) => {
           </div>
         </div>
 
-        <div className={styles.resultsContainer}>
+        <div ref={resultsContainerRef} className={styles.resultsContainer}>
           {loading ? (
             <div className={styles.loader}>Loading updates...</div>
           ) : filteredNotifications.length === 0 ? (

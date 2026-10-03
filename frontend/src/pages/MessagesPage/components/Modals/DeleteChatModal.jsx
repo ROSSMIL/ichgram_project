@@ -1,20 +1,13 @@
-import { memo, useState, useCallback, useEffect } from "react";
+import { memo, useState, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import PropTypes from "prop-types";
+import { usePreventBodyScroll } from "../../../../hooks/usePreventBodyScroll";
 import styles from "../../MessagesPage.module.css";
 
 const DeleteChatModal = memo(
   ({ isGroup, isGroupAdmin, handleConfirmDeleteChat, onClose }) => {
     const [isClosing, setIsClosing] = useState(false);
-
-    useEffect(() => {
-      const originalOverflow = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-
-      return () => {
-        document.body.style.overflow = originalOverflow;
-      };
-    }, []);
+    const bodyRef = useRef(null);
 
     const handleClose = useCallback(() => {
       if (isClosing) return;
@@ -24,18 +17,7 @@ const DeleteChatModal = memo(
       }, 200);
     }, [isClosing, onClose]);
 
-    useEffect(() => {
-      const handleKeyDown = (e) => {
-        if (e.key === "Escape") {
-          handleClose();
-        }
-      };
-
-      window.addEventListener("keydown", handleKeyDown);
-      return () => {
-        window.removeEventListener("keydown", handleKeyDown);
-      };
-    }, [handleClose]);
+    usePreventBodyScroll(true, bodyRef, handleClose);
 
     return createPortal(
       <div
@@ -68,7 +50,7 @@ const DeleteChatModal = memo(
             </button>
           </div>
 
-          <div className={styles.deleteModalBody}>
+          <div ref={bodyRef} className={styles.deleteModalBody}>
             <p className={styles.deleteModalDescription}>
               {isGroup
                 ? isGroupAdmin

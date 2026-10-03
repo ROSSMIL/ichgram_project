@@ -12,6 +12,7 @@ import API from "../../api/axios";
 import EmojiPicker from "emoji-picker-react";
 import styles from "./PostModal.module.css";
 import Avatar from "../Avatar/Avatar";
+import { usePreventBodyScroll } from "../../hooks/usePreventBodyScroll";
 
 const safeSlice = (str, maxLen = 150) => {
   if (str.length <= maxLen) return str;
@@ -141,6 +142,8 @@ const PostModal = ({
   const clickTimerRef = useRef(null);
   const postMenuRef = useRef(null);
 
+  usePreventBodyScroll(Boolean(post), commentsAreaRef, onClose);
+
   const scrollToBottom = useCallback(() => {
     if (commentsAreaRef.current) {
       commentsAreaRef.current.scrollTop = commentsAreaRef.current.scrollHeight;
@@ -192,33 +195,6 @@ const PostModal = ({
     }, 250);
     return () => clearTimeout(timer);
   }, [onClose]);
-
-  useEffect(() => {
-    if (!post) return;
-
-    const originalOverflow = window.getComputedStyle(document.body).overflow;
-    document.body.style.overflow = "hidden";
-
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
-        if (showMenu) {
-          setShowMenu(false);
-          return;
-        }
-        if (commentToDelete) {
-          setCommentToDelete(null);
-          return;
-        }
-        handleClose();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = originalOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [post, handleClose, showMenu, commentToDelete]);
 
   function getLoggedInUsername() {
     const token = localStorage.getItem("token");

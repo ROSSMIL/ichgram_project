@@ -7,6 +7,7 @@ import styles from "./ProfilePage.module.css";
 import PostModal from "../../components/PostModal/PostModal";
 import Avatar from "../../components/Avatar/Avatar";
 import AvatarViewModal from "../../components/AvatarViewModal/AvatarViewModal";
+import { usePreventBodyScroll } from "../../hooks/usePreventBodyScroll";
 
 const SEEDED_EMAILS = [
   "hub@itcareer.com",
@@ -205,27 +206,34 @@ const ProfilePage = () => {
 
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
 
+  const usersListRef = useRef(null);
+
   const isSeeded = Boolean(
     user?.isSeeded ||
     SEEDED_EMAILS.includes((user?.email || "").toLowerCase()) ||
     SEEDED_USERNAMES.includes((user?.username || "").toLowerCase()),
   );
 
-  useEffect(() => {
-    const isAnyModalOpen =
-      isSettingsOpen ||
-      Boolean(activeModal) ||
-      isAvatarModalOpen ||
-      Boolean(selectedPost);
+  const closeSettings = useCallback(() => {
+    setIsClosingSettings(true);
+    setTimeout(() => {
+      setIsSettingsOpen(false);
+      setIsClosingSettings(false);
+    }, 150);
+  }, []);
 
-    if (isAnyModalOpen) {
-      const originalOverflow = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = originalOverflow;
-      };
-    }
-  }, [isSettingsOpen, activeModal, isAvatarModalOpen, selectedPost]);
+  const closeUsersModal = useCallback(() => {
+    setIsClosingUsersModal(true);
+    setTimeout(() => {
+      setActiveModal(null);
+      setModalUsersList([]);
+      setIsClosingUsersModal(false);
+    }, 150);
+  }, []);
+
+  usePreventBodyScroll(Boolean(activeModal), usersListRef, closeUsersModal);
+
+  usePreventBodyScroll(isSettingsOpen, null, closeSettings);
 
   const handleLogout = useCallback(() => {
     localStorage.removeItem("token");
@@ -382,23 +390,6 @@ const ProfilePage = () => {
     [user],
   );
 
-  const closeSettings = useCallback(() => {
-    setIsClosingSettings(true);
-    setTimeout(() => {
-      setIsSettingsOpen(false);
-      setIsClosingSettings(false);
-    }, 150);
-  }, []);
-
-  const closeUsersModal = useCallback(() => {
-    setIsClosingUsersModal(true);
-    setTimeout(() => {
-      setActiveModal(null);
-      setModalUsersList([]);
-      setIsClosingUsersModal(false);
-    }, 150);
-  }, []);
-
   const openUsersModal = useCallback(async (type) => {
     setActiveModal(type);
     setLoadingModalList(true);
@@ -488,31 +479,6 @@ const ProfilePage = () => {
 
     fetchProfileAndPosts();
   }, [navigate]);
-
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
-        if (isSettingsOpen && !isClosingSettings) closeSettings();
-        if (activeModal && !isClosingUsersModal) closeUsersModal();
-        if (selectedPost) setSelectedPost(null);
-        if (isAvatarModalOpen) setIsAvatarModalOpen(false);
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [
-    isSettingsOpen,
-    isClosingSettings,
-    activeModal,
-    isClosingUsersModal,
-    selectedPost,
-    isAvatarModalOpen,
-    closeSettings,
-    closeUsersModal,
-  ]);
 
   if (loading) {
     return (
@@ -923,7 +889,7 @@ const ProfilePage = () => {
                 </button>
               </div>
 
-              <div className={styles.modalBody}>
+              <div ref={usersListRef} className={styles.modalBody}>
                 {loadingModalList ? (
                   <div className={styles.modalLoading}>
                     <div className={styles.spinner} />

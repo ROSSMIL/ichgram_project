@@ -17,6 +17,7 @@ import {
   saveToRecentlyViewed,
   clearRecentlyViewedStorage,
 } from "../../utils/recentlyViewed";
+import { usePreventBodyScroll } from "../../hooks/usePreventBodyScroll";
 
 const SearchDrawer = ({ isOpen, onClose }) => {
   const [users, setUsers] = useState([]);
@@ -36,6 +37,10 @@ const SearchDrawer = ({ isOpen, onClose }) => {
 
   const [isExpanded, setIsExpanded] = useState(false);
   const touchStartY = useRef(0);
+
+  const resultsContainerRef = useRef(null);
+
+  usePreventBodyScroll(isOpen, resultsContainerRef, onClose);
 
   const tabsContainerRef = useRef(null);
   const tabsRef = useRef({});
@@ -108,25 +113,6 @@ const SearchDrawer = ({ isOpen, onClose }) => {
 
     return () => clearTimeout(timer);
   }, [isClosing]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    document.body.style.overflow = "hidden";
-
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = "unset";
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, onClose]);
 
   const prevPathRef = useRef(pathname);
 
@@ -402,7 +388,7 @@ const SearchDrawer = ({ isOpen, onClose }) => {
           )}
         </div>
 
-        <div className={styles.resultsContainer}>
+        <div ref={resultsContainerRef} className={styles.resultsContainer}>
           <div className={styles.staticHeaderWrapper}>
             <span
               className={`${styles.sectionTitle} ${

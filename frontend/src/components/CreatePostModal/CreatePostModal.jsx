@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, memo, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, memo, useMemo } from "react";
 import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import API from "../../api/axios";
@@ -8,6 +8,7 @@ import getCroppedImg from "../../utils/getCroppedImg";
 import styles from "./CreatePostModal.module.css";
 import Avatar from "../Avatar/Avatar";
 import PostCard from "../PostCard/PostCard";
+import { usePreventBodyScroll } from "../../hooks/usePreventBodyScroll";
 
 const DEMO_COMMENTS = [
   {
@@ -228,30 +229,11 @@ const CreatePostModal = ({
   const fileInputRef = useRef(null);
   const emojiPickerRef = useRef(null);
   const captionInputRef = useRef(null);
+  const contentViewportRef = useRef(null);
 
   const navigate = useNavigate();
 
   const hasAnyData = !!rawImage || caption.trim().length > 0;
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const updateTheme = () => {
-      const theme =
-        document.documentElement.getAttribute("data-theme") || "light";
-      setCurrentTheme(theme);
-    };
-
-    updateTheme();
-
-    const observer = new MutationObserver(updateTheme);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-theme"],
-    });
-
-    return () => observer.disconnect();
-  }, [isOpen]);
 
   const forceClose = useCallback(() => {
     setIsClosing(true);
@@ -279,6 +261,34 @@ const CreatePostModal = ({
       forceClose();
     }
   }, [hasAnyData, forceClose]);
+
+  usePreventBodyScroll(
+    isOpen,
+    contentViewportRef,
+    showConfirmDiscard
+      ? () => setShowConfirmDiscard(false)
+      : handleAttemptClose,
+  );
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const updateTheme = () => {
+      const theme =
+        document.documentElement.getAttribute("data-theme") || "light";
+      setCurrentTheme(theme);
+    };
+
+    updateTheme();
+
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+
+    return () => observer.disconnect();
+  }, [isOpen]);
 
   const handleClearPhoto = () => {
     setRawImage(null);
@@ -314,29 +324,6 @@ const CreatePostModal = ({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    document.body.style.overflow = "hidden";
-
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape" && !isClosing) {
-        if (showConfirmDiscard) {
-          setShowConfirmDiscard(false);
-        } else {
-          handleAttemptClose();
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = "unset";
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, isClosing, showConfirmDiscard, handleAttemptClose]);
 
   const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
     setCroppedAreaPixels(croppedAreaPixels);
@@ -617,7 +604,7 @@ const CreatePostModal = ({
           </div>
         </div>
 
-        <div className={styles.contentViewport}>
+        <div className={styles.contentViewport} ref={contentViewportRef}>
           <div
             className={`${styles.body} ${
               isPreview ? styles.bodyHidden : styles.bodyVisible

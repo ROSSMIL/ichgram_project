@@ -6,6 +6,7 @@ import styles from "./EditProfilePage.module.css";
 import Avatar from "../../components/Avatar/Avatar";
 import AvatarViewModal from "../../components/AvatarViewModal/AvatarViewModal";
 import { SocketContext } from "../../context/SocketContextInstance";
+import { usePreventBodyScroll } from "../../hooks/usePreventBodyScroll";
 
 const SEEDED_EMAILS = [
   "hub@itcareer.com",
@@ -99,25 +100,7 @@ const EditProfilePage = () => {
     }, 200);
   }, [isDeleteModalClosing]);
 
-  useEffect(() => {
-    if (!isDeleteModalOpen) return;
-
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") {
-        handleCloseDeleteModal();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = originalOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isDeleteModalOpen, handleCloseDeleteModal]);
+  usePreventBodyScroll(isDeleteModalOpen, null, handleCloseDeleteModal);
 
   const handleChange = (e) => {
     if (isSeeded) return;
@@ -193,6 +176,7 @@ const EditProfilePage = () => {
       setLoading(false);
     }
   };
+
   const handleDeleteConfirm = async () => {
     if (isSeeded) return;
 

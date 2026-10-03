@@ -1,8 +1,9 @@
 // src/pages/MessagesPage/components/Modals/AddMemberModal.jsx
-import { memo, useState, useCallback, useEffect } from "react";
+import { memo, useState, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import PropTypes from "prop-types";
 import Avatar from "../../../../components/Avatar/Avatar";
+import { usePreventBodyScroll } from "../../../../hooks/usePreventBodyScroll";
 import styles from "../../MessagesPage.module.css";
 
 const AddMemberModal = memo(
@@ -16,14 +17,7 @@ const AddMemberModal = memo(
     onClose,
   }) => {
     const [isClosing, setIsClosing] = useState(false);
-    useEffect(() => {
-      const originalOverflow = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-
-      return () => {
-        document.body.style.overflow = originalOverflow;
-      };
-    }, []);
+    const userListRef = useRef(null);
 
     const handleClose = useCallback(() => {
       if (isClosing) return;
@@ -33,18 +27,7 @@ const AddMemberModal = memo(
       }, 200);
     }, [isClosing, onClose]);
 
-    useEffect(() => {
-      const handleKeyDown = (e) => {
-        if (e.key === "Escape") {
-          handleClose();
-        }
-      };
-
-      window.addEventListener("keydown", handleKeyDown);
-      return () => {
-        window.removeEventListener("keydown", handleKeyDown);
-      };
-    }, [handleClose]);
+    usePreventBodyScroll(true, userListRef, handleClose);
 
     const filteredUsers = availableUsersToAdd.filter(
       (u) =>
@@ -87,7 +70,7 @@ const AddMemberModal = memo(
 
           <div className={styles.userSelectionContainer}>
             <span className={styles.selectTitle}>Available Contacts</span>
-            <div className={styles.userSelectionList}>
+            <div ref={userListRef} className={styles.userSelectionList}>
               {filteredUsers.map((u, idx) => {
                 const isSelected = selectedAddUsers.includes(u._id);
                 return (
