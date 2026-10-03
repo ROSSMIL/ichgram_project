@@ -82,11 +82,11 @@ const PostCard = ({
   const cardRef = useRef(null);
   const likeBtnRef = useRef(null);
   const clickTimerRef = useRef(null);
-  const [prevPostId, setPrevPostId] = useState(post._id);
+  const [prevPost, setPrevPost] = useState(post);
   const [localLike, setLocalLike] = useState(null);
 
-  if (post._id !== prevPostId) {
-    setPrevPostId(post._id);
+  if (post !== prevPost) {
+    setPrevPost(post);
     setLocalLike(null);
   }
 
@@ -176,7 +176,6 @@ const PostCard = ({
       navigator.vibrate(30);
     }
   };
-
   const toggleLikeApiCall = async () => {
     if (isLiking) return;
 
@@ -199,8 +198,11 @@ const PostCard = ({
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      if (response.data && typeof onPostUpdate === "function") {
-        onPostUpdate(response.data);
+      if (response.data) {
+        setLocalLike(null); 
+        if (typeof onPostUpdate === "function") {
+          onPostUpdate(response.data);
+        }
       }
     } catch (error) {
       console.error("Error toggling like:", error);

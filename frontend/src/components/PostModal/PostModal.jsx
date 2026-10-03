@@ -82,7 +82,7 @@ const PostModal = ({
   const currentUserId = getLoggedInUserId();
   const currentUsername = getLoggedInUsername();
 
-  const [prevPostId, setPrevPostId] = useState(post?._id);
+  const [prevPost, setPrevPost] = useState(post);
 
   const [comments, setComments] = useState(() => post?.comments || []);
   const [likesCount, setLikesCount] = useState(() => {
@@ -95,8 +95,8 @@ const PostModal = ({
     checkIsLiked(post, currentUserId),
   );
 
-  if (post?._id !== prevPostId) {
-    setPrevPostId(post?._id);
+  if (post !== prevPost) {
+    setPrevPost(post);
     setComments(post?.comments || []);
     setLikesCount(
       post?.likesCount !== undefined
@@ -245,7 +245,9 @@ const PostModal = ({
 
     const nextLikedState = !isLiked;
     setIsLiked(nextLikedState);
-    setLikesCount((prev) => (isLiked ? prev - 1 : prev + 1));
+    setLikesCount((prev) =>
+      nextLikedState ? prev + 1 : Math.max(0, prev - 1),
+    );
 
     if (nextLikedState) {
       triggerHapticFeedback();
@@ -262,7 +264,11 @@ const PostModal = ({
       );
       if (response.data) {
         setLikesCount(response.data.likes?.length || 0);
-        if (typeof onPostUpdate === "function") onPostUpdate(response.data);
+        setIsLiked(checkIsLiked(response.data, currentUserId));
+
+        if (typeof onPostUpdate === "function") {
+          onPostUpdate(response.data);
+        }
       }
     } catch (error) {
       console.error("Error toggling like:", error);
