@@ -259,7 +259,7 @@ function App() {
 
       try {
         if (token) {
-          await API.get("/api/users/profile", { timeout: 6000 });
+          await API.get("/api/users/profile", { timeout: 45000 });
         }
       } catch (e) {
         console.warn("Server warmup check error:", e);
