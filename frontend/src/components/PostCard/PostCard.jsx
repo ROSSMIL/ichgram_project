@@ -106,6 +106,10 @@ const PostCard = ({
   const [activeCommentMenu, setActiveCommentMenu] = useState(null);
   const [isMenuClosing, setIsMenuClosing] = useState(false);
 
+  const [commentToDelete, setCommentToDelete] = useState(null);
+  const [isCommentDeleteClosing, setIsCommentDeleteClosing] = useState(false);
+  const [isDeletingComment, setIsDeletingComment] = useState(false);
+
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" ? window.innerWidth <= 768 : false,
   );
@@ -434,25 +438,48 @@ const PostCard = ({
     [activeCommentMenu, handleCloseCommentMenu],
   );
 
-  const handleDeleteComment = useCallback(async () => {
+  const handlePromptDeleteComment = () => {
     if (!activeCommentMenu?.id) return;
     const commentId = activeCommentMenu.id;
     handleCloseCommentMenu();
+    setCommentToDelete(commentId);
+  };
+
+  const handleCloseCommentDeleteConfirm = useCallback(() => {
+    if (isCommentDeleteClosing) return;
+    setIsCommentDeleteClosing(true);
+    setTimeout(() => {
+      setCommentToDelete(null);
+      setIsCommentDeleteClosing(false);
+    }, 200);
+  }, [isCommentDeleteClosing]);
+
+  const handleDeleteCommentConfirm = useCallback(async () => {
+    if (!commentToDelete) return;
 
     try {
+      setIsDeletingComment(true);
       const token = localStorage.getItem("token");
       const response = await API.delete(
-        `/api/posts/${post._id}/comment/${commentId}`,
+        `/api/posts/${post._id}/comment/${commentToDelete}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
       if (response.data && typeof onPostUpdate === "function") {
         onPostUpdate(response.data);
       }
+      handleCloseCommentDeleteConfirm();
     } catch (error) {
       console.error("Error during comment deletion in card:", error);
+    } finally {
+      setIsDeletingComment(false);
     }
-  }, [activeCommentMenu, handleCloseCommentMenu, onPostUpdate, post._id]);
+  }, [
+    commentToDelete,
+    handleCloseCommentDeleteConfirm,
+    onPostUpdate,
+    post._id,
+  ]);
 
   useEffect(() => {
     if (!activeCommentMenu) return;
@@ -787,7 +814,7 @@ const PostCard = ({
               <div className={styles.actionsGroupContent}>
                 <button
                   className={`${styles.actionBtnWithLabel} ${styles.deleteActionBtn}`}
-                  onClick={handleDeleteComment}
+                  onClick={handlePromptDeleteComment}
                 >
                   <svg
                     className={styles.actionIconSvg}
@@ -802,6 +829,66 @@ const PostCard = ({
                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                   </svg>
                   <span>Delete comment</span>
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+
+      {commentToDelete &&
+        createPortal(
+          <div
+            className={`${styles.confirmOverlay} ${
+              isCommentDeleteClosing ? styles.confirmOverlayClosing : ""
+            }`}
+            onClick={handleCloseCommentDeleteConfirm}
+          >
+            <div
+              className={`${styles.confirmBox} ${
+                isCommentDeleteClosing ? styles.confirmBoxClosing : ""
+              }`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={`${styles.confirmBadge} ${styles.badgeWarning}`}>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  <line x1="9" y1="10" x2="15" y2="10" />
+                </svg>
+              </div>
+
+              <h3 className={styles.confirmTitle}>Delete Comment?</h3>
+
+              <p className={styles.confirmText}>
+                Are you sure you want to delete this comment?
+              </p>
+
+              <div className={styles.confirmActions}>
+                <button
+                  type="button"
+                  className={styles.cancelConfirmBtn}
+                  onClick={handleCloseCommentDeleteConfirm}
+                  disabled={isDeletingComment}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  className={styles.deleteConfirmBtn}
+                  onClick={handleDeleteCommentConfirm}
+                  disabled={isDeletingComment}
+                >
+                  {isDeletingComment ? "Deleting..." : "Delete"}
                 </button>
               </div>
             </div>

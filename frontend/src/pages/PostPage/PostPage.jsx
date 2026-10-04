@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import EmojiPicker from "emoji-picker-react";
 import API from "../../api/axios";
@@ -88,6 +89,14 @@ const PostPage = () => {
 
   const [showMenu, setShowMenu] = useState(false);
   const [activeCommentMenuId, setActiveCommentMenuId] = useState(null);
+
+  const [showPostDeleteConfirm, setShowPostDeleteConfirm] = useState(false);
+  const [isPostDeleteClosing, setIsPostDeleteClosing] = useState(false);
+  const [isDeletingPost, setIsDeletingPost] = useState(false);
+
+  const [commentToDelete, setCommentToDelete] = useState(null);
+  const [isCommentDeleteClosing, setIsCommentDeleteClosing] = useState(false);
+  const [isDeletingComment, setIsDeletingComment] = useState(false);
 
   const emojiPickerRef = useRef(null);
   const modalEmojiPickerRef = useRef(null);
@@ -397,31 +406,65 @@ const PostPage = () => {
     window.dispatchEvent(new CustomEvent("openEditPost", { detail: post }));
   };
 
-  const handleDeletePost = async () => {
+  const handlePromptDeletePost = () => {
+    setShowMenu(false);
+    setShowPostDeleteConfirm(true);
+  };
+
+  const handleClosePostDeleteConfirm = useCallback(() => {
+    if (isPostDeleteClosing) return;
+    setIsPostDeleteClosing(true);
+    setTimeout(() => {
+      setShowPostDeleteConfirm(false);
+      setIsPostDeleteClosing(false);
+    }, 200);
+  }, [isPostDeleteClosing]);
+
+  const handleDeletePostConfirm = async () => {
     try {
+      setIsDeletingPost(true);
       const token = localStorage.getItem("token");
       await API.delete(`/api/posts/${post._id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setShowMenu(false);
+      handleClosePostDeleteConfirm();
       navigate("/dashboard");
     } catch (error) {
       console.error("Error deleting post:", error);
+    } finally {
+      setIsDeletingPost(false);
     }
   };
 
-  const handleDeleteComment = async (targetId) => {
-    if (!targetId) return;
+  const handlePromptDeleteComment = (commentId) => {
+    setActiveCommentMenuId(null);
+    setCommentToDelete(commentId);
+  };
+
+  const handleCloseCommentDeleteConfirm = useCallback(() => {
+    if (isCommentDeleteClosing) return;
+    setIsCommentDeleteClosing(true);
+    setTimeout(() => {
+      setCommentToDelete(null);
+      setIsCommentDeleteClosing(false);
+    }, 200);
+  }, [isCommentDeleteClosing]);
+
+  const handleDeleteCommentConfirm = async () => {
+    if (!commentToDelete) return;
     try {
+      setIsDeletingComment(true);
       const token = localStorage.getItem("token");
       const response = await API.delete(
-        `/api/posts/${post._id}/comment/${targetId}`,
+        `/api/posts/${post._id}/comment/${commentToDelete}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       setComments(response.data.comments);
-      setActiveCommentMenuId(null);
+      handleCloseCommentDeleteConfirm();
     } catch (error) {
       console.error("Error during comment deletion:", error);
+    } finally {
+      setIsDeletingComment(false);
     }
   };
 
@@ -522,7 +565,7 @@ const PostPage = () => {
               <div className={styles.commentPopoverMenu}>
                 <button
                   className={`${styles.popoverItem} ${styles.dangerItem}`}
-                  onClick={() => handleDeleteComment(comment._id)}
+                  onClick={() => handlePromptDeleteComment(comment._id)}
                 >
                   <svg
                     width="14"
@@ -706,7 +749,7 @@ const PostPage = () => {
 
                     <button
                       className={`${styles.popoverItem} ${styles.dangerItem}`}
-                      onClick={handleDeletePost}
+                      onClick={handlePromptDeletePost}
                     >
                       <svg
                         width="15"
@@ -1004,6 +1047,127 @@ const PostPage = () => {
           </div>
         </div>
       )}
+
+      {showPostDeleteConfirm &&
+        createPortal(
+          <div
+            className={`${styles.confirmOverlay} ${
+              isPostDeleteClosing ? styles.confirmOverlayClosing : ""
+            }`}
+            onClick={handleClosePostDeleteConfirm}
+          >
+            <div
+              className={`${styles.confirmBox} ${
+                isPostDeleteClosing ? styles.confirmBoxClosing : ""
+              }`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={`${styles.confirmBadge} ${styles.badgeDanger}`}>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </div>
+
+              <h3 className={styles.confirmTitle}>Delete Post?</h3>
+
+              <p className={styles.confirmText}>
+                Are you sure you want to delete this post? This action cannot be
+                undone.
+              </p>
+
+              <div className={styles.confirmActions}>
+                <button
+                  type="button"
+                  className={styles.cancelConfirmBtn}
+                  onClick={handleClosePostDeleteConfirm}
+                  disabled={isDeletingPost}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  className={styles.deleteConfirmBtn}
+                  onClick={handleDeletePostConfirm}
+                  disabled={isDeletingPost}
+                >
+                  {isDeletingPost ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+
+      {commentToDelete &&
+        createPortal(
+          <div
+            className={`${styles.confirmOverlay} ${
+              isCommentDeleteClosing ? styles.confirmOverlayClosing : ""
+            }`}
+            onClick={handleCloseCommentDeleteConfirm}
+          >
+            <div
+              className={`${styles.confirmBox} ${
+                isCommentDeleteClosing ? styles.confirmBoxClosing : ""
+              }`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={`${styles.confirmBadge} ${styles.badgeWarning}`}>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  <line x1="9" y1="10" x2="15" y2="10" />
+                </svg>
+              </div>
+
+              <h3 className={styles.confirmTitle}>Delete Comment?</h3>
+
+              <p className={styles.confirmText}>
+                Are you sure you want to delete this comment?
+              </p>
+
+              <div className={styles.confirmActions}>
+                <button
+                  type="button"
+                  className={styles.cancelConfirmBtn}
+                  onClick={handleCloseCommentDeleteConfirm}
+                  disabled={isDeletingComment}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  className={styles.deleteConfirmBtn}
+                  onClick={handleDeleteCommentConfirm}
+                  disabled={isDeletingComment}
+                >
+                  {isDeletingComment ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };
