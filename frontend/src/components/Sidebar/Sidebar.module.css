@@ -128,12 +128,10 @@
   outline: 2px solid var(--text-primary);
   outline-offset: 2px;
 }
-
 .avatarWrapper {
   width: 24px;
   height: 24px;
-  border-radius: 50%;
-  overflow: hidden;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -353,9 +351,6 @@
   }
 }
 
-/* ==========================================================================
-   DRAWER STYLES
-   ========================================================================== */
 .searchDrawer {
   position: fixed;
   top: 0;

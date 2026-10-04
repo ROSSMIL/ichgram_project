@@ -22,6 +22,7 @@ const Sidebar = ({
   const navigate = useNavigate();
   const socketContext = useSocket();
   const socket = socketContext?.socket;
+  const onlineUsers = socketContext?.onlineUsers || [];
 
   const pagesWithTopBar = ["/dashboard", "/explore"];
   const showMobileTopBar = pagesWithTopBar.includes(location.pathname);
@@ -530,7 +531,12 @@ const Sidebar = ({
             id={styles.profile}
           >
             <div className={styles.avatarWrapper}>
-              <Avatar user={currentUser} size={24} showStatus={false} />
+              <Avatar
+                user={currentUser}
+                size={24}
+                showStatus={true}
+                onlineUsers={onlineUsers}
+              />
             </div>
             <span className={styles.text}>Profile</span>
           </NavLink>
