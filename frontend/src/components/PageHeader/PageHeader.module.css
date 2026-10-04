@@ -96,11 +96,22 @@
     padding: 0 14px 0 10px;
     border-radius: 18px;
     font-size: 12px;
-    background: rgba(28, 28, 30, 0.88);
+    background: var(--bg-card);
     border: 1px solid var(--border-color);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    color: var(--text-primary);
+
     -webkit-backdrop-filter: blur(16px);
     backdrop-filter: blur(16px);
+  }
+
+  [data-theme="dark"] .backPillBtn {
+    background: rgba(28, 28, 30, 0.88);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  }
+
+  :root:not([data-theme="dark"]) .backPillBtn {
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
   }
 
   .backPillBtn:active {
