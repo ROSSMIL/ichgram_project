@@ -1287,10 +1287,9 @@
     gap: 16px;
   }
 }
-
 @media (max-width: 768px) {
   .profileContainer {
-    padding: 16px 12px 80px 12px;
+    padding: 60px 12px 80px 12px !important;
   }
 
   .header {
@@ -1298,6 +1297,7 @@
     padding: 20px;
     border-radius: 20px;
     margin-bottom: 20px;
+    margin-top: 0;
   }
 
   .header:hover {
