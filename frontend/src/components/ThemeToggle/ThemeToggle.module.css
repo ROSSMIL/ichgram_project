@@ -198,9 +198,11 @@ input:checked + .slider:before {
   left: 0;
   right: 0;
   bottom: 0;
-  width: 100%;
+  width: 100vw;
   height: 100dvh;
-  z-index: 99999;
+  margin: 0;
+  padding: 0;
+  z-index: 999999;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -242,10 +244,9 @@ input:checked + .slider:before {
     opacity 0.3s ease,
     transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   text-align: center;
-  max-width: calc(100% - 32px);
   box-sizing: border-box;
+  max-width: calc(100vw - 32px);
 }
-
 .curtainLight .curtainText {
   background: rgba(0, 0, 0, 0.05);
   border: 1px solid rgba(0, 0, 0, 0.1);

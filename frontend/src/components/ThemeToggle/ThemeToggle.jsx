@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import styles from "./ThemeToggle.module.css";
 
 const MoonIcon = () => (
@@ -109,7 +110,6 @@ const ThemeToggle = () => {
       setIsAnimating(false);
     }, 1200);
   };
-
   return (
     <div
       className={styles.toggleWrapper}
@@ -157,15 +157,17 @@ const ThemeToggle = () => {
         </div>
       </div>
 
-      {isAnimating && (
-        <div
-          className={`${styles.curtainOverlay} ${styles.curtainActive} ${
-            targetTheme === "dark" ? styles.curtainDark : styles.curtainLight
-          }`}
-        >
-          <div className={styles.curtainText}>{overlayText}</div>
-        </div>
-      )}
+      {isAnimating &&
+        createPortal(
+          <div
+            className={`${styles.curtainOverlay} ${styles.curtainActive} ${
+              targetTheme === "dark" ? styles.curtainDark : styles.curtainLight
+            }`}
+          >
+            <div className={styles.curtainText}>{overlayText}</div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };
