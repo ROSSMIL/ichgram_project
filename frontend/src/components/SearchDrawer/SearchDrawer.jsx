@@ -16,6 +16,7 @@ import {
   getSavedRecentlyViewed,
   saveToRecentlyViewed,
   clearRecentlyViewedStorage,
+  getStorageKey,
 } from "../../utils/recentlyViewed";
 import { usePreventBodyScroll } from "../../hooks/usePreventBodyScroll";
 
@@ -147,17 +148,12 @@ const SearchDrawer = ({ isOpen, onClose }) => {
         setUsers(activeUsersFromBackend);
 
         const savedRecent = getSavedRecentlyViewed();
-        const activeUserIds = new Set(activeUsersFromBackend.map((u) => u._id));
+        const usersMap = new Map(activeUsersFromBackend.map((u) => [u._id, u]));
 
         const updatedRecent = savedRecent.map((recentUser) => {
-          const isDeleted =
-            !activeUserIds.has(recentUser._id) ||
-            recentUser.isDeleted ||
-            recentUser.username === "Deleted User" ||
-            recentUser.username?.startsWith("deleted_user_") ||
-            recentUser.fullName === "Account Deleted";
+          const freshBackendUser = usersMap.get(recentUser._id);
 
-          if (isDeleted) {
+          if (!freshBackendUser) {
             return {
               ...recentUser,
               username: "Deleted User",
@@ -166,10 +162,20 @@ const SearchDrawer = ({ isOpen, onClose }) => {
               isDeleted: true,
             };
           }
-          return recentUser;
+
+          return {
+            ...recentUser,
+            username: freshBackendUser.username,
+            fullName: freshBackendUser.fullName,
+            avatar: freshBackendUser.avatar || "",
+            isDeleted: false,
+          };
         });
 
         setRecentlyViewed(updatedRecent);
+
+        const storageKey = getStorageKey();
+        localStorage.setItem(storageKey, JSON.stringify(updatedRecent));
       } catch (err) {
         console.error("=== SEARCH DRAWER FETCH ERROR ===", err.message);
         setError(err.response?.data?.message || err.message);

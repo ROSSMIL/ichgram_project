@@ -1,18 +1,25 @@
-export const getLoggedInUsername = () => {
+export const getLoggedInUserDetails = () => {
   const token = localStorage.getItem("token");
-  if (!token) return null;
+  if (!token) return { userId: null, username: null };
   try {
     const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.username;
+    return {
+      userId: payload.userId || payload.id || payload._id || null,
+      username: payload.username || null,
+    };
   } catch (e) {
     console.error("Failed to decode token:", e);
-    return null;
+    return { userId: null, username: null };
   }
 };
 
+export const getLoggedInUsername = () => {
+  return getLoggedInUserDetails().username;
+};
+
 export const getStorageKey = () => {
-  const username = getLoggedInUsername();
-  return username ? `recentlyViewed_${username}` : "recentlyViewed_guest";
+  const { userId } = getLoggedInUserDetails();
+  return userId ? `recentlyViewed_${userId}` : "recentlyViewed_guest";
 };
 
 export const getSavedRecentlyViewed = () => {
@@ -60,7 +67,7 @@ export const saveToRecentlyViewed = (user) => {
     return;
   }
 
-  const currentUsername = getLoggedInUsername();
+  const { username: currentUsername } = getLoggedInUserDetails();
   if (
     currentUsername &&
     user.username &&
