@@ -6,35 +6,62 @@ import API from "../../api/axios";
 import Avatar from "../Avatar/Avatar";
 import styles from "./PostCard.module.css";
 
-const formatTimeAgo = (dateInput) => {
+const formatTimeAgo = (dateInput, isCompact = false) => {
   if (!dateInput) return "just now";
 
   const date = new Date(dateInput);
   const now = new Date();
   const diffInSeconds = Math.floor((now - date) / 1000);
 
-  if (diffInSeconds < 60) return "just now";
+  if (diffInSeconds < 60) return isCompact ? "now" : "just now";
 
   const diffInMinutes = Math.floor(diffInSeconds / 60);
-  if (diffInMinutes < 60) return `${diffInMinutes} min.`;
+  if (diffInMinutes < 60) {
+    return isCompact ? `${diffInMinutes}m` : `${diffInMinutes} min.`;
+  }
 
   const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24)
-    return diffInHours === 1 ? "1 hour" : `${diffInHours} hours`;
+  if (diffInHours < 24) {
+    return isCompact
+      ? `${diffInHours}h`
+      : diffInHours === 1
+        ? "1 hour"
+        : `${diffInHours} hours`;
+  }
 
   const diffInDays = Math.floor(diffInHours / 24);
-  if (diffInDays < 7) return diffInDays === 1 ? "1 day" : `${diffInDays} days`;
+  if (diffInDays < 7) {
+    return isCompact
+      ? `${diffInDays}d`
+      : diffInDays === 1
+        ? "1 day"
+        : `${diffInDays} days`;
+  }
 
   const diffInWeeks = Math.floor(diffInDays / 7);
-  if (diffInDays < 30)
-    return diffInWeeks <= 1 ? "1 week" : `${diffInWeeks} weeks`;
+  if (diffInDays < 30) {
+    return isCompact
+      ? `${diffInWeeks}w`
+      : diffInWeeks <= 1
+        ? "1 week"
+        : `${diffInWeeks} weeks`;
+  }
 
   const diffInMonths = Math.floor(diffInDays / 30);
-  if (diffInMonths < 12)
-    return diffInMonths <= 1 ? "1 month" : `${diffInMonths} months`;
+  if (diffInMonths < 12) {
+    return isCompact
+      ? `${diffInMonths}mo`
+      : diffInMonths <= 1
+        ? "1 month"
+        : `${diffInMonths} months`;
+  }
 
   const diffInYears = Math.floor(diffInDays / 365);
-  return diffInYears <= 1 ? "1 year" : `${diffInYears} years`;
+  return isCompact
+    ? `${diffInYears}y`
+    : diffInYears <= 1
+      ? "1 year"
+      : `${diffInYears} years`;
 };
 
 const isPostEdited = (post) => {
@@ -78,6 +105,18 @@ const PostCard = ({
 
   const [activeCommentMenu, setActiveCommentMenu] = useState(null);
   const [isMenuClosing, setIsMenuClosing] = useState(false);
+
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth <= 768 : false,
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const cardRef = useRef(null);
   const likeBtnRef = useRef(null);
@@ -176,6 +215,7 @@ const PostCard = ({
       navigator.vibrate(30);
     }
   };
+
   const toggleLikeApiCall = async () => {
     if (isLiking) return;
 
@@ -199,7 +239,7 @@ const PostCard = ({
       );
 
       if (response.data) {
-        setLocalLike(null); 
+        setLocalLike(null);
         if (typeof onPostUpdate === "function") {
           onPostUpdate(response.data);
         }
@@ -456,7 +496,7 @@ const PostCard = ({
             <div className={styles.userMeta}>
               <span className={styles.dot}>•</span>
               <span className={styles.time}>
-                {formatTimeAgo(post.createdAt)}
+                {formatTimeAgo(post.createdAt, isMobile)}
               </span>
 
               {edited && (
@@ -466,7 +506,7 @@ const PostCard = ({
                     className={styles.editedBadge}
                     title={
                       post.updatedAt
-                        ? `Edited ${formatTimeAgo(post.updatedAt)} ago`
+                        ? `Edited ${formatTimeAgo(post.updatedAt, isMobile)} ago`
                         : "Edited"
                     }
                   >
@@ -557,9 +597,9 @@ const PostCard = ({
                 height="22"
                 viewBox="0 0 24 24"
                 width="22"
-                className={`${isLiked ? styles.likedHeart : styles.unlikedHeart} ${
-                  animateHeart ? styles.popActive : ""
-                }`}
+                className={`${
+                  isLiked ? styles.likedHeart : styles.unlikedHeart
+                } ${animateHeart ? styles.popActive : ""}`}
               >
                 <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path>
               </svg>
@@ -636,7 +676,7 @@ const PostCard = ({
                   {authorUsername}
                 </Link>
                 <span className={styles.commentTimeAgo}>
-                  {formatTimeAgo(post.createdAt)}
+                  {formatTimeAgo(post.createdAt, false)}
                 </span>
               </div>
               <span className={styles.desktopCaptionText}>{post.caption}</span>
@@ -668,7 +708,7 @@ const PostCard = ({
                         {uName}
                       </Link>
                       <span className={styles.commentTimeAgo}>
-                        {formatTimeAgo(c.createdAt)}
+                        {formatTimeAgo(c.createdAt, false)}
                       </span>
                     </div>
                     <span className={styles.desktopCommentText}>{c.text}</span>

@@ -896,3 +896,27 @@
   width: 14px;
   height: 14px;
 }
+@media (max-width: 768px) {
+  .header {
+    padding: 2px 4px 10px 4px;
+  }
+
+  .userInfo {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .userMeta {
+    font-size: 12px;
+  }
+
+  .time {
+    white-space: nowrap;
+    font-size: 12px;
+  }
+
+  .followBtn {
+    padding: 3px 8px;
+    font-size: 12px;
+  }
+}
