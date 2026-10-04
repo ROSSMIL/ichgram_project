@@ -208,6 +208,10 @@ const ProfilePage = () => {
 
   const usersListRef = useRef(null);
 
+  const [modalTheme, setModalTheme] = useState(() => {
+    return document.documentElement.getAttribute("data-theme") || "light";
+  });
+
   const isSeeded = Boolean(
     user?.isSeeded ||
     SEEDED_EMAILS.includes((user?.email || "").toLowerCase()) ||
@@ -479,6 +483,21 @@ const ProfilePage = () => {
 
     fetchProfileAndPosts();
   }, [navigate]);
+  useEffect(() => {
+    const updateModalTheme = () => {
+      const current =
+        document.documentElement.getAttribute("data-theme") || "light";
+      setModalTheme(current);
+    };
+
+    const observer = new MutationObserver(updateModalTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   if (loading) {
     return (
@@ -822,34 +841,48 @@ const ProfilePage = () => {
                 <div className={styles.settingsActionStack}>
                   <button
                     onClick={() => {
-                      const currentTheme =
-                        document.documentElement.getAttribute("data-theme") ||
-                        "light";
                       const nextTheme =
-                        currentTheme === "dark" ? "light" : "dark";
+                        modalTheme === "dark" ? "light" : "dark";
                       document.documentElement.setAttribute(
                         "data-theme",
                         nextTheme,
                       );
                       localStorage.setItem("theme", nextTheme);
-                      window.dispatchEvent(new Event("storage"));
+                      setModalTheme(nextTheme);
                     }}
                     className={styles.modalAction}
                   >
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <circle cx="12" cy="12" r="5" />
-                      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-                    </svg>
-                    <span>Switch Theme</span>
+                    {modalTheme === "dark" ? (
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="12" cy="12" r="5" />
+                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                      </svg>
+                    ) : (
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                      </svg>
+                    )}
+                    <span>
+                      {modalTheme === "dark" ? "Light Mode" : "Dark Mode"}
+                    </span>
                   </button>
 
                   <button
