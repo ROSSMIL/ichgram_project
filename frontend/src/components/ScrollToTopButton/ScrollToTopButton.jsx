@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
+import PropTypes from "prop-types";
 import styles from "./ScrollToTopButton.module.css";
 
-const ScrollToTopButton = () => {
+const ScrollToTopButton = ({ isHidden = false }) => {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [isClicked, setIsClicked] = useState(false);
 
@@ -67,6 +68,8 @@ const ScrollToTopButton = () => {
     };
   }, []);
 
+  if (isHidden) return null;
+
   return createPortal(
     <button
       type="button"
@@ -92,6 +95,10 @@ const ScrollToTopButton = () => {
     </button>,
     document.body,
   );
+};
+
+ScrollToTopButton.propTypes = {
+  isHidden: PropTypes.bool,
 };
 
 export default ScrollToTopButton;
