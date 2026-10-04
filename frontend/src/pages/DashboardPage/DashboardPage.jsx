@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import PropTypes from "prop-types";
-import { useNavigate } from "react-router-dom";
 import API from "../../api/axios";
 import PostModal from "../../components/PostModal/PostModal";
 import PostCard from "../../components/PostCard/PostCard";
@@ -8,6 +7,15 @@ import FeedFilterPill from "../../components/FeedFilterPill/FeedFilterPill";
 import Logo from "../../components/Logo/Logo";
 import styles from "./DashboardPage.module.css";
 import { useSocket } from "../../context/useSocket";
+
+const shuffleArray = (array) => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
 
 const AllCaughtUpCard = ({ onScrollToTop }) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -103,11 +111,13 @@ AllCaughtUpCard.propTypes = {
 };
 
 const DashboardPage = () => {
-  const navigate = useNavigate();
   const { isDisconnected } = useSocket() || {};
 
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [posts, setPosts] = useState(() => {
+    const cached = sessionStorage.getItem("dashboard_posts_cache");
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [loading, setLoading] = useState(() => posts.length === 0);
   const [currentUserFollowing, setCurrentUserFollowing] = useState([]);
   const [selectedPost, setSelectedPost] = useState(null);
 
@@ -117,16 +127,7 @@ const DashboardPage = () => {
 
   const token = localStorage.getItem("token");
 
-  const shuffleArray = (array) => {
-    const shuffled = [...array];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
-  };
-
-  const getLoggedInData = () => {
+  const getLoggedInData = useCallback(() => {
     if (!token) return { userId: null, username: null };
     try {
       const payload = JSON.parse(atob(token.split(".")[1]));
@@ -138,7 +139,7 @@ const DashboardPage = () => {
       console.error("Token decoding error", error);
       return { userId: null, username: null };
     }
-  };
+  }, [token]);
 
   const { userId: currentUserId } = getLoggedInData();
 
@@ -147,7 +148,9 @@ const DashboardPage = () => {
       if (!token) return;
 
       try {
-        setLoading(true);
+        if (isShuffleRequired || posts.length === 0) {
+          setLoading(true);
+        }
 
         const [postsRes, profileRes] = await Promise.all([
           API.get("/api/posts"),
@@ -155,6 +158,7 @@ const DashboardPage = () => {
         ]);
 
         setPosts((prevPosts) => {
+          let updatedList;
           if (!isShuffleRequired && prevPosts.length > 0) {
             const fetchedPostsMap = new Map(
               postsRes.data.map((p) => [p._id, p]),
@@ -168,9 +172,16 @@ const DashboardPage = () => {
               (p) => !existingIds.has(p._id),
             );
 
-            return [...newPosts, ...updatedExistingPosts];
+            updatedList = [...newPosts, ...updatedExistingPosts];
+          } else {
+            updatedList = shuffleArray(postsRes.data);
           }
-          return shuffleArray(postsRes.data);
+
+          sessionStorage.setItem(
+            "dashboard_posts_cache",
+            JSON.stringify(updatedList),
+          );
+          return updatedList;
         });
 
         const followingIds =
@@ -185,16 +196,11 @@ const DashboardPage = () => {
         setExploreHiddenUserIds(new Set(followingIds));
       } catch (error) {
         console.error("Error loading feed data:", error);
-
-        if (error.response?.status === 401) {
-          localStorage.removeItem("token");
-          navigate("/login");
-        }
       } finally {
         setLoading(false);
       }
     },
-    [token, navigate],
+    [token, posts.length],
   );
 
   const prevDisconnectedRef = useRef(null);
@@ -216,9 +222,13 @@ const DashboardPage = () => {
   }, [token, fetchFeedData]);
 
   const handlePostUpdate = useCallback((updatedPost) => {
-    setPosts((prevPosts) =>
-      prevPosts.map((p) => (p._id === updatedPost._id ? updatedPost : p)),
-    );
+    setPosts((prevPosts) => {
+      const updated = prevPosts.map((p) =>
+        p._id === updatedPost._id ? updatedPost : p,
+      );
+      sessionStorage.setItem("dashboard_posts_cache", JSON.stringify(updated));
+      return updated;
+    });
 
     setSelectedPost((prevSelected) => {
       if (prevSelected && prevSelected._id === updatedPost._id) {
@@ -269,6 +279,7 @@ const DashboardPage = () => {
       } else {
         if (token) {
           setPosts([]);
+          sessionStorage.removeItem("dashboard_posts_cache");
           fetchFeedData(true);
         }
       }
@@ -310,8 +321,8 @@ const DashboardPage = () => {
 
       setCurrentUserFollowing(updatedFollowing);
 
-      setPosts((prevPosts) =>
-        prevPosts.map((p) => {
+      setPosts((prevPosts) => {
+        const updated = prevPosts.map((p) => {
           const postAuthorId = p.user?._id || p.user?.id || p.user;
 
           if (
@@ -339,23 +350,30 @@ const DashboardPage = () => {
             };
           }
           return p;
-        }),
-      );
+        });
+
+        sessionStorage.setItem(
+          "dashboard_posts_cache",
+          JSON.stringify(updated),
+        );
+        return updated;
+      });
     } catch (error) {
       console.error("Follow error:", error);
     }
   };
 
-  const handleOpenModal = (post, focusComment = false) => {
-    const isMobile = window.innerWidth <= 768;
-
-    if (isMobile) {
-      navigate(`/post/${post._id}${focusComment ? "?focus=true" : ""}`);
-    } else {
-      setSelectedPost(post);
-      setAutoFocusComment(focusComment);
-    }
-  };
+  const handleOpenModal = useCallback((post, focusComment = false) => {
+    window.dispatchEvent(
+      new CustomEvent("openPostModal", {
+        detail: {
+          postId: post._id || post.id,
+          post: post,
+          focusComment: focusComment,
+        },
+      }),
+    );
+  }, []);
 
   const handleCloseModal = () => {
     setSelectedPost(null);
@@ -370,6 +388,7 @@ const DashboardPage = () => {
       mainContent.scrollTo({ top: 0, behavior: "smooth" });
     }
     setPosts([]);
+    sessionStorage.removeItem("dashboard_posts_cache");
     fetchFeedData(true);
   };
 
