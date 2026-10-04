@@ -1141,29 +1141,55 @@
     opacity: 0;
   }
 }
-
 @media (max-width: 768px) {
   .overlay {
-    padding: 12px;
+    padding: 10px;
   }
 
   .modal {
     max-width: 100% !important;
-    height: 90vh !important;
+    height: 92vh !important;
     border-radius: 20px;
+  }
+
+  .modalTitle,
+  .modeTabs {
+    display: none !important;
+  }
+
+  .modalTitleMobile {
+    display: block !important;
+  }
+
+  .header {
+    padding: 14px 16px;
+  }
+
+  .headerRightActions {
+    gap: 8px;
+  }
+
+  .resetAllBtn {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+
+  .shareBtn {
+    font-size: 13px;
+    padding: 5px 10px;
   }
 
   .body {
     flex-direction: column;
     overflow-y: auto;
     padding: 0 8px 8px 8px;
-    gap: 8px;
+    gap: 12px;
   }
 
   .leftColumn {
     flex: none;
     width: 100%;
-    height: 300px;
+    height: 280px;
   }
 
   .rightColumn {
@@ -1171,7 +1197,7 @@
   }
 
   .captionArea {
-    min-height: 80px;
+    min-height: 90px;
   }
 
   .dropText {
@@ -1187,6 +1213,17 @@
   .iconCircle {
     width: 68px;
     height: 68px;
+  }
+
+  .cropToolbar {
+    padding: 8px;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .zoomControl {
+    max-width: 80px;
   }
 
   .emojiContainer {
@@ -1254,4 +1291,19 @@
   max-height: 100% !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
+}
+.modalTitleMobile {
+  display: none;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  text-align: center;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+  pointer-events: none;
 }

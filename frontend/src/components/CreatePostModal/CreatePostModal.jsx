@@ -523,7 +523,6 @@ const CreatePostModal = ({
           className={styles.fileInput}
           accept="image/*"
         />
-
         <div className={styles.header}>
           <button
             className={styles.closeBtn}
@@ -545,7 +544,17 @@ const CreatePostModal = ({
             </svg>
           </button>
 
-          {croppedImage ? (
+          {!croppedImage && (
+            <h3 className={styles.modalTitle}>
+              {editingPost ? "Edit post" : "Create new post"}
+            </h3>
+          )}
+
+          <h3 className={styles.modalTitleMobile}>
+            {editingPost ? "Edit post" : "Create post"}
+          </h3>
+
+          {croppedImage && (
             <div className={styles.modeTabs}>
               <button
                 type="button"
@@ -566,10 +575,6 @@ const CreatePostModal = ({
                 Preview
               </button>
             </div>
-          ) : (
-            <h3 className={styles.modalTitle}>
-              {editingPost ? "Edit post" : "Create new post"}
-            </h3>
           )}
 
           <div className={styles.headerRightActions}>
@@ -603,7 +608,6 @@ const CreatePostModal = ({
             </button>
           </div>
         </div>
-
         <div className={styles.contentViewport} ref={contentViewportRef}>
           <div
             className={`${styles.body} ${
