@@ -1,10 +1,4 @@
-import {
-  useState,
-  useEffect,
-  useCallback,
-  useRef,
-  useLayoutEffect,
-} from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import EmojiPicker from "emoji-picker-react";
 import API from "../../api/axios";
@@ -88,7 +82,6 @@ const PostPage = () => {
   const [showModalEmojiPicker, setShowModalEmojiPicker] = useState(false);
   const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false);
   const [isClosingModal, setIsClosingModal] = useState(false);
-  const [isMobileView, setIsMobileView] = useState(window.innerWidth <= 868);
 
   const [animateHeart, setAnimateHeart] = useState(false);
   const [floatingHearts, setFloatingHearts] = useState([]);
@@ -100,7 +93,6 @@ const PostPage = () => {
   const modalEmojiPickerRef = useRef(null);
   const commentInputRef = useRef(null);
   const modalCommentInputRef = useRef(null);
-  const commentsAreaRef = useRef(null);
   const modalCommentsAreaRef = useRef(null);
   const likeBtnRef = useRef(null);
   const clickTimerRef = useRef(null);
@@ -131,16 +123,7 @@ const PostPage = () => {
   const currentUserId = getLoggedInUserId();
   const currentUsername = getLoggedInUsername();
 
-  useEffect(() => {
-    const handleResize = () => setIsMobileView(window.innerWidth <= 868);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const scrollToBottom = useCallback(() => {
-    if (commentsAreaRef.current) {
-      commentsAreaRef.current.scrollTop = commentsAreaRef.current.scrollHeight;
-    }
+  const scrollToModalBottom = useCallback(() => {
     if (modalCommentsAreaRef.current) {
       modalCommentsAreaRef.current.scrollTop =
         modalCommentsAreaRef.current.scrollHeight;
@@ -163,16 +146,13 @@ const PostPage = () => {
   }, [isCommentsModalOpen, isClosingModal]);
 
   const handleFocusCommentInput = useCallback(() => {
-    if (isMobileView) {
-      handleOpenModal();
-      setTimeout(() => {
-        if (modalCommentInputRef.current) modalCommentInputRef.current.focus();
-      }, 250);
-    } else {
-      if (commentInputRef.current) commentInputRef.current.focus();
-      setTimeout(scrollToBottom, 300);
-    }
-  }, [isMobileView, scrollToBottom, handleOpenModal]);
+    handleOpenModal();
+    setTimeout(() => {
+      if (modalCommentInputRef.current) {
+        modalCommentInputRef.current.focus();
+      }
+    }, 250);
+  }, [handleOpenModal]);
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -209,12 +189,6 @@ const PostPage = () => {
       return () => clearTimeout(timer);
     }
   }, [autoFocusComment, loading, post, handleFocusCommentInput]);
-
-  useLayoutEffect(() => {
-    if (post) {
-      scrollToBottom();
-    }
-  }, [post, comments.length, scrollToBottom]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -374,7 +348,7 @@ const PostPage = () => {
       setNewComment("");
       setShowEmojiPicker(false);
       setShowModalEmojiPicker(false);
-      setTimeout(scrollToBottom, 50);
+      setTimeout(scrollToModalBottom, 50);
     } catch (error) {
       console.error("Error adding comment:", error);
     } finally {
@@ -479,6 +453,12 @@ const PostPage = () => {
 
   const edited = isPostEdited(post);
 
+  const getCommentsBtnText = (count) => {
+    if (count === 0) return "No comments yet — be the first!";
+    if (count === 1) return "View 1 comment";
+    return `View all ${count} comments`;
+  };
+
   const renderCommentCard = (comment) => {
     const commenterUsername =
       comment.user?.username || comment.username || "user";
@@ -582,8 +562,6 @@ const PostPage = () => {
       </div>
     );
   }
-
-  const previewComments = isMobileView ? comments.slice(-3) : comments;
 
   return (
     <div className={styles.pageWrapper}>
@@ -754,7 +732,7 @@ const PostPage = () => {
           <div className={styles.commentsContainer}>
             {post.caption && (
               <div className={styles.authorCaptionBox}>
-                <Avatar user={authorUser} size={30} />
+                <Avatar user={authorUser} size={32} />
                 <div className={styles.captionBody}>
                   <div className={styles.captionHeader}>
                     <Link
@@ -767,29 +745,17 @@ const PostPage = () => {
                       {formatTimeAgo(post.createdAt)}
                     </span>
                   </div>
-                  <span className={styles.captionText}>{post.caption}</span>
+                  <p className={styles.captionText}>{post.caption}</p>
                 </div>
               </div>
             )}
 
-            <div className={styles.commentsArea} ref={commentsAreaRef}>
-              {isMobileView && comments.length > 3 && (
-                <button
-                  className={styles.viewAllCommentsBtn}
-                  onClick={handleOpenModal}
-                >
-                  View all {comments.length} comments
-                </button>
-              )}
-
-              {comments.length > 0 ? (
-                previewComments.map((comment) => renderCommentCard(comment))
-              ) : (
-                <div className={styles.noComments}>
-                  No comments yet. Be the first!
-                </div>
-              )}
-            </div>
+            <button
+              className={styles.viewAllCommentsBtn}
+              onClick={handleOpenModal}
+            >
+              {getCommentsBtnText(comments.length)}
+            </button>
           </div>
 
           <div className={styles.actionsArea}>
@@ -900,7 +866,6 @@ const PostPage = () => {
                 }}
                 onFocus={handleFocusCommentInput}
                 disabled={isSubmitting}
-                autoFocus={autoFocusComment}
               />
 
               <button
@@ -939,9 +904,9 @@ const PostPage = () => {
               </button>
             </div>
 
-            <div className={styles.commentsContainer}>
+            <div className={styles.modalCommentsContainer}>
               {post.caption && (
-                <div className={styles.authorCaptionBox}>
+                <div className={styles.authorCaptionBoxModal}>
                   <Avatar user={authorUser} size={30} />
                   <div className={styles.captionBody}>
                     <div className={styles.captionHeader}>

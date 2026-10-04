@@ -290,22 +290,21 @@
   background-color: var(--bg-main, #000000);
   border: 1px solid var(--border-color);
   border-radius: 20px;
-  padding: 12px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  justify-content: space-between;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .authorCaptionBox {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 10px 12px;
-  background-color: var(--bg-card, rgba(255, 255, 255, 0.04));
-  border: 1px solid var(--border-color);
-  border-radius: 14px;
+  padding: 0;
+  background-color: transparent;
+  border: none;
   flex-shrink: 0;
 }
 
@@ -325,49 +324,54 @@
 
 .captionText {
   color: var(--text-primary);
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: 14.5px;
+  line-height: 1.5;
   white-space: pre-line;
   word-break: break-word;
-}
-
-.commentsArea {
-  flex: 1;
-  padding-right: 4px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  gap: 10px;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-}
-
-.commentsArea::-webkit-scrollbar,
-.modalCommentsArea::-webkit-scrollbar {
-  width: 4px;
-}
-
-.commentsArea::-webkit-scrollbar-thumb,
-.modalCommentsArea::-webkit-scrollbar-thumb {
-  background: var(--border-color, rgba(255, 255, 255, 0.2));
-  border-radius: 4px;
+  margin: 0;
 }
 
 .viewAllCommentsBtn {
-  background: none;
+  background: transparent;
   border: none;
   color: var(--text-secondary, #8e8e8e);
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 500;
   cursor: pointer;
-  padding: 6px 0;
+  padding: 8px 0 0 0;
   text-align: left;
   transition: color 0.2s ease;
+  width: auto;
+  align-self: flex-start;
 }
 
 .viewAllCommentsBtn:hover {
   color: var(--text-primary);
+  text-decoration: underline;
+}
+
+.modalCommentsContainer {
+  flex: 1;
+  background-color: var(--bg-main, #000000);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.authorCaptionBoxModal {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  background-color: var(--bg-card, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  flex-shrink: 0;
 }
 
 .commentCard {
@@ -784,6 +788,15 @@
   -webkit-overflow-scrolling: touch;
 }
 
+.modalCommentsArea::-webkit-scrollbar {
+  width: 4px;
+}
+
+.modalCommentsArea::-webkit-scrollbar-thumb {
+  background: var(--border-color, rgba(255, 255, 255, 0.2));
+  border-radius: 4px;
+}
+
 .modalInputFooter {
   padding-top: 4px;
   position: relative;
@@ -982,12 +995,6 @@
 
   .commentsContainer {
     border-radius: 16px;
-    padding: 10px;
-  }
-
-  .commentsArea {
-    flex: 1;
-    max-height: none;
-    padding-right: 0;
+    padding: 12px;
   }
 }
