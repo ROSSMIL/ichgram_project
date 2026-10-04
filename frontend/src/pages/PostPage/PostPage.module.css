@@ -971,12 +971,28 @@
     width: 100% !important;
     height: 48vh !important;
     max-height: 420px !important;
+    min-height: 280px !important;
+    position: relative !important;
   }
 
   .imageContainer {
+    width: 100% !important;
+    height: 100% !important;
     border-radius: 0 !important;
     border: none !important;
-    aspect-ratio: auto;
+    position: relative !important;
+    overflow: hidden !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .postImg {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
   }
 
   .infoSection {
@@ -993,6 +1009,7 @@
     flex-direction: column !important;
     justify-content: space-between !important;
     background-color: var(--bg-card) !important;
+    min-height: 0 !important;
   }
 
   .commentsContainer {
