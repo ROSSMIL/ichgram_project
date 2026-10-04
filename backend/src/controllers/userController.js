@@ -6,6 +6,7 @@ import Message from "../models/messageModel.js";
 import Notification from "../models/notificationModel.js";
 import { SEEDED_EMAILS, resetSeededAccount } from "../config/seeder.js";
 import { v2 as cloudinary } from "cloudinary";
+import crypto from "crypto";
 
 export const getProfile = async (req, res) => {
   try {
@@ -44,7 +45,7 @@ export const editProfile = async (req, res) => {
     }
 
     const user = await User.findById(userId);
-    if (!user) {
+    if (!user || user.isDeleted) {
       return res.status(404).json({ message: "User not found in database" });
     }
 
@@ -71,7 +72,10 @@ export const editProfile = async (req, res) => {
         });
       }
 
-      const existingUser = await User.findOne({ username: cleanUsername });
+      const existingUser = await User.findOne({
+        username: cleanUsername,
+        isDeleted: { $ne: true },
+      });
       if (existingUser && existingUser._id.toString() !== userId.toString()) {
         return res
           .status(400)
@@ -188,6 +192,7 @@ export const getAllUsers = async (req, res) => {
       .json({ message: "Server error while fetching users" });
   }
 };
+
 export const toggleFollow = async (req, res) => {
   try {
     const currentUserId = req.user?.userId || req.user?.id || req.user?._id;
@@ -204,7 +209,7 @@ export const toggleFollow = async (req, res) => {
     const targetUser = await User.findById(targetUserId);
     const currentUser = await User.findById(currentUserId);
 
-    if (!targetUser || !currentUser) {
+    if (!targetUser || !currentUser || targetUser.isDeleted) {
       return res.status(404).json({ message: "User not found" });
     }
 
@@ -381,46 +386,13 @@ export const deleteProfile = async (req, res) => {
 
     console.log(`=== ANONYMIZING USER (GHOST MODE): ${user.username} ===`);
 
-    if (user.avatar) {
-      await deleteCloudinaryImage(user.avatar);
-    }
+    const timestamp = Date.now();
+    const randomSecret = crypto.randomBytes(16).toString("hex");
 
-    const userPosts = await Post.find({ user: userId });
-    for (const post of userPosts) {
-      if (post.url) {
-        await deleteCloudinaryImage(post.url);
-      }
-    }
-    await Post.deleteMany({ user: userId });
-
-    await Post.updateMany({}, { $pull: { comments: { user: userId } } });
-    await Post.updateMany({ likes: userId }, { $pull: { likes: userId } });
-
-    await User.updateMany(
-      { followers: userId },
-      { $pull: { followers: userId } },
-    );
-    await User.updateMany(
-      { following: userId },
-      { $pull: { following: userId } },
-    );
-
-    await Notification.deleteMany({
-      $or: [{ recipient: userId }, { sender: userId }],
-    });
-
-    const io = req.app.get("io");
-
-    if (io) {
-      io.emit("user account deleted", { userId: userId.toString() });
-
-      const userSockets = await io.in(userId.toString()).fetchSockets();
-      userSockets.forEach((s) => s.disconnect(true));
-    }
-
-    user.username = `deleted_user_${user._id}`;
+    user.username = `deleted_user_${timestamp}_${user._id.toString().slice(-4)}`;
     user.fullName = "Account Deleted";
-    user.email = `deleted_${user._id}@deleted.local`;
+    user.email = `deleted_${timestamp}_${user._id}@deleted.local`;
+    user.password = `$2b$10$DELETED_ACCOUNT_${randomSecret}`;
     user.avatar = "";
     user.bio = "This account has been deleted.";
     user.website = "";
@@ -429,6 +401,49 @@ export const deleteProfile = async (req, res) => {
     user.isDeleted = true;
 
     await user.save();
+
+    try {
+      if (user.avatar) {
+        await deleteCloudinaryImage(user.avatar);
+      }
+
+      const userPosts = await Post.find({ user: userId });
+      for (const post of userPosts) {
+        if (post.url) {
+          await deleteCloudinaryImage(post.url);
+        }
+      }
+      await Post.deleteMany({ user: userId });
+
+      await Post.updateMany({}, { $pull: { comments: { user: userId } } });
+      await Post.updateMany({ likes: userId }, { $pull: { likes: userId } });
+
+      await User.updateMany(
+        { followers: userId },
+        { $pull: { followers: userId } },
+      );
+      await User.updateMany(
+        { following: userId },
+        { $pull: { following: userId } },
+      );
+
+      await Notification.deleteMany({
+        $or: [{ recipient: userId }, { sender: userId }],
+      });
+    } catch (cleanError) {
+      console.error(
+        "Non-critical cleanup error during deleteProfile:",
+        cleanError,
+      );
+    }
+
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("user account deleted", { userId: userId.toString() });
+
+      const userSockets = await io.in(userId.toString()).fetchSockets();
+      userSockets.forEach((s) => s.disconnect(true));
+    }
 
     res.status(200).json({
       message: "Profile anonymized and deleted successfully",

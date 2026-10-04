@@ -2,7 +2,6 @@ import User from "../models/userModel.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import seedDatabase from "../config/seeder.js";
 
 export const register = async (req, res) => {
   try {
@@ -37,12 +36,18 @@ export const register = async (req, res) => {
         .json({ message: "Password must be at least 6 characters long." });
     }
 
-    const existingEmail = await User.findOne({ email: cleanEmail });
+    const existingEmail = await User.findOne({
+      email: cleanEmail,
+      isDeleted: { $ne: true },
+    });
     if (existingEmail) {
       return res.status(400).json({ message: "This email is already taken." });
     }
 
-    const existingUsername = await User.findOne({ username: cleanUsername });
+    const existingUsername = await User.findOne({
+      username: cleanUsername,
+      isDeleted: { $ne: true },
+    });
     if (existingUsername) {
       return res
         .status(400)
@@ -84,6 +89,7 @@ export const register = async (req, res) => {
     });
   }
 };
+
 export const login = async (req, res) => {
   try {
     const { emailOrUsername, password } = req.body;
@@ -96,11 +102,13 @@ export const login = async (req, res) => {
 
     const user = await User.findOne({
       $or: [{ email: cleanInput }, { username: cleanInput }],
+      isDeleted: { $ne: true },
     });
 
-    const isMatch = user
-      ? await bcrypt.compare(password, user.password)
-      : false;
+    const isMatch =
+      user && user.password
+        ? await bcrypt.compare(password, user.password)
+        : false;
 
     if (
       !user ||
@@ -135,18 +143,16 @@ export const login = async (req, res) => {
       .json({ message: "Server error during login", error: error.message });
   }
 };
+
 export const guestLogin = async (req, res) => {
   try {
     const { guestDeviceId } = req.body;
     const deviceId = guestDeviceId || crypto.randomUUID();
 
-    let guestUser = await User.findOne({ guestDeviceId: deviceId });
-    if (
-      guestUser &&
-      (guestUser.isDeleted || guestUser.username?.startsWith("deleted_user_"))
-    ) {
-      guestUser = null;
-    }
+    let guestUser = await User.findOne({
+      guestDeviceId: deviceId,
+      isDeleted: { $ne: true },
+    });
 
     if (!guestUser) {
       const uniqueSuffix = crypto.randomBytes(3).toString("hex");
