@@ -355,7 +355,6 @@ const deleteCloudinaryImage = async (imageUrl) => {
     const publicId = `${folder}/${filenameWithExt.split(".")[0]}`;
 
     await cloudinary.uploader.destroy(publicId);
-    console.log(`Deleted Cloudinary asset: ${publicId}`);
   } catch (err) {
     console.error("Cloudinary cleanup error:", err?.message || err);
   }
@@ -384,10 +383,10 @@ export const deleteProfile = async (req, res) => {
       });
     }
 
-    console.log(`=== ANONYMIZING USER (GHOST MODE): ${user.username} ===`);
-
     const timestamp = Date.now();
     const randomSecret = crypto.randomBytes(16).toString("hex");
+
+    const wasGuest = Boolean(user.isGuest);
 
     user.username = `deleted_user_${timestamp}_${user._id.toString().slice(-4)}`;
     user.fullName = "Account Deleted";
@@ -398,6 +397,11 @@ export const deleteProfile = async (req, res) => {
     user.website = "";
     user.followers = [];
     user.following = [];
+
+    if (wasGuest) {
+      user.guestDeviceId = "";
+    }
+
     user.isDeleted = true;
 
     await user.save();
@@ -447,7 +451,7 @@ export const deleteProfile = async (req, res) => {
 
     res.status(200).json({
       message: "Profile anonymized and deleted successfully",
-      isGuestReset: false,
+      isGuestReset: wasGuest,
       isSeededReset: false,
     });
   } catch (error) {

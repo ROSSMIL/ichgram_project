@@ -176,7 +176,6 @@ const EditProfilePage = () => {
       setLoading(false);
     }
   };
-
   const handleDeleteConfirm = async () => {
     if (isSeeded) return;
 
@@ -188,12 +187,16 @@ const EditProfilePage = () => {
 
     try {
       const token = localStorage.getItem("token");
-      await API.delete("/api/users/profile", {
+
+      const response = await API.delete("/api/users/profile", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       localStorage.removeItem("token");
-      localStorage.removeItem("guest_device_id");
+
+      if (response.data?.isGuestReset) {
+        localStorage.removeItem("guest_device_id");
+      }
 
       window.dispatchEvent(new CustomEvent("auth:logout"));
       window.dispatchEvent(new Event("profileUpdated"));

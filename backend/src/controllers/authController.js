@@ -165,7 +165,7 @@ export const guestLogin = async (req, res) => {
       guestUser = new User({
         email: guestEmail,
         username: guestUsername,
-        fullName: `Guest Explorer`,
+        fullName: "Guest Explorer",
         password: hashedPassword,
         isGuest: true,
         guestDeviceId: deviceId,
