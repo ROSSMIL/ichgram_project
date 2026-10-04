@@ -11,6 +11,7 @@
   box-sizing: border-box;
   gap: 3.5rem;
   transition: background-color 0.4s ease;
+  overflow-x: hidden;
 }
 
 .imageSection {
@@ -81,7 +82,8 @@
   transition:
     background-color 0.4s ease,
     border-color 0.3s ease,
-    box-shadow 0.3s ease;
+    box-shadow 0.3s ease,
+    opacity 0.3s ease;
 }
 
 .formBox:hover,
@@ -91,14 +93,7 @@
 }
 
 .loadingBox {
-  opacity: 0.92;
-}
-
-.logoImage {
-  width: 60%;
-  height: auto;
-  object-fit: contain;
-  margin-bottom: 1.5rem;
+  pointer-events: none;
 }
 
 .form {
@@ -136,8 +131,13 @@
   transition: color 0.2s ease;
 }
 
-.togglePasswordsBtn:hover {
+.togglePasswordsBtn:hover:not(:disabled) {
   color: var(--text-primary);
+}
+
+.togglePasswordsBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .passwordRulesContainer {
@@ -220,7 +220,8 @@
     transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
     box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1),
     filter 0.25s ease,
-    opacity 0.2s ease;
+    opacity 0.25s ease,
+    background-color 0.25s ease;
 }
 
 .form button:not(.togglePasswordsBtn):hover:not(:disabled) {
@@ -237,9 +238,13 @@
     box-shadow 0.1s ease;
 }
 
-.form button:disabled {
-  cursor: not-allowed;
-  opacity: 0.38;
+.form button:not(.togglePasswordsBtn):disabled {
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  opacity: 0.45;
+  background-color: var(--bg-hover, rgba(255, 255, 255, 0.03));
+  color: var(--text-secondary);
+  border-color: var(--border-color);
   transform: none !important;
   box-shadow: none !important;
 }
@@ -263,20 +268,29 @@
     background-color 0.4s ease,
     border-color 0.25s ease,
     box-shadow 0.3s ease,
-    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.25s ease;
 }
 
-.redirectBox:hover,
-.redirectBox:focus-visible {
+.redirectBox:hover:not(.redirectDisabled),
+.redirectBox:focus-visible:not(.redirectDisabled) {
   border-color: var(--text-secondary);
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.22);
   transform: scale(1.018);
 }
 
-.redirectBox:active {
+.redirectBox:active:not(.redirectDisabled) {
   transform: scale(0.98);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
   transition: transform 0.1s ease;
+}
+
+.redirectDisabled {
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  opacity: 0.45;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 .redirectText {
@@ -315,11 +329,11 @@
   opacity: 0;
 }
 
-.redirectBox:hover .link {
+.redirectBox:hover:not(.redirectDisabled) .link {
   opacity: 1;
 }
 
-.redirectBox:hover .link::after {
+.redirectBox:hover:not(.redirectDisabled) .link::after {
   width: 100%;
   left: 0;
   opacity: 1;

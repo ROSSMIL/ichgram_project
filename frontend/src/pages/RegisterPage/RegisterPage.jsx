@@ -5,10 +5,10 @@ import Input from "../../components/Input/Input.jsx";
 import Button from "../../components/Button/Button.jsx";
 import LoadingHints from "../../components/LoadingHints/LoadingHints.jsx";
 import ThemeToggle from "../../components/ThemeToggle/ThemeToggle.jsx";
+import Logo from "../../components/Logo/Logo.jsx";
 import styles from "./RegisterPage.module.css";
 
 import phonesImg from "../../assets/phones.png";
-import logoImg from "../../assets/logo.png";
 
 const RegisterPage = () => {
   const [email, setEmail] = useState("");
@@ -45,6 +45,7 @@ const RegisterPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isLoading) return;
     setError("");
 
     if (
@@ -98,6 +99,12 @@ const RegisterPage = () => {
     }
   };
 
+  const handleRedirectToLogin = () => {
+    if (!isLoading) {
+      navigate("/login");
+    }
+  };
+
   const hasPasswordInput = password.length > 0 || confirmPassword.length > 0;
 
   const passwordType =
@@ -122,7 +129,7 @@ const RegisterPage = () => {
         <div
           className={`${styles.formBox} ${isLoading ? styles.loadingBox : ""}`}
         >
-          <img src={logoImg} alt="ICHGRAM" className={styles.logoImage} />
+          <Logo />
 
           <form onSubmit={handleSubmit} className={styles.form} noValidate>
             <Input
@@ -193,6 +200,7 @@ const RegisterPage = () => {
                   className={styles.togglePasswordsBtn}
                   onClick={() => setShowPasswords((prev) => !prev)}
                   tabIndex={-1}
+                  disabled={isLoading}
                 >
                   {showPasswords ? "Hide passwords" : "Show passwords"}
                 </button>
@@ -262,13 +270,15 @@ const RegisterPage = () => {
         </div>
 
         <div
-          className={styles.redirectBox}
-          onClick={() => navigate("/login")}
+          className={`${styles.redirectBox} ${
+            isLoading ? styles.redirectDisabled : ""
+          }`}
+          onClick={handleRedirectToLogin}
           role="button"
-          tabIndex={0}
+          tabIndex={isLoading ? -1 : 0}
           onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              navigate("/login");
+            if ((e.key === "Enter" || e.key === " ") && !isLoading) {
+              handleRedirectToLogin();
             }
           }}
         >

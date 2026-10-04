@@ -24,11 +24,13 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const isAnyLoading = isLoading || isGuestLoading;
+
   useEffect(() => {
     if (location.state?.accountDeleted) {
       const timer = setTimeout(() => {
         setShowDeletedModal(true);
-      }, 120); 
+      }, 120);
 
       return () => clearTimeout(timer);
     }
@@ -51,6 +53,7 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isAnyLoading) return;
     setError("");
 
     if (!emailOrUsername.trim() || !password.trim()) {
@@ -87,6 +90,7 @@ const LoginPage = () => {
   };
 
   const handleGuestLogin = async () => {
+    if (isAnyLoading) return;
     setError("");
     try {
       setIsGuestLoading(true);
@@ -129,6 +133,12 @@ const LoginPage = () => {
     }
   };
 
+  const handleRedirectToRegister = () => {
+    if (!isAnyLoading) {
+      navigate("/register");
+    }
+  };
+
   return (
     <div className={styles.container}>
       <ThemeToggle />
@@ -144,7 +154,7 @@ const LoginPage = () => {
       <div className={styles.authSection}>
         <div
           className={`${styles.formBox} ${
-            isLoading || isGuestLoading ? styles.loadingBox : ""
+            isAnyLoading ? styles.loadingBox : ""
           }`}
         >
           <Logo />
@@ -155,7 +165,7 @@ const LoginPage = () => {
               placeholder="Username, or email"
               value={emailOrUsername}
               onChange={handleEmailOrUsernameChange}
-              disabled={isLoading || isGuestLoading}
+              disabled={isAnyLoading}
             />
 
             <div className={styles.inputWrapper}>
@@ -164,7 +174,7 @@ const LoginPage = () => {
                 placeholder="Password"
                 value={password}
                 onChange={handlePasswordChange}
-                disabled={isLoading || isGuestLoading}
+                disabled={isAnyLoading}
               />
               {password && (
                 <button
@@ -172,6 +182,7 @@ const LoginPage = () => {
                   className={styles.togglePasswordBtn}
                   onClick={() => setShowPassword((prev) => !prev)}
                   tabIndex={-1}
+                  disabled={isAnyLoading}
                 >
                   {showPassword ? "Hide" : "Show"}
                 </button>
@@ -180,7 +191,7 @@ const LoginPage = () => {
 
             {error && <div className={styles.errorMessage}>{error}</div>}
 
-            <Button disabled={isLoading || isGuestLoading}>
+            <Button disabled={isAnyLoading}>
               {isLoading ? (
                 <div className={styles.spinnerWrapper}>
                   <svg className={styles.spinner} viewBox="0 0 50 50">
@@ -209,7 +220,7 @@ const LoginPage = () => {
               type="button"
               className={styles.guestButton}
               onClick={handleGuestLogin}
-              disabled={isLoading || isGuestLoading}
+              disabled={isAnyLoading}
             >
               {isGuestLoading ? (
                 <div className={styles.spinnerWrapper}>
@@ -230,22 +241,25 @@ const LoginPage = () => {
             </button>
           </form>
 
-          <LoadingHints active={isLoading || isGuestLoading} />
+          <LoadingHints active={isAnyLoading} />
         </div>
 
         <div
-          className={styles.redirectBox}
-          onClick={() => navigate("/register")}
+          className={`${styles.redirectBox} ${
+            isAnyLoading ? styles.redirectDisabled : ""
+          }`}
+          onClick={handleRedirectToRegister}
           role="button"
-          tabIndex={0}
+          tabIndex={isAnyLoading ? -1 : 0}
           onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              navigate("/register");
+            if ((e.key === "Enter" || e.key === " ") && !isAnyLoading) {
+              handleRedirectToRegister();
             }
           }}
         >
           <p className={styles.redirectText}>
-            Don't have an account? <span className={styles.link}>Sign up</span>
+            Don&apos;t have an account?{" "}
+            <span className={styles.link}>Sign up</span>
           </p>
         </div>
       </div>
@@ -279,8 +293,8 @@ const LoginPage = () => {
               <p className={styles.modalText}>
                 Your account and personal data have been successfully removed.
                 <span className={styles.infoBoxText}>
-                  We're sad to see you go! You can create a new account anytime
-                  to continue exploring Ichgram.
+                  We&apos;re sad to see you go! You can create a new account
+                  anytime to continue exploring Ichgram.
                 </span>
               </p>
 
