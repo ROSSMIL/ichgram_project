@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef, memo } from "react";
 import PropTypes from "prop-types";
 import API from "../../api/axios";
-import PostModal from "../../components/PostModal/PostModal";
 import FeedFilterPill from "../../components/FeedFilterPill/FeedFilterPill";
 import styles from "./ExplorePage.module.css";
 
@@ -259,12 +258,12 @@ ExploreItem.propTypes = {
 };
 
 const ExplorePage = () => {
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [posts, setPosts] = useState(() => {
+    const cached = sessionStorage.getItem("explore_posts_cache");
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [loading, setLoading] = useState(() => posts.length === 0);
   const [currentUserFollowing, setCurrentUserFollowing] = useState([]);
-  const [selectedPost, setSelectedPost] = useState(null);
-  const [autoFocusComment, setAutoFocusComment] = useState(false);
-
   const [activeFilter, setActiveFilter] = useState("all");
 
   const token = localStorage.getItem("token");
@@ -284,44 +283,55 @@ const ExplorePage = () => {
 
   const { userId: currentUserId } = getLoggedInData();
 
-  const fetchExploreData = useCallback(async () => {
-    try {
-      setLoading(true);
+  const fetchExploreData = useCallback(
+    async (forceRefresh = false) => {
+      try {
+        if (forceRefresh || posts.length === 0) {
+          setLoading(true);
+        }
 
-      const [postsRes, profileRes] = await Promise.all([
-        API.get("/api/posts", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        API.get("/api/users/profile", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
+        const [postsRes, profileRes] = await Promise.all([
+          API.get("/api/posts", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          API.get("/api/users/profile", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
 
-      const randomizedPosts = shuffleArray(postsRes.data);
-      setPosts(randomizedPosts);
+        if (forceRefresh || posts.length === 0) {
+          const randomizedPosts = shuffleArray(postsRes.data);
+          setPosts(randomizedPosts);
+          sessionStorage.setItem(
+            "explore_posts_cache",
+            JSON.stringify(randomizedPosts),
+          );
+        }
 
-      const followingIds =
-        profileRes.data.following
-          ?.map((f) => {
-            const id = typeof f === "string" ? f : f._id || f.id;
-            return id ? id.toString() : "";
-          })
-          .filter(Boolean) || [];
+        const followingIds =
+          profileRes.data.following
+            ?.map((f) => {
+              const id = typeof f === "string" ? f : f._id || f.id;
+              return id ? id.toString() : "";
+            })
+            .filter(Boolean) || [];
 
-      setCurrentUserFollowing(followingIds);
-    } catch (error) {
-      console.error("Error loading explore data:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
+        setCurrentUserFollowing(followingIds);
+      } catch (error) {
+        console.error("Error loading explore data:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [token, posts.length],
+  );
 
   useEffect(() => {
     let isMounted = true;
 
     const loadData = async () => {
       if (token && isMounted) {
-        await fetchExploreData();
+        await fetchExploreData(false);
       }
     };
 
@@ -333,15 +343,12 @@ const ExplorePage = () => {
   }, [fetchExploreData, token]);
 
   const handlePostUpdate = useCallback((updatedPost) => {
-    setPosts((prevPosts) =>
-      prevPosts.map((p) => (p._id === updatedPost._id ? updatedPost : p)),
-    );
-
-    setSelectedPost((prevSelected) => {
-      if (prevSelected && prevSelected._id === updatedPost._id) {
-        return updatedPost;
-      }
-      return prevSelected;
+    setPosts((prevPosts) => {
+      const newPosts = prevPosts.map((p) =>
+        p._id === updatedPost._id ? updatedPost : p,
+      );
+      sessionStorage.setItem("explore_posts_cache", JSON.stringify(newPosts));
+      return newPosts;
     });
   }, []);
 
@@ -389,7 +396,8 @@ const ExplorePage = () => {
       } else {
         if (token) {
           setPosts([]);
-          fetchExploreData();
+          sessionStorage.removeItem("explore_posts_cache");
+          fetchExploreData(true);
         }
       }
     };
@@ -401,77 +409,16 @@ const ExplorePage = () => {
     };
   }, [fetchExploreData, token, scrollToTop]);
 
-  const handleFollowToggle = useCallback(
-    async (targetUserId) => {
-      try {
-        const response = await API.post(
-          `/api/users/${targetUserId}/follow`,
-          {},
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
-
-        let updatedFollowing = [];
-        if (response.data.following) {
-          updatedFollowing = response.data.following
-            .map((f) => {
-              const id = typeof f === "string" ? f : f._id || f.id;
-              return id ? id.toString() : "";
-            })
-            .filter(Boolean);
-        } else {
-          updatedFollowing = currentUserFollowing.includes(targetUserId)
-            ? currentUserFollowing.filter((id) => id !== targetUserId)
-            : [...currentUserFollowing, targetUserId];
-        }
-
-        setCurrentUserFollowing(updatedFollowing);
-
-        setPosts((prevPosts) =>
-          prevPosts.map((p) => {
-            const postAuthorId = p.user?._id || p.user?.id || p.user;
-            if (
-              postAuthorId &&
-              postAuthorId.toString() === targetUserId.toString()
-            ) {
-              const isNowFollowing = updatedFollowing.includes(targetUserId);
-              return {
-                ...p,
-                isFollowingAuthor: isNowFollowing,
-                user:
-                  typeof p.user === "object"
-                    ? {
-                        ...p.user,
-                        followers: isNowFollowing
-                          ? [...(p.user.followers || []), currentUserId]
-                          : (p.user.followers || []).filter((fId) => {
-                              const id =
-                                typeof fId === "string"
-                                  ? fId
-                                  : fId._id || fId.id;
-                              return id !== currentUserId;
-                            }),
-                      }
-                    : p.user,
-              };
-            }
-            return p;
-          }),
-        );
-      } catch (error) {
-        console.error("Follow error:", error);
-      }
-    },
-    [token, currentUserFollowing, currentUserId],
-  );
-
   const handleOpenModal = useCallback((post, focusComment = false) => {
-    setSelectedPost(post);
-    setAutoFocusComment(focusComment);
-  }, []);
-
-  const handleCloseModal = useCallback(() => {
-    setSelectedPost(null);
-    setAutoFocusComment(false);
+    window.dispatchEvent(
+      new CustomEvent("openPostModal", {
+        detail: {
+          postId: post._id || post.id,
+          post: post,
+          focusComment: focusComment,
+        },
+      }),
+    );
   }, []);
 
   const filteredPosts = posts.filter((post) => {
@@ -644,17 +591,6 @@ const ExplorePage = () => {
             </div>
           )}
         </div>
-      )}
-
-      {selectedPost && (
-        <PostModal
-          post={posts.find((p) => p._id === selectedPost._id) || selectedPost}
-          onClose={handleCloseModal}
-          autoFocusComment={autoFocusComment}
-          onPostUpdate={handlePostUpdate}
-          currentUserFollowing={currentUserFollowing}
-          onFollowToggle={handleFollowToggle}
-        />
       )}
     </div>
   );

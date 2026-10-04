@@ -55,10 +55,10 @@ const ScrollToTop = () => {
 
   return null;
 };
-
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -67,6 +67,8 @@ const ProtectedRoute = ({ children }) => {
 
   const [activePostModal, setActivePostModal] = useState(null);
   const [autoFocusComment, setAutoFocusComment] = useState(false);
+
+  const isPostPage = location.pathname.startsWith("/post/");
 
   useAutoLogout();
 
@@ -151,29 +153,33 @@ const ProtectedRoute = ({ children }) => {
 
   return (
     <div className="app-container">
-      <div className="left-column">
-        <Sidebar
-          onSearchToggle={toggleSearch}
-          isSearchOpen={isSearchOpen}
-          onNotificationsToggle={toggleNotifications}
-          isNotificationsOpen={isNotificationsOpen}
-          openCreateModal={openCreateModal}
-        />
+      {!isPostPage && (
+        <div className="left-column">
+          <Sidebar
+            onSearchToggle={toggleSearch}
+            isSearchOpen={isSearchOpen}
+            onNotificationsToggle={toggleNotifications}
+            isNotificationsOpen={isNotificationsOpen}
+            openCreateModal={openCreateModal}
+          />
 
-        <ActivityWidget />
-      </div>
+          <ActivityWidget />
+        </div>
+      )}
 
       <ProfileDropdown />
 
       <main className="app-content">{children}</main>
 
-      <div className="footer-container">
-        <Footer
-          onSearchToggle={toggleSearch}
-          isSearchOpen={isSearchOpen}
-          openCreateModal={openCreateModal}
-        />
-      </div>
+      {!isPostPage && (
+        <div className="footer-container">
+          <Footer
+            onSearchToggle={toggleSearch}
+            isSearchOpen={isSearchOpen}
+            openCreateModal={openCreateModal}
+          />
+        </div>
+      )}
 
       <SearchDrawer
         isOpen={isSearchOpen}
@@ -211,7 +217,6 @@ const ProtectedRoute = ({ children }) => {
     </div>
   );
 };
-
 const PublicOnlyRoute = ({ children }) => {
   const token = localStorage.getItem("token");
 

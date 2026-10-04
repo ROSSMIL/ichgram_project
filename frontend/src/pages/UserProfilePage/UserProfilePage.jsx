@@ -12,7 +12,6 @@ import { createPortal } from "react-dom";
 import { useSocket } from "../../context/useSocket.js";
 import API from "../../api/axios.js";
 import styles from "./UserProfilePage.module.css";
-import PostModal from "../../components/PostModal/PostModal";
 import Avatar from "../../components/Avatar/Avatar";
 import AvatarViewModal from "../../components/AvatarViewModal/AvatarViewModal";
 import PageHeader from "../../components/PageHeader/PageHeader";
@@ -394,7 +393,6 @@ const UserProfilePage = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isBioExpanded, setIsBioExpanded] = useState(false);
-  const [selectedPost, setSelectedPost] = useState(null);
 
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
@@ -634,7 +632,6 @@ const UserProfilePage = () => {
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
-        if (selectedPost) setSelectedPost(null);
         if (isAvatarModalOpen) setIsAvatarModalOpen(false);
       }
     };
@@ -643,7 +640,18 @@ const UserProfilePage = () => {
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [selectedPost, isAvatarModalOpen]);
+  }, [isAvatarModalOpen]);
+
+  const handleSelectPost = useCallback((post) => {
+    window.dispatchEvent(
+      new CustomEvent("openPostModal", {
+        detail: {
+          postId: post._id || post.id,
+          post: post,
+        },
+      }),
+    );
+  }, []);
 
   const userIdStr = (user?._id || user?.id)?.toString();
   const rawPresence = onlineUsers?.[userIdStr];
@@ -960,7 +968,7 @@ const UserProfilePage = () => {
               key={post._id}
               post={post}
               index={index}
-              onSelectPost={setSelectedPost}
+              onSelectPost={handleSelectPost}
             />
           ))
         ) : (
@@ -1036,15 +1044,6 @@ const UserProfilePage = () => {
           </div>
         )}
       </div>
-
-      {selectedPost && (
-        <PostModal
-          post={selectedPost}
-          onClose={() => setSelectedPost(null)}
-          currentUserFollowing={currentUser?.following || []}
-          onFollowToggle={handleFollowToggle}
-        />
-      )}
 
       {activeModal &&
         createPortal(

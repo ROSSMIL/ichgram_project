@@ -4,7 +4,6 @@ import { useNavigate, Link } from "react-router-dom";
 import { createPortal } from "react-dom";
 import API from "../../api/axios.js";
 import styles from "./ProfilePage.module.css";
-import PostModal from "../../components/PostModal/PostModal";
 import Avatar from "../../components/Avatar/Avatar";
 import AvatarViewModal from "../../components/AvatarViewModal/AvatarViewModal";
 import { usePreventBodyScroll } from "../../hooks/usePreventBodyScroll";
@@ -192,7 +191,6 @@ const ProfilePage = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isBioExpanded, setIsBioExpanded] = useState(false);
-  const [selectedPost, setSelectedPost] = useState(null);
 
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
@@ -291,18 +289,12 @@ const ProfilePage = () => {
         post._id === updatedPost._id ? updatedPost : post,
       ),
     );
-    setSelectedPost((prevSelected) =>
-      prevSelected && prevSelected._id === updatedPost._id
-        ? updatedPost
-        : prevSelected,
-    );
   }, []);
 
   const handlePostDelete = useCallback((deletedPostId) => {
     setPosts((prevPosts) =>
       prevPosts.filter((post) => post._id !== deletedPostId),
     );
-    setSelectedPost(null);
   }, []);
 
   useEffect(() => {
@@ -483,6 +475,7 @@ const ProfilePage = () => {
 
     fetchProfileAndPosts();
   }, [navigate]);
+
   useEffect(() => {
     const updateModalTheme = () => {
       const current =
@@ -497,6 +490,17 @@ const ProfilePage = () => {
     });
 
     return () => observer.disconnect();
+  }, []);
+
+  const handleSelectPost = useCallback((post) => {
+    window.dispatchEvent(
+      new CustomEvent("openPostModal", {
+        detail: {
+          postId: post._id || post.id,
+          post: post,
+        },
+      }),
+    );
   }, []);
 
   if (loading) {
@@ -748,7 +752,7 @@ const ProfilePage = () => {
               key={post._id}
               post={post}
               index={index}
-              onSelectPost={setSelectedPost}
+              onSelectPost={handleSelectPost}
             />
           ))
         ) : (
@@ -918,17 +922,6 @@ const ProfilePage = () => {
           </div>,
           document.body,
         )}
-      {selectedPost && (
-        <PostModal
-          key={selectedPost._id}
-          post={posts.find((p) => p._id === selectedPost._id) || selectedPost}
-          onClose={() => setSelectedPost(null)}
-          onPostUpdate={handlePostUpdate}
-          onPostDelete={handlePostDelete}
-          currentUserFollowing={user.following || []}
-          onFollowToggle={handleFollowToggle}
-        />
-      )}
 
       {activeModal &&
         createPortal(

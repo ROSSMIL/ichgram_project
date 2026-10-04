@@ -53,9 +53,7 @@ const formatTimeAgo = (dateInput) => {
   return diffInYears === 1 ? "1 year" : `${diffInYears} years`;
 };
 
-const isPostEdited = (post) => {
-  return Boolean(post?.isEdited);
-};
+const isPostEdited = (post) => Boolean(post?.isEdited);
 
 const checkIsLiked = (postObj, userId) => {
   if (!postObj || !userId || !postObj.likes) return false;
@@ -85,7 +83,12 @@ const PostPage = () => {
 
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showModalEmojiPicker, setShowModalEmojiPicker] = useState(false);
+  const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false);
+  const [isClosingModal, setIsClosingModal] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(window.innerWidth <= 868);
 
   const [animateHeart, setAnimateHeart] = useState(false);
   const [floatingHearts, setFloatingHearts] = useState([]);
@@ -94,8 +97,11 @@ const PostPage = () => {
   const [activeCommentMenuId, setActiveCommentMenuId] = useState(null);
 
   const emojiPickerRef = useRef(null);
+  const modalEmojiPickerRef = useRef(null);
   const commentInputRef = useRef(null);
+  const modalCommentInputRef = useRef(null);
   const commentsAreaRef = useRef(null);
+  const modalCommentsAreaRef = useRef(null);
   const likeBtnRef = useRef(null);
   const clickTimerRef = useRef(null);
   const postMenuRef = useRef(null);
@@ -125,18 +131,48 @@ const PostPage = () => {
   const currentUserId = getLoggedInUserId();
   const currentUsername = getLoggedInUsername();
 
+  useEffect(() => {
+    const handleResize = () => setIsMobileView(window.innerWidth <= 868);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const scrollToBottom = useCallback(() => {
     if (commentsAreaRef.current) {
       commentsAreaRef.current.scrollTop = commentsAreaRef.current.scrollHeight;
     }
+    if (modalCommentsAreaRef.current) {
+      modalCommentsAreaRef.current.scrollTop =
+        modalCommentsAreaRef.current.scrollHeight;
+    }
   }, []);
 
+  const handleOpenModal = useCallback(() => {
+    setIsClosingModal(false);
+    setIsCommentsModalOpen(true);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    if (!isCommentsModalOpen || isClosingModal) return;
+    setIsClosingModal(true);
+    setShowModalEmojiPicker(false);
+    setTimeout(() => {
+      setIsCommentsModalOpen(false);
+      setIsClosingModal(false);
+    }, 220);
+  }, [isCommentsModalOpen, isClosingModal]);
+
   const handleFocusCommentInput = useCallback(() => {
-    if (commentInputRef.current) {
-      commentInputRef.current.focus();
+    if (isMobileView) {
+      handleOpenModal();
+      setTimeout(() => {
+        if (modalCommentInputRef.current) modalCommentInputRef.current.focus();
+      }, 250);
+    } else {
+      if (commentInputRef.current) commentInputRef.current.focus();
+      setTimeout(scrollToBottom, 300);
     }
-    setTimeout(scrollToBottom, 300);
-  }, [scrollToBottom]);
+  }, [isMobileView, scrollToBottom, handleOpenModal]);
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -165,26 +201,14 @@ const PostPage = () => {
     if (id) fetchPost();
   }, [id, currentUserId]);
 
-  useLayoutEffect(() => {
-    if (autoFocusComment) {
-      const tryFocus = () => {
-        if (commentInputRef.current) {
-          commentInputRef.current.focus();
-        }
-      };
-
-      tryFocus();
-      const t1 = setTimeout(tryFocus, 50);
-      const t2 = setTimeout(tryFocus, 150);
-      const t3 = setTimeout(tryFocus, 300);
-
-      return () => {
-        clearTimeout(t1);
-        clearTimeout(t2);
-        clearTimeout(t3);
-      };
+  useEffect(() => {
+    if (autoFocusComment && !loading && post) {
+      const timer = setTimeout(() => {
+        handleFocusCommentInput();
+      }, 50);
+      return () => clearTimeout(timer);
     }
-  }, [autoFocusComment]);
+  }, [autoFocusComment, loading, post, handleFocusCommentInput]);
 
   useLayoutEffect(() => {
     if (post) {
@@ -199,6 +223,12 @@ const PostPage = () => {
         !emojiPickerRef.current.contains(event.target)
       ) {
         setShowEmojiPicker(false);
+      }
+      if (
+        modalEmojiPickerRef.current &&
+        !modalEmojiPickerRef.current.contains(event.target)
+      ) {
+        setShowModalEmojiPicker(false);
       }
       if (postMenuRef.current && !postMenuRef.current.contains(event.target)) {
         setShowMenu(false);
@@ -225,7 +255,7 @@ const PostPage = () => {
 
     const nextLikedState = !isLiked;
     setIsLiked(nextLikedState);
-    setLikesCount((prev) => (isLiked ? prev - 1 : prev + 1));
+    setLikesCount((prev) => (isLiked ? Math.max(0, prev - 1) : prev + 1));
 
     if (nextLikedState) {
       triggerHapticFeedback();
@@ -328,7 +358,7 @@ const PostPage = () => {
   }, []);
 
   const handleSendComment = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!newComment.trim() || isSubmitting) return;
 
     try {
@@ -343,6 +373,7 @@ const PostPage = () => {
       setComments(response.data.comments);
       setNewComment("");
       setShowEmojiPicker(false);
+      setShowModalEmojiPicker(false);
       setTimeout(scrollToBottom, 50);
     } catch (error) {
       console.error("Error adding comment:", error);
@@ -351,15 +382,14 @@ const PostPage = () => {
     }
   };
 
-  const handleEmojiClick = (emojiData) => {
+  const handleEmojiClick = (emojiData, isModalInput = false) => {
     const emoji = emojiData.emoji;
-    const input = commentInputRef.current;
+    const input = isModalInput
+      ? modalCommentInputRef.current
+      : commentInputRef.current;
 
     if (!input) {
-      setNewComment((prev) => {
-        if ((prev + emoji).length > 150) return prev;
-        return prev + emoji;
-      });
+      setNewComment((prev) => safeSlice(prev + emoji, 150));
       return;
     }
     const start = input.selectionStart ?? input.value.length;
@@ -449,6 +479,94 @@ const PostPage = () => {
 
   const edited = isPostEdited(post);
 
+  const renderCommentCard = (comment) => {
+    const commenterUsername =
+      comment.user?.username || comment.username || "user";
+    const commenterUser = comment.user || {
+      username: commenterUsername,
+      avatar: comment.avatar,
+    };
+    const commenterId = comment.user?._id || comment.user?.id || comment.user;
+    const isMyComment =
+      currentUserId &&
+      commenterId &&
+      commenterId.toString() === currentUserId.toString();
+    const commentId = comment._id || comment.createdAt;
+    const isCommentMenuOpen = activeCommentMenuId === commentId;
+
+    return (
+      <div key={commentId} className={styles.commentCard}>
+        <Avatar user={commenterUser} size={28} />
+        <div className={styles.commentBody}>
+          <div className={styles.commentHeader}>
+            <Link
+              to={getProfileLink(commenterUsername)}
+              className={styles.commentUser}
+            >
+              {commenterUsername}
+            </Link>
+            <span className={styles.commentTimeAgo}>
+              {formatTimeAgo(comment.createdAt)}
+            </span>
+          </div>
+          <span className={styles.commentText}>{comment.text}</span>
+        </div>
+
+        {isMyComment && (
+          <div className={styles.commentMenuWrapper}>
+            <button
+              className={`${styles.commentMoreBtn} ${
+                isCommentMenuOpen ? styles.activeCommentMoreBtn : ""
+              }`}
+              onClick={() =>
+                setActiveCommentMenuId(isCommentMenuOpen ? null : commentId)
+              }
+              title="Comment options"
+              aria-label="Comment options"
+            >
+              <svg
+                aria-label="Comment options"
+                color="currentColor"
+                fill="currentColor"
+                height="16"
+                viewBox="0 0 24 24"
+                width="16"
+              >
+                <circle cx="12" cy="12" r="1.5"></circle>
+                <circle cx="6" cy="12" r="1.5"></circle>
+                <circle cx="18" cy="12" r="1.5"></circle>
+              </svg>
+            </button>
+
+            {isCommentMenuOpen && (
+              <div className={styles.commentPopoverMenu}>
+                <button
+                  className={`${styles.popoverItem} ${styles.dangerItem}`}
+                  onClick={() => handleDeleteComment(comment._id)}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                  <span>Delete comment</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className={styles.loadingContainer}>
@@ -464,6 +582,8 @@ const PostPage = () => {
       </div>
     );
   }
+
+  const previewComments = isMobileView ? comments.slice(-3) : comments;
 
   return (
     <div className={styles.pageWrapper}>
@@ -631,8 +751,8 @@ const PostPage = () => {
             )}
           </header>
 
-          {post.caption && (
-            <div className={styles.stickyCaptionArea}>
+          <div className={styles.commentsContainer}>
+            {post.caption && (
               <div className={styles.authorCaptionBox}>
                 <Avatar user={authorUser} size={30} />
                 <div className={styles.captionBody}>
@@ -650,106 +770,26 @@ const PostPage = () => {
                   <span className={styles.captionText}>{post.caption}</span>
                 </div>
               </div>
-            </div>
-          )}
-
-          <div className={styles.commentsArea} ref={commentsAreaRef}>
-            {comments.length > 0 ? (
-              comments.map((comment) => {
-                const commenterUsername =
-                  comment.user?.username || comment.username || "user";
-                const commenterUser = comment.user || {
-                  username: commenterUsername,
-                  avatar: comment.avatar,
-                };
-                const commenterId =
-                  comment.user?._id || comment.user?.id || comment.user;
-                const isMyComment =
-                  currentUserId &&
-                  commenterId &&
-                  commenterId.toString() === currentUserId.toString();
-                const commentId = comment._id || comment.createdAt;
-                const isCommentMenuOpen = activeCommentMenuId === commentId;
-
-                return (
-                  <div key={commentId} className={styles.commentCard}>
-                    <Avatar user={commenterUser} size={28} />
-                    <div className={styles.commentBody}>
-                      <div className={styles.commentHeader}>
-                        <Link
-                          to={getProfileLink(commenterUsername)}
-                          className={styles.commentUser}
-                        >
-                          {commenterUsername}
-                        </Link>
-                        <span className={styles.commentTimeAgo}>
-                          {formatTimeAgo(comment.createdAt)}
-                        </span>
-                      </div>
-                      <span className={styles.commentText}>{comment.text}</span>
-                    </div>
-
-                    {isMyComment && (
-                      <div className={styles.commentMenuWrapper}>
-                        <button
-                          className={`${styles.commentMoreBtn} ${
-                            isCommentMenuOpen ? styles.activeCommentMoreBtn : ""
-                          }`}
-                          onClick={() =>
-                            setActiveCommentMenuId(
-                              isCommentMenuOpen ? null : commentId,
-                            )
-                          }
-                          title="Comment options"
-                          aria-label="Comment options"
-                        >
-                          <svg
-                            aria-label="Comment options"
-                            color="currentColor"
-                            fill="currentColor"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            width="16"
-                          >
-                            <circle cx="12" cy="12" r="1.5"></circle>
-                            <circle cx="6" cy="12" r="1.5"></circle>
-                            <circle cx="18" cy="12" r="1.5"></circle>
-                          </svg>
-                        </button>
-
-                        {isCommentMenuOpen && (
-                          <div className={styles.commentPopoverMenu}>
-                            <button
-                              className={`${styles.popoverItem} ${styles.dangerItem}`}
-                              onClick={() => handleDeleteComment(comment._id)}
-                            >
-                              <svg
-                                width="14"
-                                height="14"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <polyline points="3 6 5 6 21 6"></polyline>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                              </svg>
-                              <span>Delete comment</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            ) : (
-              <div className={styles.noComments}>
-                No comments yet. Be the first!
-              </div>
             )}
+
+            <div className={styles.commentsArea} ref={commentsAreaRef}>
+              {isMobileView && comments.length > 3 && (
+                <button
+                  className={styles.viewAllCommentsBtn}
+                  onClick={handleOpenModal}
+                >
+                  View all {comments.length} comments
+                </button>
+              )}
+
+              {comments.length > 0 ? (
+                previewComments.map((comment) => renderCommentCard(comment))
+              ) : (
+                <div className={styles.noComments}>
+                  No comments yet. Be the first!
+                </div>
+              )}
+            </div>
           </div>
 
           <div className={styles.actionsArea}>
@@ -823,7 +863,9 @@ const PostPage = () => {
                 {showEmojiPicker && (
                   <div className={styles.emojiContainer}>
                     <EmojiPicker
-                      onEmojiClick={handleEmojiClick}
+                      onEmojiClick={(emojiData) =>
+                        handleEmojiClick(emojiData, false)
+                      }
                       autoFocusSearch={false}
                       theme="auto"
                       searchDisabled={true}
@@ -850,7 +892,10 @@ const PostPage = () => {
 
                   e.target.style.height = "20px";
                   if (trimmedVal) {
-                    e.target.style.height = `${Math.min(e.target.scrollHeight, 100)}px`;
+                    e.target.style.height = `${Math.min(
+                      e.target.scrollHeight,
+                      100,
+                    )}px`;
                   }
                 }}
                 onFocus={handleFocusCommentInput}
@@ -869,6 +914,131 @@ const PostPage = () => {
           </form>
         </div>
       </div>
+
+      {isCommentsModalOpen && (
+        <div
+          className={`${styles.modalOverlay} ${
+            isClosingModal ? styles.modalOverlayClosing : ""
+          }`}
+          onClick={handleCloseModal}
+        >
+          <div
+            className={`${styles.modalSheet} ${
+              isClosingModal ? styles.modalSheetClosing : ""
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <div className={styles.drawerHandle} />
+              <span className={styles.modalTitle}>Comments</span>
+              <button
+                className={styles.modalCloseBtn}
+                onClick={handleCloseModal}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className={styles.commentsContainer}>
+              {post.caption && (
+                <div className={styles.authorCaptionBox}>
+                  <Avatar user={authorUser} size={30} />
+                  <div className={styles.captionBody}>
+                    <div className={styles.captionHeader}>
+                      <Link
+                        to={getProfileLink(authorUsername)}
+                        className={styles.captionUsername}
+                      >
+                        {authorUsername}
+                      </Link>
+                      <span className={styles.commentTimeAgo}>
+                        {formatTimeAgo(post.createdAt)}
+                      </span>
+                    </div>
+                    <span className={styles.captionText}>{post.caption}</span>
+                  </div>
+                </div>
+              )}
+
+              <div
+                className={styles.modalCommentsArea}
+                ref={modalCommentsAreaRef}
+              >
+                {comments.length > 0 ? (
+                  comments.map((comment) => renderCommentCard(comment))
+                ) : (
+                  <div className={styles.noComments}>
+                    No comments yet. Be the first!
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <form
+              className={styles.modalInputFooter}
+              onSubmit={handleSendComment}
+            >
+              <div className={styles.inputPill}>
+                <div className={styles.emojiWrapper} ref={modalEmojiPickerRef}>
+                  <button
+                    type="button"
+                    className={styles.emojiBtn}
+                    onClick={() => setShowModalEmojiPicker((prev) => !prev)}
+                  >
+                    <svg
+                      aria-label="Emoji"
+                      color="currentColor"
+                      fill="currentColor"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      width="22"
+                    >
+                      <path d="M15.83 10.96a1.75 1.75 0 1 1 1.75-1.76 1.75 1.75 0 0 1-1.75 1.76Zm-7.66 0a1.75 1.75 0 1 1 1.75-1.76 1.75 1.75 0 0 1-1.75 1.76Zm4.17 6.64a5.12 5.12 0 0 1-4.08-2.03.75.75 0 0 1 1.18-.93 3.6 3.6 0 0 0 5.8 0 .75.75 0 0 1 1.18.93 5.12 5.12 0 0 1-4.08 2.03ZM12 2.5a9.5 9.5 0 1 0 9.5 9.5 9.51 9.51 0 0 0-9.5-9.5Zm0 21a11.5 11.5 0 1 1 11.5-11.5 11.51 11.51 0 0 1-11.5 11.5Z"></path>
+                    </svg>
+                  </button>
+
+                  {showModalEmojiPicker && (
+                    <div className={styles.modalEmojiContainer}>
+                      <EmojiPicker
+                        onEmojiClick={(emojiData) =>
+                          handleEmojiClick(emojiData, true)
+                        }
+                        autoFocusSearch={false}
+                        theme="auto"
+                        searchDisabled={true}
+                        skinTonesDisabled={true}
+                        previewConfig={{ showPreview: false }}
+                        height={260}
+                        width={260}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <textarea
+                  ref={modalCommentInputRef}
+                  rows={1}
+                  placeholder="Add a comment..."
+                  className={styles.commentInput}
+                  value={newComment}
+                  maxLength={150}
+                  onChange={(e) =>
+                    setNewComment(safeSlice(e.target.value, 150))
+                  }
+                  disabled={isSubmitting}
+                />
+                <button
+                  type="submit"
+                  className={styles.sendBtn}
+                  disabled={!newComment.trim() || isSubmitting}
+                >
+                  {isSubmitting ? "..." : "Send"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
