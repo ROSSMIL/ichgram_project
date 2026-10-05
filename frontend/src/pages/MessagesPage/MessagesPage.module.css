@@ -490,7 +490,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  padding: 10px 20px 10px 20px;
+  padding: 12px 20px;
   flex-shrink: 0;
   gap: 12px;
   width: 100%;
@@ -759,7 +759,6 @@
   -webkit-backdrop-filter: blur(12px);
   pointer-events: none;
   white-space: nowrap;
-
   opacity: 0;
   filter: blur(10px);
   will-change: opacity, filter;
@@ -1994,6 +1993,7 @@
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05);
   transform: translateY(-1px);
 }
+
 .userSelectionContainer {
   display: flex;
   flex-direction: column;
@@ -2802,14 +2802,70 @@
 .memberListItem {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border-radius: 14px;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 16px;
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
+  box-sizing: border-box;
   opacity: 0;
   animation: itemPopInModal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   animation-delay: calc(var(--stagger-index, 0) * 0.03s);
+  will-change: background-color, border-color, box-shadow;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.memberListItem:hover {
+  background-color: var(--bg-hover, rgba(255, 255, 255, 0.06));
+  border-color: var(--text-secondary);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.memberUserLink,
+.memberUserStatic {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-grow: 1;
+  text-decoration: none;
+  min-width: 0;
+  padding: 4px;
+  border-radius: 12px;
+}
+
+.memberUserLink {
+  cursor: pointer;
+}
+
+.modalAvatarWrapper {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.memberUserLink:hover .modalAvatarWrapper {
+  transform: scale(1.12) rotate(-3deg);
+}
+
+.memberUserLink:active .modalAvatarWrapper {
+  transform: scale(0.92);
+}
+
+.memberUserLink:hover .profileArrowBadge {
+  opacity: 1;
+  transform: translateX(0) scale(1.1);
+  background-color: var(--link-color, #0095f6);
+  color: #ffffff;
+}
+
+.memberUserLink:hover .selectUsername {
+  color: var(--link-color, #0095f6);
 }
 
 .memberInfo {
@@ -2903,211 +2959,6 @@
   margin: 0;
 }
 
-@keyframes itemPopIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.92);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes fadeInModalBg {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes popInModal {
-  from {
-    opacity: 0;
-    transform: scale(0.9) translateY(20px);
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes itemPopInModal {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.94);
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes emptyConversationPopIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.9) translateY(10px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-@keyframes emptyWave {
-  0%,
-  100% {
-    transform: rotate(0deg);
-  }
-  15% {
-    transform: rotate(14deg);
-  }
-  30% {
-    transform: rotate(-8deg);
-  }
-  45% {
-    transform: rotate(14deg);
-  }
-  60% {
-    transform: rotate(-4deg);
-  }
-  75% {
-    transform: rotate(10deg);
-  }
-}
-
-@keyframes dateDividerPopIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.85) translateY(-6px);
-    filter: blur(4px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-    filter: blur(0px);
-  }
-}
-
-@keyframes newMsgPopIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.88) translateY(-8px);
-    filter: blur(4px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-    filter: blur(0px);
-  }
-}
-
-@media (min-width: 1440px) {
-  .container {
-    max-width: 1600px;
-    padding-left: 305px;
-    padding-right: 90px;
-  }
-}
-
-@media (max-width: 1024px) {
-  .container {
-    padding-left: 100px;
-    padding-right: 70px;
-  }
-
-  .sidebar {
-    width: 280px;
-  }
-}
-@media (max-width: 768px) {
-  .container {
-    height: calc(100dvh - 78px);
-    padding: 56px 10px 8px 10px;
-  }
-
-  .sidebar {
-    width: 100%;
-    height: 100%;
-  }
-
-  .sidebarHeader {
-    padding: 12px 20px 10px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .sidebarHeader h2 {
-    font-size: 20px;
-  }
-
-  .hideMobile {
-    display: none !important;
-  }
-
-  .showMobile {
-    display: flex !important;
-    width: 100% !important;
-    height: 100% !important;
-  }
-
-  .backBtn {
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background-color: rgba(255, 255, 255, 0.06);
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-    flex-shrink: 0;
-    margin-right: 2px;
-    transition:
-      transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-      background-color 0.2s ease;
-  }
-
-  .backBtn:active {
-    transform: scale(0.88) translateX(-3px);
-    background-color: rgba(255, 255, 255, 0.12);
-  }
-
-  .messageOuterContainer {
-    max-width: 85%;
-  }
-
-  .threeDotsCircleBtn {
-    opacity: 0.5;
-    transform: scale(1);
-  }
-
-  .reactionsList {
-    gap: 4px;
-    margin-top: 4px;
-  }
-
-  .reactionBadge {
-    padding: 2px 7px;
-    font-size: 0.68rem;
-  }
-
-  .reactionEmoji {
-    font-size: 11px;
-  }
-
-  .actionModalContainer {
-    width: 100%;
-    max-width: 220px;
-  }
-
-  .emojiPickerBtn {
-    font-size: 18px;
-    padding: 4px;
-  }
-}
-
 .deletedSenderBadge {
   display: inline-flex;
   align-items: center;
@@ -3187,6 +3038,7 @@
   letter-spacing: 0.1px;
   user-select: none;
 }
+
 .restoreBody {
   display: flex;
   flex-direction: column;
@@ -3326,10 +3178,6 @@
   color: #ef4444;
 }
 
-.deleteWarningBox p strong {
-  color: var(--text-primary);
-}
-
 .dangerConfirmBtn {
   padding: 10px 20px;
   border-radius: 14px;
@@ -3357,18 +3205,7 @@
   transform: scale(0.95) translateY(0);
   box-shadow: 0 2px 8px rgba(237, 73, 86, 0.25);
 }
-.deleteWarningBox {
-  background-color: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.25);
-}
 
-.deleteWarningIcon {
-  color: #ef4444;
-}
-
-.deleteWarningBox strong {
-  color: #ef4444;
-}
 .headerMenuWrapper {
   position: relative;
   display: flex;
@@ -3426,31 +3263,11 @@
   background-color: rgba(239, 68, 68, 0.12);
 }
 
-@keyframes dropdownPopIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9) translateY(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
 .headerDropdownMenuClosing {
   animation: dropdownPopOut 0.18s cubic-bezier(0.4, 0, 1, 1) forwards !important;
   pointer-events: none;
 }
 
-@keyframes dropdownPopOut {
-  from {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: scale(0.9) translateY(-6px);
-  }
-}
 .modalOverlayClosing {
   animation: fadeOutModalBg 0.2s cubic-bezier(0.4, 0, 1, 1) forwards !important;
 }
@@ -3459,98 +3276,6 @@
   animation: popOutModal 0.2s cubic-bezier(0.4, 0, 1, 1) forwards !important;
 }
 
-@keyframes fadeOutModalBg {
-  from {
-    opacity: 1;
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
-  }
-  to {
-    opacity: 0;
-    -webkit-backdrop-filter: blur(0px);
-    backdrop-filter: blur(0px);
-  }
-}
-
-@keyframes popOutModal {
-  from {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: scale(0.92) translateY(12px);
-    filter: blur(4px);
-  }
-}
-.memberListItem {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: 16px;
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
-  box-sizing: border-box;
-  opacity: 0;
-  animation: itemPopInModal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  animation-delay: calc(var(--stagger-index, 0) * 0.03s);
-  will-change: background-color, border-color, box-shadow;
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.memberListItem:hover {
-  background-color: var(--bg-hover, rgba(255, 255, 255, 0.06));
-  border-color: var(--text-secondary);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-}
-
-.memberUserLink,
-.memberUserStatic {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-grow: 1;
-  text-decoration: none;
-  min-width: 0;
-  padding: 4px;
-  border-radius: 12px;
-}
-
-.memberUserLink {
-  cursor: pointer;
-}
-
-.modalAvatarWrapper {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.memberUserLink:hover .modalAvatarWrapper {
-  transform: scale(1.12) rotate(-3deg);
-}
-
-.memberUserLink:active .modalAvatarWrapper {
-  transform: scale(0.92);
-}
-
-.memberUserLink:hover .profileArrowBadge {
-  opacity: 1;
-  transform: translateX(0) scale(1.1);
-  background-color: var(--link-color, #0095f6);
-  color: #ffffff;
-}
-
-.memberUserLink:hover .selectUsername {
-  color: var(--link-color, #0095f6);
-}
 .badgesWrapper {
   display: flex;
   align-items: center;
@@ -3585,4 +3310,281 @@
 
 .chatItem:active .reactionBadgeCounter {
   transform: scale(0.92);
+}
+
+@keyframes itemPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fadeInModalBg {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes popInModal {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes itemPopInModal {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes emptyConversationPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes emptyWave {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  15% {
+    transform: rotate(14deg);
+  }
+  30% {
+    transform: rotate(-8deg);
+  }
+  45% {
+    transform: rotate(14deg);
+  }
+  60% {
+    transform: rotate(-4deg);
+  }
+  75% {
+    transform: rotate(10deg);
+  }
+}
+
+@keyframes dateDividerPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.85) translateY(-6px);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0px);
+  }
+}
+
+@keyframes newMsgPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.88) translateY(-8px);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0px);
+  }
+}
+
+@keyframes dropdownPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes dropdownPopOut {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9) translateY(-6px);
+  }
+}
+
+@keyframes fadeOutModalBg {
+  from {
+    opacity: 1;
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+  to {
+    opacity: 0;
+    -webkit-backdrop-filter: blur(0px);
+    backdrop-filter: blur(0px);
+  }
+}
+
+@keyframes popOutModal {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.92) translateY(12px);
+    filter: blur(4px);
+  }
+}
+
+@media (min-width: 1440px) {
+  .container {
+    max-width: 1600px;
+    padding-left: 305px;
+    padding-right: 90px;
+  }
+}
+
+@media (max-width: 1081px) {
+  .userInfo {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 2px;
+  }
+
+  .dot {
+    display: none !important;
+  }
+
+  .userMeta {
+    margin-top: 1px;
+  }
+
+  .userInfo:has(.authorBadge:hover) .userMeta {
+    transform: none !important;
+  }
+
+  .headerStatusBubble {
+    height: 20px;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .container {
+    padding-left: 100px;
+    padding-right: 70px;
+  }
+
+  .sidebar {
+    width: 280px;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    height: calc(100dvh - 78px);
+    padding: 56px 10px 8px 10px;
+  }
+
+  .sidebar {
+    width: 100%;
+    height: 100%;
+  }
+
+  .sidebarHeader {
+    padding: 12px 20px 10px 20px;
+  }
+
+  .sidebarHeader h2 {
+    font-size: 20px;
+  }
+
+  .hideMobile {
+    display: none !important;
+  }
+
+  .showMobile {
+    display: flex !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .backBtn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    flex-shrink: 0;
+    margin-right: 2px;
+    transition:
+      transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+      background-color 0.2s ease;
+  }
+
+  .backBtn:active {
+    transform: scale(0.88) translateX(-3px);
+    background-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .messageOuterContainer {
+    max-width: 85%;
+  }
+
+  .threeDotsCircleBtn {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+
+  .reactionsList {
+    gap: 4px;
+    margin-top: 4px;
+  }
+
+  .reactionBadge {
+    padding: 2px 7px;
+    font-size: 0.68rem;
+  }
+
+  .reactionEmoji {
+    font-size: 11px;
+  }
+
+  .actionModalContainer {
+    width: 100%;
+    max-width: 220px;
+  }
+
+  .emojiPickerBtn {
+    font-size: 18px;
+    padding: 4px;
+  }
 }
