@@ -64,22 +64,7 @@ const formatTimeAgo = (dateInput, isCompact = false) => {
       : `${diffInYears} years`;
 };
 
-const isPostEdited = (post) => {
-  if (post?.isEdited) return true;
-
-  if (post?.updatedAt && post?.createdAt) {
-    const created = new Date(post.createdAt).getTime();
-    const updated = new Date(post.updatedAt).getTime();
-    const hasInteractions =
-      (post.likes?.length || 0) > 0 || (post.comments?.length || 0) > 0;
-
-    if (!hasInteractions && updated - created > 5000) {
-      return true;
-    }
-  }
-
-  return false;
-};
+const isPostEdited = (post) => Boolean(post?.isEdited);
 
 const PostCard = ({
   post,
@@ -579,11 +564,6 @@ const PostCard = ({
         </header>
 
         <div className={styles.imageContainer} onClick={handleImageClick}>
-          <div
-            className={styles.blurredBg}
-            style={{ backgroundImage: `url(${post.url})` }}
-          />
-
           <img src={post.url} alt="Post content" className={styles.postImg} />
 
           {floatingHearts.map((heart) => (

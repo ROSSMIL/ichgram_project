@@ -16,8 +16,8 @@ export default async function getCroppedImg(imageSrc, pixelCrop) {
     return null;
   }
 
-  const cropX = pixelCrop?.x ?? 0;
-  const cropY = pixelCrop?.y ?? 0;
+  const cropX = Math.max(0, pixelCrop?.x ?? 0);
+  const cropY = Math.max(0, pixelCrop?.y ?? 0);
   const cropWidth = pixelCrop?.width || image.naturalWidth;
   const cropHeight = pixelCrop?.height || image.naturalHeight;
 

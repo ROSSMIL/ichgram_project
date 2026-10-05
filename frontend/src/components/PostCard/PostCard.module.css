@@ -49,7 +49,6 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
-
     height: 100%;
   }
 
@@ -95,8 +94,7 @@
 .imageContainer {
   position: relative;
   width: 100%;
-  flex: 1;
-  min-height: 380px;
+  aspect-ratio: 1 / 1; 
   border-radius: 18px;
   overflow: hidden;
   cursor: pointer;
@@ -108,27 +106,13 @@
   justify-content: center;
 }
 
-.blurredBg {
-  position: absolute;
-  top: -10%;
-  left: -10%;
-  width: 120%;
-  height: 120%;
-  background-size: cover;
-  background-position: center;
-  filter: blur(28px) brightness(0.42);
-  transform: scale(1.1);
-  z-index: 1;
-  pointer-events: none;
-}
-
 .postImg {
   position: relative;
   z-index: 2;
   width: 100%;
   height: 100%;
   display: block;
-  object-fit: contain;
+  object-fit: cover; 
   border-radius: 16px;
 }
 
@@ -897,6 +881,7 @@
   width: 14px;
   height: 14px;
 }
+
 @media (max-width: 768px) {
   .header {
     padding: 2px 4px 10px 4px;

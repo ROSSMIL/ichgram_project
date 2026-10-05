@@ -218,6 +218,8 @@ const CreatePostModal = ({
   const [currentTheme, setCurrentTheme] = useState("light");
   const [showConfirmDiscard, setShowConfirmDiscard] = useState(false);
 
+  const [isImageProcessing, setIsImageProcessing] = useState(false);
+
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [aspect, setAspect] = useState(1);
@@ -249,6 +251,7 @@ const CreatePostModal = ({
       setPreviewStyle("feed");
       setIsCroppingActive(false);
       setIsCroppingLoading(false);
+      setIsImageProcessing(false);
       setIsClosing(false);
       onClose();
     }, 150);
@@ -296,6 +299,7 @@ const CreatePostModal = ({
     setError("");
     setIsCroppingActive(false);
     setIsCroppingLoading(false);
+    setIsImageProcessing(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -378,6 +382,8 @@ const CreatePostModal = ({
     }
 
     setError("");
+    setIsImageProcessing(true);
+
     const reader = new FileReader();
     reader.onloadend = () => {
       setRawImage(reader.result);
@@ -385,6 +391,11 @@ const CreatePostModal = ({
       setIsCroppingActive(true);
       setZoom(1);
       setCrop({ x: 0, y: 0 });
+      setIsImageProcessing(false);
+    };
+    reader.onerror = () => {
+      setError("Failed to read image file.");
+      setIsImageProcessing(false);
     };
     reader.readAsDataURL(file);
   };
@@ -418,7 +429,7 @@ const CreatePostModal = ({
   };
 
   const applyCrop = async () => {
-    if (isCroppingLoading) return;
+    if (isCroppingLoading || !rawImage || !croppedAreaPixels) return;
     setIsCroppingLoading(true);
     try {
       const croppedResult = await getCroppedImg(rawImage, croppedAreaPixels);
@@ -426,6 +437,7 @@ const CreatePostModal = ({
       setIsCroppingActive(false);
     } catch (e) {
       console.error("Error cropping image:", e);
+      setError("Failed to crop image. Try again.");
     } finally {
       setIsCroppingLoading(false);
     }
@@ -478,9 +490,7 @@ const CreatePostModal = ({
       _id: editingPost ? editingPost._id : "preview_temp_id",
       url: croppedImage || rawImage,
       caption: caption,
-      createdAt: editingPost
-        ? editingPost.createdAt
-        : "2026-03-27T21:00:00.000Z",
+      createdAt: editingPost ? editingPost.createdAt : new Date().toISOString(),
       likes: editingPost ? editingPost.likes : [],
       likesCount: editingPost ? editingPost.likesCount : 0,
       isEdited: editingPost ? true : false,
@@ -523,6 +533,7 @@ const CreatePostModal = ({
           className={styles.fileInput}
           accept="image/*"
         />
+
         <div className={styles.header}>
           <button
             className={styles.closeBtn}
@@ -593,7 +604,7 @@ const CreatePostModal = ({
             <button
               className={styles.shareBtn}
               onClick={handleSubmit}
-              disabled={loading || !croppedImage}
+              disabled={loading || !croppedImage || isImageProcessing}
             >
               {loading ? (
                 <span className={styles.btnLoadingWrapper}>
@@ -608,6 +619,7 @@ const CreatePostModal = ({
             </button>
           </div>
         </div>
+
         <div className={styles.contentViewport} ref={contentViewportRef}>
           <div
             className={`${styles.body} ${
@@ -615,7 +627,17 @@ const CreatePostModal = ({
             }`}
           >
             <div className={styles.leftColumn}>
-              {!rawImage ? (
+              {isImageProcessing ? (
+                <div className={styles.dropZone}>
+                  <div
+                    className={styles.btnSpinner}
+                    style={{ width: 32, height: 32 }}
+                  />
+                  <p className={styles.dropText} style={{ marginTop: 16 }}>
+                    Processing photo...
+                  </p>
+                </div>
+              ) : !rawImage ? (
                 <div
                   className={`${styles.dropZone} ${
                     isDragOver ? styles.dragOver : ""
@@ -675,21 +697,27 @@ const CreatePostModal = ({
                     <div className={styles.aspectRatios}>
                       <button
                         type="button"
-                        className={`${styles.aspectBtn} ${aspect === 1 ? styles.activeAspect : ""}`}
+                        className={`${styles.aspectBtn} ${
+                          aspect === 1 ? styles.activeAspect : ""
+                        }`}
                         onClick={() => setAspect(1)}
                       >
                         1:1
                       </button>
                       <button
                         type="button"
-                        className={`${styles.aspectBtn} ${aspect === 4 / 5 ? styles.activeAspect : ""}`}
+                        className={`${styles.aspectBtn} ${
+                          aspect === 4 / 5 ? styles.activeAspect : ""
+                        }`}
                         onClick={() => setAspect(4 / 5)}
                       >
                         4:5
                       </button>
                       <button
                         type="button"
-                        className={`${styles.aspectBtn} ${aspect === 16 / 9 ? styles.activeAspect : ""}`}
+                        className={`${styles.aspectBtn} ${
+                          aspect === 16 / 9 ? styles.activeAspect : ""
+                        }`}
                         onClick={() => setAspect(16 / 9)}
                       >
                         16:9
