@@ -150,7 +150,52 @@ const PostModal = ({
   const clickTimerRef = useRef(null);
   const postMenuRef = useRef(null);
 
-  usePreventBodyScroll(Boolean(post), commentsAreaRef, onClose);
+  const handleClose = useCallback(() => {
+    if (isClosing) return;
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+      setIsClosing(false);
+    }, 220);
+  }, [isClosing, onClose]);
+
+  const handleCloseDeleteConfirm = useCallback(() => {
+    if (isDeleteConfirmClosing) return;
+    setIsDeleteConfirmClosing(true);
+    setTimeout(() => {
+      setIsDeleteConfirmOpen(false);
+      setIsDeleteConfirmClosing(false);
+    }, 200);
+  }, [isDeleteConfirmClosing]);
+
+  const handleCloseCommentDeleteConfirm = useCallback(() => {
+    if (isCommentDeleteClosing) return;
+    setIsCommentDeleteClosing(true);
+    setTimeout(() => {
+      setCommentToDelete(null);
+      setIsCommentDeleteClosing(false);
+    }, 200);
+  }, [isCommentDeleteClosing]);
+
+  const handleAttemptClose = useCallback(() => {
+    if (commentToDelete) {
+      handleCloseCommentDeleteConfirm();
+      return;
+    }
+    if (isDeleteConfirmOpen) {
+      handleCloseDeleteConfirm();
+      return;
+    }
+    handleClose();
+  }, [
+    commentToDelete,
+    isDeleteConfirmOpen,
+    handleCloseCommentDeleteConfirm,
+    handleCloseDeleteConfirm,
+    handleClose,
+  ]);
+
+  usePreventBodyScroll(Boolean(post), commentsAreaRef, handleAttemptClose);
 
   const scrollToBottom = useCallback(() => {
     if (commentsAreaRef.current) {
@@ -195,24 +240,6 @@ const PostModal = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleClose = useCallback(() => {
-    setIsClosing(true);
-    const timer = setTimeout(() => {
-      onClose();
-      setIsClosing(false);
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [onClose]);
-
-  const handleCloseDeleteConfirm = useCallback(() => {
-    if (isDeleteConfirmClosing) return;
-    setIsDeleteConfirmClosing(true);
-    setTimeout(() => {
-      setIsDeleteConfirmOpen(false);
-      setIsDeleteConfirmClosing(false);
-    }, 200);
-  }, [isDeleteConfirmClosing]);
-
   const handleOpenDeleteConfirm = () => {
     setShowMenu(false);
     setIsDeleteConfirmOpen(true);
@@ -250,15 +277,6 @@ const PostModal = ({
   const handlePromptDeleteComment = (cId) => {
     setCommentToDelete(cId);
   };
-
-  const handleCloseCommentDeleteConfirm = useCallback(() => {
-    if (isCommentDeleteClosing) return;
-    setIsCommentDeleteClosing(true);
-    setTimeout(() => {
-      setCommentToDelete(null);
-      setIsCommentDeleteClosing(false);
-    }, 200);
-  }, [isCommentDeleteClosing]);
 
   const handleDeleteCommentConfirm = async () => {
     if (!commentToDelete) return;
@@ -535,7 +553,7 @@ const PostModal = ({
 
   const handleTriggerEdit = () => {
     setShowMenu(false);
-    onClose();
+    handleClose();
     window.dispatchEvent(new CustomEvent("openEditPost", { detail: post }));
   };
 
@@ -660,7 +678,7 @@ const PostModal = ({
                   <div className={styles.userInfo}>
                     <Link
                       to={getProfileLink(authorUsername)}
-                      onClick={onClose}
+                      onClick={handleClose}
                       className={styles.authorBadge}
                     >
                       <Avatar user={authorUser} size={32} />
@@ -764,7 +782,7 @@ const PostModal = ({
                             strokeLinecap="round"
                             strokeLinejoin="round"
                           >
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 2-2v-7"></path>
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                           </svg>
                           <span>Edit post</span>
@@ -803,7 +821,7 @@ const PostModal = ({
                       <div className={styles.captionHeader}>
                         <Link
                           to={getProfileLink(authorUsername)}
-                          onClick={onClose}
+                          onClick={handleClose}
                           className={styles.captionUsername}
                         >
                           {authorUsername}
@@ -842,7 +860,7 @@ const PostModal = ({
                           <div className={styles.commentHeader}>
                             <Link
                               to={getProfileLink(commenterUsername)}
-                              onClick={onClose}
+                              onClick={handleClose}
                               className={styles.commentUser}
                             >
                               {commenterUsername}
