@@ -954,6 +954,8 @@
     transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow 0.25s ease,
     border-color 0.25s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .messageBubble::before {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, memo } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import CheckmarkIcon from "./CheckmarkIcon";
@@ -34,12 +34,16 @@ const MessageItem = memo(
     const senderLinkRef = useRef(null);
     const hoverTimeoutRef = useRef(null);
 
+    const lastTapRef = useRef(0);
+    const tapTimeoutRef = useRef(null);
+
     const [isHoveredSender, setIsHoveredSender] = useState(false);
     const [isClosingSender, setIsClosingSender] = useState(false);
 
     const isSenderDeleted =
       msg.sender?.isDeleted ||
       msg.sender?.username?.startsWith("deleted_user_");
+
     const handleMouseEnterSender = () => {
       if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
       setIsClosingSender(false);
@@ -57,6 +61,7 @@ const MessageItem = memo(
     useEffect(() => {
       return () => {
         if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+        if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
       };
     }, []);
 
@@ -80,6 +85,52 @@ const MessageItem = memo(
       }
     }, [isEditing, editingContent]);
 
+    const triggerReaction = useCallback(() => {
+      if ("vibrate" in navigator) {
+        navigator.vibrate(30);
+      }
+      onToggleReaction(msg._id, "❤️");
+    }, [msg._id, onToggleReaction]);
+
+    const handleDoubleClick = useCallback(
+      (e) => {
+        if (isDeleted || isEditing) return;
+        e.stopPropagation();
+        triggerReaction();
+      },
+      [isDeleted, isEditing, triggerReaction],
+    );
+
+    const handleTouchEnd = useCallback(
+      (e) => {
+        if (isDeleted || isEditing) return;
+
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTapRef.current;
+
+        if (tapLength < 300 && tapLength > 40) {
+          if (e.cancelable) {
+            e.preventDefault();
+          }
+          e.stopPropagation();
+
+          if (tapTimeoutRef.current) {
+            clearTimeout(tapTimeoutRef.current);
+            tapTimeoutRef.current = null;
+          }
+
+          triggerReaction();
+          lastTapRef.current = 0;
+        } else {
+          lastTapRef.current = currentTime;
+          tapTimeoutRef.current = setTimeout(() => {
+            lastTapRef.current = 0;
+          }, 300);
+        }
+      },
+      [isDeleted, isEditing, triggerReaction],
+    );
+
     if (msg.isSystem) {
       return (
         <div className={styles.systemMessageContainer}>
@@ -101,12 +152,8 @@ const MessageItem = memo(
           } ${msg.isSending ? styles.sending : ""} ${
             isDeleted ? styles.deletedMessage : ""
           } ${isEditing ? styles.editingBubble : ""} ${styles.msgPopIn}`}
-          onDoubleClick={(e) => {
-            e.stopPropagation();
-            if (!isDeleted && !isEditing) {
-              onToggleReaction(msg._id, "❤️");
-            }
-          }}
+          onTouchEnd={handleTouchEnd}
+          onDoubleClick={handleDoubleClick}
         >
           <div className={styles.floatWrapper}>
             {!isMyMessage && selectedChat?.isGroupChat && (
