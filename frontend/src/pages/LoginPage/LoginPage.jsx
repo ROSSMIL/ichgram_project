@@ -15,6 +15,12 @@ const LoginPage = () => {
   const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  const [stayLoggedIn, setStayLoggedIn] = useState(() => {
+    const saved = localStorage.getItem("rememberMePreference");
+    return saved !== null ? saved === "true" : false;
+  });
+
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isGuestLoading, setIsGuestLoading] = useState(false);
@@ -25,6 +31,12 @@ const LoginPage = () => {
   const location = useLocation();
 
   const isAnyLoading = isLoading || isGuestLoading;
+
+  const handleRememberMeChange = (e) => {
+    const checked = e.target.checked;
+    setStayLoggedIn(checked);
+    localStorage.setItem("rememberMePreference", checked ? "true" : "false");
+  };
 
   useEffect(() => {
     if (location.state?.accountDeleted) {
@@ -67,10 +79,12 @@ const LoginPage = () => {
       const response = await API.post("/api/auth/login", {
         emailOrUsername: emailOrUsername.trim(),
         password,
+        stayLoggedIn,
       });
 
       if (response.status === 200) {
         localStorage.setItem("token", response.data.token);
+        localStorage.setItem("stayLoggedIn", stayLoggedIn ? "true" : "false");
         navigate("/dashboard");
       }
     } catch (err) {
@@ -111,6 +125,7 @@ const LoginPage = () => {
 
       if (response.status === 200) {
         localStorage.setItem("token", response.data.token);
+        localStorage.setItem("stayLoggedIn", "true");
         if (response.data.guestDeviceId) {
           localStorage.setItem("guest_device_id", response.data.guestDeviceId);
         }
@@ -189,6 +204,31 @@ const LoginPage = () => {
               )}
             </div>
 
+            <div
+              className={`${styles.rememberMeContainer} ${
+                isAnyLoading ? styles.rememberDisabled : ""
+              }`}
+            >
+              <label className={styles.rememberMeLabel}>
+                <input
+                  type="checkbox"
+                  checked={stayLoggedIn}
+                  onChange={handleRememberMeChange}
+                  disabled={isAnyLoading}
+                  className={styles.nativeCheckbox}
+                />
+                <div
+                  className={`${styles.customCheckbox} ${
+                    stayLoggedIn ? styles.checkboxChecked : ""
+                  }`}
+                >
+                  <svg className={styles.checkboxCheckmark} viewBox="0 0 24 24">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
+                <span className={styles.rememberText}>Remember Me</span>
+              </label>
+            </div>
             {error && <div className={styles.errorMessage}>{error}</div>}
 
             <Button disabled={isAnyLoading}>

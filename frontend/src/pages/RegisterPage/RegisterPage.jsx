@@ -17,6 +17,12 @@ const RegisterPage = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPasswords, setShowPasswords] = useState(false);
+
+  const [stayLoggedIn, setStayLoggedIn] = useState(() => {
+    const saved = localStorage.getItem("rememberMePreference");
+    return saved !== null ? saved === "true" : false;
+  });
+
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -24,6 +30,12 @@ const RegisterPage = () => {
 
   const isMinLength = password.length >= 6;
   const isMatching = password.length > 0 && password === confirmPassword;
+
+  const handleRememberMeChange = (e) => {
+    const checked = e.target.checked;
+    setStayLoggedIn(checked);
+    localStorage.setItem("rememberMePreference", checked ? "true" : "false");
+  };
 
   const handlePasswordChange = (e) => {
     const val = e.target.value;
@@ -76,11 +88,13 @@ const RegisterPage = () => {
         fullName: fullName.trim(),
         username: username.trim(),
         password,
+        stayLoggedIn,
       });
 
       if (response.status === 201 || response.status === 200) {
         if (response.data?.token) {
           localStorage.setItem("token", response.data.token);
+          localStorage.setItem("stayLoggedIn", stayLoggedIn ? "true" : "false");
           navigate("/dashboard");
         } else {
           navigate("/login");
@@ -234,6 +248,32 @@ const RegisterPage = () => {
                 </div>
               </div>
             )}
+
+            <div
+              className={`${styles.rememberMeContainer} ${
+                isLoading ? styles.rememberDisabled : ""
+              }`}
+            >
+              <label className={styles.rememberMeLabel}>
+                <input
+                  type="checkbox"
+                  checked={stayLoggedIn}
+                  onChange={handleRememberMeChange}
+                  disabled={isLoading}
+                  className={styles.nativeCheckbox}
+                />
+                <div
+                  className={`${styles.customCheckbox} ${
+                    stayLoggedIn ? styles.checkboxChecked : ""
+                  }`}
+                >
+                  <svg className={styles.checkboxCheckmark} viewBox="0 0 24 24">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
+                <span className={styles.rememberText}>Remember Me</span>
+              </label>
+            </div>
 
             {error &&
               !error.toLowerCase().includes("email") &&

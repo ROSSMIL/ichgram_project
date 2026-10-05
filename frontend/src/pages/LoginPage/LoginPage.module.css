@@ -145,6 +145,98 @@
   cursor: not-allowed;
 }
 
+.rememberMeContainer {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin: -0.1rem 0 0.2rem 0;
+  padding: 0 0.2rem;
+  transition: opacity 0.25s ease;
+}
+
+.rememberDisabled {
+  opacity: 0.45;
+  pointer-events: none !important;
+  cursor: not-allowed !important;
+}
+
+.rememberDisabled .rememberMeLabel {
+  cursor: not-allowed !important;
+}
+
+.rememberDisabled .customCheckbox {
+  border-color: var(--border-color) !important;
+}
+.rememberMeLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.nativeCheckbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.customCheckbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border-color);
+  background-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition:
+    background-color 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-color 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.rememberMeLabel:hover .customCheckbox {
+  border-color: var(--text-secondary);
+}
+
+.checkboxChecked {
+  background-color: var(--text-primary);
+  border-color: var(--text-primary);
+  transform: scale(1.05);
+}
+
+.checkboxCheckmark {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: var(--bg-card);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  transition: stroke-dashoffset 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.checkboxChecked .checkboxCheckmark {
+  stroke-dashoffset: 0;
+}
+
+.rememberText {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: color 0.2s ease;
+}
+
+.rememberMeLabel:hover .rememberText {
+  color: var(--text-primary);
+}
+
 .dividerContainer {
   display: flex;
   align-items: center;
@@ -491,7 +583,6 @@
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
   }
 }
 

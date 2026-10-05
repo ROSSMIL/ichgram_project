@@ -2,10 +2,9 @@ import User from "../models/userModel.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-
 export const register = async (req, res) => {
   try {
-    const { email, fullName, username, password } = req.body;
+    const { email, fullName, username, password, stayLoggedIn } = req.body;
 
     if (!email || !fullName || !username || !password) {
       return res.status(400).json({ message: "All fields are required" });
@@ -65,10 +64,12 @@ export const register = async (req, res) => {
     });
     await newUser.save();
 
+    const expiresIn = stayLoggedIn ? "30d" : "1d";
+
     const token = jwt.sign(
       { userId: newUser._id, username: newUser.username },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" },
+      { expiresIn },
     );
 
     res.status(201).json({
@@ -89,10 +90,9 @@ export const register = async (req, res) => {
     });
   }
 };
-
 export const login = async (req, res) => {
   try {
-    const { emailOrUsername, password } = req.body;
+    const { emailOrUsername, password, stayLoggedIn } = req.body;
 
     if (!emailOrUsername || !password) {
       return res.status(400).json({ message: "All fields are required" });
@@ -121,10 +121,12 @@ export const login = async (req, res) => {
         .json({ message: "Invalid username/email or password." });
     }
 
+    const expiresIn = stayLoggedIn ? "30d" : "1d";
+
     const token = jwt.sign(
       { userId: user._id, username: user.username },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" },
+      { expiresIn },
     );
 
     res.status(200).json({
@@ -181,7 +183,7 @@ export const guestLogin = async (req, res) => {
     const token = jwt.sign(
       { userId: guestUser._id, username: guestUser.username },
       jwtSecret,
-      { expiresIn: "7d" },
+      { expiresIn: "30d" },
     );
 
     return res.status(200).json({

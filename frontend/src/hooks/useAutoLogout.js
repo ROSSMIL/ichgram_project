@@ -10,11 +10,19 @@ const useAutoLogout = () => {
     const token = localStorage.getItem("token");
     const isGuest = localStorage.getItem("isGuest");
 
+    const lastActivity = localStorage.getItem("lastActivity");
+    const now = Date.now();
+
+    if (lastActivity && now - parseInt(lastActivity, 10) < IDLE_TIMEOUT) {
+      return;
+    }
+
     if (token || isGuest) {
       console.log("🔒 Inactivity timeout reached. Logging out...");
       localStorage.removeItem("token");
       localStorage.removeItem("isGuest");
       localStorage.removeItem("lastActivity");
+      localStorage.removeItem("stayLoggedIn");
 
       window.dispatchEvent(new Event("profileUpdated"));
       navigate("/login", { replace: true });
@@ -24,8 +32,9 @@ const useAutoLogout = () => {
   useEffect(() => {
     const token = localStorage.getItem("token");
     const isGuest = localStorage.getItem("isGuest");
+    const stayLoggedIn = localStorage.getItem("stayLoggedIn") === "true";
 
-    if (!token && !isGuest) return;
+    if ((!token && !isGuest) || stayLoggedIn) return;
 
     const lastActivity = localStorage.getItem("lastActivity");
     const now = Date.now();

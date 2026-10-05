@@ -105,8 +105,16 @@ const DEFAULT_HINTS = [
     text: "You can explore all features instantly using Guest Login option.",
   },
   {
+    tag: "DEV FACT",
+    text: '"Remember Me" works for Guest accounts too... Just saying!',
+  },
+  {
     tag: "DATABASE",
     text: "Spinning up MongoDB Atlas clusters in the cloud for you...",
+  },
+  {
+    tag: "EASTER EGG",
+    text: "Tired of logging in again? Check that 'Remember Me' box next time!",
   },
   {
     tag: "DEV FACT",
