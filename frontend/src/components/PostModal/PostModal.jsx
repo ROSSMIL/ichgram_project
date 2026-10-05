@@ -72,6 +72,7 @@ const PostModal = ({
   post,
   onClose,
   onPostUpdate,
+  onPostDelete,
   currentUserFollowing,
   onFollowToggle,
   autoFocusComment = false,
@@ -224,9 +225,21 @@ const PostModal = ({
       await API.delete(`/api/posts/${post._id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      const deletedPostId = post._id || post.id;
+
+      if (typeof onPostDelete === "function") {
+        onPostDelete(deletedPostId);
+      }
+
+      window.dispatchEvent(
+        new CustomEvent("postDeleted", {
+          detail: { _id: deletedPostId },
+        }),
+      );
+
       handleCloseDeleteConfirm();
       onClose();
-      window.location.reload();
     } catch (error) {
       console.error("Error deleting post:", error);
     } finally {
@@ -1135,6 +1148,7 @@ PostModal.propTypes = {
   post: PropTypes.object,
   onClose: PropTypes.func.isRequired,
   onPostUpdate: PropTypes.func,
+  onPostDelete: PropTypes.func,
   currentUserFollowing: PropTypes.array,
   onFollowToggle: PropTypes.func,
   autoFocusComment: PropTypes.bool,

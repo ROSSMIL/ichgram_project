@@ -76,6 +76,9 @@ const PostPage = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
 
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
+
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -168,10 +171,10 @@ const PostPage = () => {
       try {
         setLoading(true);
         const token = localStorage.getItem("token");
-        const res = await API.get(`/api/posts/${id}`, {
+        const response = await API.get(`/api/posts/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const fetchedPost = res.data;
+        const fetchedPost = response.data;
         setPost(fetchedPost);
         setComments(fetchedPost.comments || []);
         setLikesCount(
@@ -180,6 +183,17 @@ const PostPage = () => {
             : fetchedPost.likes?.length || 0,
         );
         setIsLiked(checkIsLiked(fetchedPost, currentUserId));
+
+        if (fetchedPost.user && fetchedPost.user.followers && currentUserId) {
+          setIsFollowing(
+            fetchedPost.user.followers.some((fId) => {
+              const fStr = typeof fId === "string" ? fId : fId._id || fId.id;
+              return fStr === currentUserId;
+            }),
+          );
+        } else if (fetchedPost.isFollowingAuthor !== undefined) {
+          setIsFollowing(fetchedPost.isFollowingAuthor);
+        }
       } catch (err) {
         console.error("Error fetching post:", err);
       } finally {
@@ -230,6 +244,34 @@ const PostPage = () => {
     }
   };
 
+  const handleFollowToggle = async () => {
+    const targetAuthorId = post?.user?._id || post?.user?.id || post?.user;
+    if (!targetAuthorId || isFollowLoading) return;
+
+    try {
+      setIsFollowLoading(true);
+      const token = localStorage.getItem("token");
+      await API.post(
+        `/api/users/${targetAuthorId}/follow`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      const nextState = !isFollowing;
+      setIsFollowing(nextState);
+
+      window.dispatchEvent(
+        new CustomEvent("userFollowToggled", {
+          detail: { targetUserId: targetAuthorId, isFollowing: nextState },
+        }),
+      );
+    } catch (error) {
+      console.error("Error toggling follow:", error);
+    } finally {
+      setIsFollowLoading(false);
+    }
+  };
+
   const toggleLikeApiCall = async () => {
     if (isLiking || !post) return;
     setIsLiking(true);
@@ -255,6 +297,10 @@ const PostPage = () => {
       );
       if (response.data) {
         setLikesCount(response.data.likes?.length || 0);
+
+        window.dispatchEvent(
+          new CustomEvent("postUpdated", { detail: response.data }),
+        );
       }
     } catch (error) {
       console.error("Error toggling like:", error);
@@ -357,6 +403,11 @@ const PostPage = () => {
       setNewComment("");
       setShowEmojiPicker(false);
       setShowModalEmojiPicker(false);
+
+      window.dispatchEvent(
+        new CustomEvent("postUpdated", { detail: response.data }),
+      );
+
       setTimeout(scrollToModalBottom, 50);
     } catch (error) {
       console.error("Error adding comment:", error);
@@ -424,11 +475,32 @@ const PostPage = () => {
     try {
       setIsDeletingPost(true);
       const token = localStorage.getItem("token");
-      await API.delete(`/api/posts/${post._id}`, {
+      const deletedPostId = post._id || post.id;
+
+      await API.delete(`/api/posts/${deletedPostId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      sessionStorage.removeItem("dashboard_posts_cache");
+      sessionStorage.removeItem("explore_posts_cache");
+
+      window.dispatchEvent(
+        new CustomEvent("postDeleted", {
+          detail: {
+            _id: deletedPostId,
+            id: deletedPostId,
+            postId: deletedPostId,
+          },
+        }),
+      );
+
       handleClosePostDeleteConfirm();
-      navigate("/dashboard");
+
+      if (window.history.length > 1) {
+        navigate(-1);
+      } else {
+        navigate("/dashboard");
+      }
     } catch (error) {
       console.error("Error deleting post:", error);
     } finally {
@@ -460,6 +532,9 @@ const PostPage = () => {
         { headers: { Authorization: `Bearer ${token}` } },
       );
       setComments(response.data.comments);
+      window.dispatchEvent(
+        new CustomEvent("postUpdated", { detail: response.data }),
+      );
       handleCloseCommentDeleteConfirm();
     } catch (error) {
       console.error("Error during comment deletion:", error);
@@ -646,7 +721,13 @@ const PostPage = () => {
             <div className={styles.headerLeftGroup}>
               <button
                 className={styles.backBtn}
-                onClick={() => navigate(-1)}
+                onClick={() => {
+                  if (window.history.length > 1) {
+                    navigate(-1);
+                  } else {
+                    navigate("/dashboard");
+                  }
+                }}
                 aria-label="Back"
               >
                 <svg
@@ -696,6 +777,39 @@ const PostPage = () => {
                       >
                         edited
                       </span>
+                    </>
+                  )}
+
+                  {!isAuthor && (
+                    <>
+                      <span className={styles.dot}>•</span>
+                      <button
+                        className={`${styles.followBtn} ${
+                          isFollowing ? styles.following : styles.follow
+                        }`}
+                        onClick={handleFollowToggle}
+                        disabled={isFollowLoading}
+                      >
+                        {isFollowing ? (
+                          <>
+                            <svg
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="3"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                            <span>Following</span>
+                          </>
+                        ) : (
+                          "Follow"
+                        )}
+                      </button>
                     </>
                   )}
                 </div>

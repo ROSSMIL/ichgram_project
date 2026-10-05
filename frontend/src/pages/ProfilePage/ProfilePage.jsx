@@ -291,9 +291,26 @@ const ProfilePage = () => {
     );
   }, []);
 
-  const handlePostDelete = useCallback((deletedPostId) => {
+  const handlePostDelete = useCallback((deletedPayload) => {
+    let deletedId = deletedPayload;
+
+    if (deletedPayload && typeof deletedPayload === "object") {
+      deletedId =
+        deletedPayload._id ||
+        deletedPayload.id ||
+        deletedPayload.postId ||
+        (deletedPayload.detail &&
+          (deletedPayload.detail._id ||
+            deletedPayload.detail.id ||
+            deletedPayload.detail.postId));
+    }
+
+    if (!deletedId) return;
+
+    const targetIdStr = deletedId.toString();
+
     setPosts((prevPosts) =>
-      prevPosts.filter((post) => post._id !== deletedPostId),
+      prevPosts.filter((post) => post._id.toString() !== targetIdStr),
     );
   }, []);
 

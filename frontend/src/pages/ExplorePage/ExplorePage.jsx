@@ -342,6 +342,19 @@ const ExplorePage = () => {
     };
   }, [fetchExploreData, token]);
 
+  const handlePostCreated = useCallback((newPost) => {
+    if (!newPost || !newPost._id) return;
+
+    setPosts((prevPosts) => {
+      if (prevPosts.some((p) => p._id === newPost._id)) {
+        return prevPosts;
+      }
+      const updated = [newPost, ...prevPosts];
+      sessionStorage.setItem("explore_posts_cache", JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   const handlePostUpdate = useCallback((updatedPost) => {
     setPosts((prevPosts) => {
       const newPosts = prevPosts.map((p) =>
@@ -352,18 +365,60 @@ const ExplorePage = () => {
     });
   }, []);
 
+  const handlePostDeleted = useCallback((deletedPayload) => {
+    let targetId = deletedPayload;
+
+    if (deletedPayload && typeof deletedPayload === "object") {
+      targetId =
+        deletedPayload._id ||
+        deletedPayload.id ||
+        deletedPayload.postId ||
+        (deletedPayload.detail &&
+          (deletedPayload.detail._id ||
+            deletedPayload.detail.id ||
+            deletedPayload.detail.postId));
+    }
+
+    if (!targetId) return;
+
+    const targetIdStr = targetId.toString();
+
+    setPosts((prevPosts) => {
+      const updated = prevPosts.filter((p) => p._id.toString() !== targetIdStr);
+      sessionStorage.setItem("explore_posts_cache", JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   useEffect(() => {
+    const handleGlobalPostCreated = (event) => {
+      if (event.detail) {
+        handlePostCreated(event.detail);
+      }
+    };
+
     const handleGlobalPostUpdate = (event) => {
       if (event.detail) {
         handlePostUpdate(event.detail);
       }
     };
 
-    window.addEventListener("postUpdated", handleGlobalPostUpdate);
-    return () => {
-      window.removeEventListener("postUpdated", handleGlobalPostUpdate);
+    const handleGlobalPostDelete = (event) => {
+      if (event.detail) {
+        handlePostDeleted(event.detail);
+      }
     };
-  }, [handlePostUpdate]);
+
+    window.addEventListener("postCreated", handleGlobalPostCreated);
+    window.addEventListener("postUpdated", handleGlobalPostUpdate);
+    window.addEventListener("postDeleted", handleGlobalPostDelete);
+
+    return () => {
+      window.removeEventListener("postCreated", handleGlobalPostCreated);
+      window.removeEventListener("postUpdated", handleGlobalPostUpdate);
+      window.removeEventListener("postDeleted", handleGlobalPostDelete);
+    };
+  }, [handlePostCreated, handlePostUpdate, handlePostDeleted]);
 
   const scrollToTop = useCallback(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });

@@ -214,6 +214,37 @@
   user-select: none;
 }
 
+.followBtn {
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.follow {
+  color: var(--link-color);
+}
+
+.follow:hover {
+  color: var(--link-hover);
+  background-color: var(--bg-hover, var(--border-color));
+}
+
+.following {
+  color: var(--text-secondary, #8e8e8e);
+}
+
+.following:hover {
+  color: #ed4956;
+}
+
 .menuWrapper {
   position: relative;
   flex-shrink: 0;
@@ -805,6 +836,136 @@
   flex-shrink: 0;
 }
 
+.confirmOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.72);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000005;
+  padding: 20px;
+  box-sizing: border-box;
+  animation: confirmFadeIn 0.22s ease-out forwards;
+}
+
+.confirmOverlayClosing {
+  animation: confirmFadeOut 0.2s ease-in forwards !important;
+}
+
+.confirmBox {
+  background-color: var(--bg-card, #1c1c1e);
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  padding: 28px 24px;
+  max-width: 400px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+  animation: confirmScaleUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.confirmBoxClosing {
+  animation: confirmScaleDown 0.2s ease-in forwards !important;
+}
+
+.confirmBadge {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  border: 1px solid;
+}
+
+.badgeDanger {
+  background: rgba(237, 73, 86, 0.12);
+  border-color: rgba(237, 73, 86, 0.35);
+  color: #ed4956;
+}
+
+.badgeWarning {
+  background: rgba(255, 159, 10, 0.12);
+  border-color: rgba(255, 159, 10, 0.35);
+  color: #ff9f0a;
+}
+
+.confirmTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 10px 0;
+}
+
+.confirmText {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0 0 24px 0;
+}
+
+.confirmActions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.cancelConfirmBtn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.cancelConfirmBtn:hover:not(:disabled) {
+  background-color: var(--bg-hover, rgba(255, 255, 255, 0.08));
+}
+
+.deleteConfirmBtn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 14px;
+  border: none;
+  background-color: #ed4956;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(237, 73, 86, 0.35);
+  transition:
+    transform 0.2s ease,
+    filter 0.2s ease;
+}
+
+.deleteConfirmBtn:hover:not(:disabled) {
+  transform: scale(1.02);
+  filter: brightness(1.08);
+}
+
+.deleteConfirmBtn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -948,6 +1109,46 @@
   }
 }
 
+@keyframes confirmFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes confirmFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes confirmScaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes confirmScaleDown {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+  }
+}
+
 @media (max-width: 868px) {
   .pageWrapper {
     padding: 0;
@@ -1015,175 +1216,5 @@
   .commentsContainer {
     border-radius: 16px;
     padding: 12px;
-  }
-}
-
-.confirmOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.72);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000005;
-  padding: 20px;
-  box-sizing: border-box;
-  animation: confirmFadeIn 0.22s ease-out forwards;
-}
-
-.confirmOverlayClosing {
-  animation: confirmFadeOut 0.2s ease-in forwards !important;
-}
-
-.confirmBox {
-  background-color: var(--bg-card, #1c1c1e);
-  border: 1px solid var(--border-color);
-  border-radius: 24px;
-  padding: 28px 24px;
-  max-width: 400px;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
-  box-sizing: border-box;
-  animation: confirmScaleUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-.confirmBoxClosing {
-  animation: confirmScaleDown 0.2s ease-in forwards !important;
-}
-
-.confirmBadge {
-  width: 56px;
-  height: 56px;
-  border-radius: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 16px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-  border: 1px solid;
-}
-
-.badgeDanger {
-  background: rgba(237, 73, 86, 0.12);
-  border-color: rgba(237, 73, 86, 0.35);
-  color: #ed4956;
-}
-
-.badgeWarning {
-  background: rgba(255, 159, 10, 0.12);
-  border-color: rgba(255, 159, 10, 0.35);
-  color: #ff9f0a;
-}
-
-.confirmTitle {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 10px 0;
-}
-
-.confirmText {
-  font-size: 14px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-  margin: 0 0 24px 0;
-}
-
-.confirmActions {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-}
-
-.cancelConfirmBtn {
-  flex: 1;
-  padding: 12px;
-  border-radius: 14px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-card);
-  color: var(--text-primary);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background-color 0.2s ease,
-    transform 0.15s ease;
-}
-
-.cancelConfirmBtn:hover:not(:disabled) {
-  background-color: var(--bg-hover, rgba(255, 255, 255, 0.08));
-}
-
-.deleteConfirmBtn {
-  flex: 1;
-  padding: 12px;
-  border-radius: 14px;
-  border: none;
-  background-color: #ed4956;
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 14px rgba(237, 73, 86, 0.35);
-  transition:
-    transform 0.2s ease,
-    filter 0.2s ease;
-}
-
-.deleteConfirmBtn:hover:not(:disabled) {
-  transform: scale(1.02);
-  filter: brightness(1.08);
-}
-
-.deleteConfirmBtn:active:not(:disabled) {
-  transform: scale(0.96);
-}
-
-@keyframes confirmFadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes confirmFadeOut {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-
-@keyframes confirmScaleUp {
-  from {
-    opacity: 0;
-    transform: scale(0.9) translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-@keyframes confirmScaleDown {
-  from {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: scale(0.92) translateY(10px);
   }
 }

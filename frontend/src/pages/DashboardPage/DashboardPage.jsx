@@ -238,18 +238,67 @@ const DashboardPage = () => {
     });
   }, []);
 
+  const handlePostCreated = useCallback((newPost) => {
+    setPosts((prevPosts) => {
+      if (prevPosts.some((p) => p._id === newPost._id)) return prevPosts;
+      const updated = [newPost, ...prevPosts];
+      sessionStorage.setItem("dashboard_posts_cache", JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const handlePostDeleted = useCallback((deletedPayload) => {
+    let targetId = deletedPayload;
+
+    if (deletedPayload && typeof deletedPayload === "object") {
+      targetId =
+        deletedPayload._id ||
+        deletedPayload.id ||
+        deletedPayload.postId ||
+        (deletedPayload.detail &&
+          (deletedPayload.detail._id ||
+            deletedPayload.detail.id ||
+            deletedPayload.detail.postId));
+    }
+
+    if (!targetId) return;
+
+    const targetIdStr = targetId.toString();
+
+    setPosts((prevPosts) => {
+      const updated = prevPosts.filter((p) => p._id.toString() !== targetIdStr);
+      sessionStorage.setItem("dashboard_posts_cache", JSON.stringify(updated));
+      return updated;
+    });
+
+    setSelectedPost((prev) =>
+      prev && prev._id.toString() === targetIdStr ? null : prev,
+    );
+  }, []);
+
   useEffect(() => {
     const handleGlobalPostUpdate = (event) => {
-      if (event.detail) {
-        handlePostUpdate(event.detail);
-      }
+      if (event.detail) handlePostUpdate(event.detail);
+    };
+
+    const handleGlobalPostCreated = (event) => {
+      if (event.detail) handlePostCreated(event.detail);
+    };
+
+    const handleGlobalPostDelete = (event) => {
+      if (event.detail) handlePostDeleted(event.detail);
     };
 
     window.addEventListener("postUpdated", handleGlobalPostUpdate);
+    window.addEventListener("postCreated", handleGlobalPostCreated);
+    window.addEventListener("postDeleted", handleGlobalPostDelete);
+
     return () => {
       window.removeEventListener("postUpdated", handleGlobalPostUpdate);
+      window.removeEventListener("postCreated", handleGlobalPostCreated);
+      window.removeEventListener("postDeleted", handleGlobalPostDelete);
     };
-  }, [handlePostUpdate]);
+  }, [handlePostUpdate, handlePostCreated, handlePostDeleted]);
 
   const scrollToTop = useCallback(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -278,8 +327,6 @@ const DashboardPage = () => {
         }
       } else {
         if (token) {
-          setPosts([]);
-          sessionStorage.removeItem("dashboard_posts_cache");
           fetchFeedData(true);
         }
       }
@@ -387,8 +434,6 @@ const DashboardPage = () => {
     if (mainContent) {
       mainContent.scrollTo({ top: 0, behavior: "smooth" });
     }
-    setPosts([]);
-    sessionStorage.removeItem("dashboard_posts_cache");
     fetchFeedData(true);
   };
 
