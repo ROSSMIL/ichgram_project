@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../../api/axios.js";
 import Input from "../../components/Input/Input.jsx";
@@ -8,7 +8,8 @@ import ThemeToggle from "../../components/ThemeToggle/ThemeToggle.jsx";
 import Logo from "../../components/Logo/Logo.jsx";
 import styles from "./RegisterPage.module.css";
 
-import phonesImg from "../../assets/phones.png";
+import phonesDarkImg from "../../assets/phones-dark.png";
+import phonesLightImg from "../../assets/phones-light.png";
 
 const RegisterPage = () => {
   const [email, setEmail] = useState("");
@@ -17,6 +18,12 @@ const RegisterPage = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPasswords, setShowPasswords] = useState(false);
+
+  const [isDarkTheme, setIsDarkTheme] = useState(() => {
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme) return savedTheme === "dark";
+    return document.documentElement.getAttribute("data-theme") !== "light";
+  });
 
   const [stayLoggedIn, setStayLoggedIn] = useState(() => {
     const saved = localStorage.getItem("rememberMePreference");
@@ -30,6 +37,30 @@ const RegisterPage = () => {
 
   const isMinLength = password.length >= 6;
   const isMatching = password.length > 0 && password === confirmPassword;
+
+  useEffect(() => {
+    const checkTheme = () => {
+      const currentTheme = document.documentElement.getAttribute("data-theme");
+      setIsDarkTheme(currentTheme !== "light");
+    };
+
+    checkTheme();
+
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const imgDark = new Image();
+    imgDark.src = phonesDarkImg;
+    const imgLight = new Image();
+    imgLight.src = phonesLightImg;
+  }, []);
 
   const handleRememberMeChange = (e) => {
     const checked = e.target.checked;
@@ -127,14 +158,16 @@ const RegisterPage = () => {
   const confirmPasswordType =
     showPasswords && confirmPassword.length > 0 ? "text" : "password";
 
+  const activePhonesImg = isDarkTheme ? phonesDarkImg : phonesLightImg;
+
   return (
     <div className={styles.container}>
       <ThemeToggle />
 
       <div className={styles.imageSection}>
         <img
-          src={phonesImg}
-          alt="Ichgram Phones"
+          src={activePhonesImg}
+          alt="Ichgram Showcase"
           className={styles.phonesImage}
         />
       </div>

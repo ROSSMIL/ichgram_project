@@ -22,6 +22,16 @@
   max-width: 24rem;
   position: relative;
   overflow: visible;
+
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1) translateX(0);
+  will-change: opacity, transform, max-width;
+  transition:
+    opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    max-width 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0.4s ease;
 }
 
 .imageSection::before {
@@ -50,9 +60,10 @@
   object-fit: contain;
   position: relative;
   z-index: 1;
-  will-change: transform;
+  will-change: transform, opacity;
+  transform: translateZ(0);
   animation: pureFloat 6s ease-in-out infinite;
-  transition: opacity 0.5s ease;
+  transition: opacity 0.35s ease;
 }
 
 .authSection {
@@ -411,15 +422,23 @@
 
 @media (max-width: 50rem) {
   .imageSection {
-    display: none;
+    opacity: 0;
+    visibility: hidden;
+    max-width: 0;
+    transform: scale(0.95) translateX(-15px);
+    pointer-events: none;
   }
+
   .container {
     padding: 1.2rem;
+    gap: 0;
   }
+
   .formBox {
     padding: 1.8rem 1.4rem;
   }
 }
+
 .rememberMeContainer {
   display: flex;
   align-items: center;

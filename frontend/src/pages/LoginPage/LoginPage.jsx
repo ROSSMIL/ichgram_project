@@ -9,12 +9,19 @@ import ThemeToggle from "../../components/ThemeToggle/ThemeToggle.jsx";
 import Logo from "../../components/Logo/Logo.jsx";
 import styles from "./LoginPage.module.css";
 
-import phonesImg from "../../assets/phones.png";
+import phonesDarkImg from "../../assets/phones-dark.png";
+import phonesLightImg from "../../assets/phones-light.png";
 
 const LoginPage = () => {
   const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  const [isDarkTheme, setIsDarkTheme] = useState(() => {
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme) return savedTheme === "dark";
+    return document.documentElement.getAttribute("data-theme") !== "light";
+  });
 
   const [stayLoggedIn, setStayLoggedIn] = useState(() => {
     const saved = localStorage.getItem("rememberMePreference");
@@ -31,6 +38,30 @@ const LoginPage = () => {
   const location = useLocation();
 
   const isAnyLoading = isLoading || isGuestLoading;
+
+  useEffect(() => {
+    const checkTheme = () => {
+      const currentTheme = document.documentElement.getAttribute("data-theme");
+      setIsDarkTheme(currentTheme !== "light");
+    };
+
+    checkTheme();
+
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const imgDark = new Image();
+    imgDark.src = phonesDarkImg;
+    const imgLight = new Image();
+    imgLight.src = phonesLightImg;
+  }, []);
 
   const handleRememberMeChange = (e) => {
     const checked = e.target.checked;
@@ -154,14 +185,16 @@ const LoginPage = () => {
     }
   };
 
+  const activePhonesImg = isDarkTheme ? phonesDarkImg : phonesLightImg;
+
   return (
     <div className={styles.container}>
       <ThemeToggle />
 
       <div className={styles.imageSection}>
         <img
-          src={phonesImg}
-          alt="Ichgram Phones"
+          src={activePhonesImg}
+          alt="Ichgram Showcase"
           className={styles.phonesImage}
         />
       </div>
