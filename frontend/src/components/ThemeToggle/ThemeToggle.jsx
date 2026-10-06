@@ -79,7 +79,6 @@ const ThemeToggle = () => {
   const changeTheme = (nextTheme) => {
     setTheme(nextTheme);
     localStorage.setItem("theme", nextTheme);
-    document.documentElement.setAttribute("data-theme", nextTheme);
   };
 
   const handleToggle = (e) => {
@@ -110,6 +109,7 @@ const ThemeToggle = () => {
       setIsAnimating(false);
     }, 1200);
   };
+
   return (
     <div
       className={styles.toggleWrapper}

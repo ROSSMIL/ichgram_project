@@ -55,6 +55,7 @@ const ScrollToTop = () => {
 
   return null;
 };
+
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
@@ -217,6 +218,7 @@ const ProtectedRoute = ({ children }) => {
     </div>
   );
 };
+
 const PublicOnlyRoute = ({ children }) => {
   const token = localStorage.getItem("token");
 
@@ -233,6 +235,51 @@ function App() {
   const [retryTrigger, setRetryTrigger] = useState(0);
 
   const isAppReadyRef = useRef(isAppReady);
+  useEffect(() => {
+    const updateFavicons = () => {
+      const currentTheme =
+        document.documentElement.getAttribute("data-theme") || "light";
+
+      const faviconSvg = document.querySelector("link[type='image/svg+xml']");
+      const faviconPng = document.querySelector("link[rel='alternate icon']");
+      const appleIcon = document.querySelector("link[rel='apple-touch-icon']");
+
+      const newSvg =
+        currentTheme === "dark" ? "/favicon-dark.svg" : "/favicon-light.svg";
+      const newPng =
+        currentTheme === "dark" ? "/favicon-dark.png" : "/favicon-light.png";
+
+      if (faviconSvg && faviconSvg.getAttribute("href") !== newSvg) {
+        faviconSvg.setAttribute("href", newSvg);
+      }
+      if (faviconPng && faviconPng.getAttribute("href") !== newPng) {
+        faviconPng.setAttribute("href", newPng);
+      }
+      if (appleIcon && appleIcon.getAttribute("href") !== newPng) {
+        appleIcon.setAttribute("href", newPng);
+      }
+    };
+
+    updateFavicons();
+
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (
+          mutation.type === "attributes" &&
+          mutation.attributeName === "data-theme"
+        ) {
+          updateFavicons();
+        }
+      }
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     isAppReadyRef.current = isAppReady;
