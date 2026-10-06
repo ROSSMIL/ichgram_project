@@ -18,6 +18,7 @@ import messageRoutes from "./src/routes/messageRoutes.js";
 import notificationRoutes from "./src/routes/notificationRoutes.js";
 
 const app = express();
+app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3333;
 
 const __filename = fileURLToPath(import.meta.url);
@@ -37,12 +38,10 @@ app.use(
         allowedOrigins.includes(origin) ||
         process.env.NODE_ENV !== "production"
       ) {
-        callback(null, true);
-      } else {
-        callback(null, true);
+        return callback(null, true);
       }
+      callback(new Error("Not allowed by CORS"));
     },
-    credentials: true,
   }),
 );
 

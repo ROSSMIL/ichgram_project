@@ -113,6 +113,7 @@ export const login = async (req, res) => {
     if (
       !user ||
       !isMatch ||
+      user.isGuest ||
       user.isDeleted ||
       user.username?.startsWith("deleted_user_")
     ) {
@@ -149,7 +150,12 @@ export const login = async (req, res) => {
 export const guestLogin = async (req, res) => {
   try {
     const { guestDeviceId } = req.body;
-    const deviceId = guestDeviceId || crypto.randomUUID();
+    const deviceId =
+      typeof guestDeviceId === "string" &&
+      guestDeviceId.length > 0 &&
+      guestDeviceId.length <= 128
+        ? guestDeviceId
+        : crypto.randomUUID();
 
     let guestUser = await User.findOne({
       guestDeviceId: deviceId,
@@ -161,8 +167,8 @@ export const guestLogin = async (req, res) => {
       const guestUsername = `guest_${uniqueSuffix}`;
       const guestEmail = `guest_${uniqueSuffix}@ichgram.guest`;
 
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash("GuestPassword123!", salt);
+      const randomPassword = crypto.randomBytes(32).toString("hex");
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
 
       guestUser = new User({
         email: guestEmail,

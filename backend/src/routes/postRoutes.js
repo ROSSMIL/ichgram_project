@@ -11,17 +11,23 @@ import {
   updatePost,
 } from "../controllers/postController.js";
 import protect from "../middlewares/authMiddleware.js";
+import { createContentLimiter } from "../middlewares/rateLimiter.js";
 
 const router = express.Router();
 
-router.post("/", protect, createPost);
+router.post("/", protect, createContentLimiter, createPost);
 router.get("/", protect, getAllPosts);
 router.get("/:postId", protect, getPostById);
 router.put("/:postId", protect, updatePost);
 router.delete("/:postId", protect, deletePost);
 
 router.get("/user/:username", protect, getPostsByUsername);
-router.post("/:postId/comment", protect, addCommentToPost);
+router.post(
+  "/:postId/comment",
+  protect,
+  createContentLimiter,
+  addCommentToPost,
+);
 router.put("/:postId/like", protect, toggleLikePost);
 router.delete("/:postId/comment/:commentId", protect, deleteComment);
 
