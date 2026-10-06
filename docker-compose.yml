@@ -1,0 +1,11 @@
+services:
+  mongodb:
+    image: mongo:9.0.2
+    container_name: ichgram_local_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
