@@ -4,6 +4,7 @@ import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import EmojiPicker from "emoji-picker-react";
 import API from "../../api/axios";
 import Avatar from "../../components/Avatar/Avatar";
+import { useFollowing } from "../../hooks/useFollowing";
 import styles from "./PostPage.module.css";
 
 const safeSlice = (str, maxLen = 150) => {
@@ -63,6 +64,12 @@ const PostPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const {
+    isFollowing: isUserFollowed,
+    isLoaded: isFollowingLoaded,
+    toggleFollow,
+  } = useFollowing();
+
   const queryParams = new URLSearchParams(location.search);
   const autoFocusComment =
     queryParams.get("focus") === "true" ||
@@ -76,7 +83,6 @@ const PostPage = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
 
-  const [isFollowing, setIsFollowing] = useState(false);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
 
   const [newComment, setNewComment] = useState("");
@@ -183,17 +189,6 @@ const PostPage = () => {
             : fetchedPost.likes?.length || 0,
         );
         setIsLiked(checkIsLiked(fetchedPost, currentUserId));
-
-        if (fetchedPost.user && fetchedPost.user.followers && currentUserId) {
-          setIsFollowing(
-            fetchedPost.user.followers.some((fId) => {
-              const fStr = typeof fId === "string" ? fId : fId._id || fId.id;
-              return fStr === currentUserId;
-            }),
-          );
-        } else if (fetchedPost.isFollowingAuthor !== undefined) {
-          setIsFollowing(fetchedPost.isFollowingAuthor);
-        }
       } catch (err) {
         console.error("Error fetching post:", err);
       } finally {
@@ -250,21 +245,7 @@ const PostPage = () => {
 
     try {
       setIsFollowLoading(true);
-      const token = localStorage.getItem("token");
-      await API.post(
-        `/api/users/${targetAuthorId}/follow`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-
-      const nextState = !isFollowing;
-      setIsFollowing(nextState);
-
-      window.dispatchEvent(
-        new CustomEvent("userFollowToggled", {
-          detail: { targetUserId: targetAuthorId, isFollowing: nextState },
-        }),
-      );
+      await toggleFollow(targetAuthorId);
     } catch (error) {
       console.error("Error toggling follow:", error);
     } finally {
@@ -562,6 +543,8 @@ const PostPage = () => {
   };
   const authorId = post?.user?._id || post?.user?.id || post?.user;
 
+  const isFollowing = authorId ? isUserFollowed(authorId) : false;
+
   const isAuthor =
     (currentUserId &&
       authorId &&
@@ -788,7 +771,7 @@ const PostPage = () => {
                           isFollowing ? styles.following : styles.follow
                         }`}
                         onClick={handleFollowToggle}
-                        disabled={isFollowLoading}
+                        disabled={isFollowLoading || !isFollowingLoaded}
                       >
                         {isFollowing ? (
                           <>

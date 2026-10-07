@@ -463,7 +463,25 @@ const ExplorePage = () => {
       window.removeEventListener("refreshExplore", handleRefresh);
     };
   }, [fetchExploreData, token, scrollToTop]);
+  useEffect(() => {
+    const handleUserFollowToggled = (e) => {
+      const { targetUserId, isFollowing } = e.detail || {};
+      if (!targetUserId) return;
+      const target = String(targetUserId);
 
+      setCurrentUserFollowing((prev) =>
+        isFollowing
+          ? prev.includes(target)
+            ? prev
+            : [...prev, target]
+          : prev.filter((id) => id !== target),
+      );
+    };
+
+    window.addEventListener("userFollowToggled", handleUserFollowToggled);
+    return () =>
+      window.removeEventListener("userFollowToggled", handleUserFollowToggled);
+  }, []);
   const handleOpenModal = useCallback((post, focusComment = false) => {
     window.dispatchEvent(
       new CustomEvent("openPostModal", {

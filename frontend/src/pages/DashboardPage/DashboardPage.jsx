@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import PropTypes from "prop-types";
 import API from "../../api/axios";
-import PostModal from "../../components/PostModal/PostModal";
 import PostCard from "../../components/PostCard/PostCard";
 import FeedFilterPill from "../../components/FeedFilterPill/FeedFilterPill";
 import Logo from "../../components/Logo/Logo";
@@ -119,11 +118,9 @@ const DashboardPage = () => {
   });
   const [loading, setLoading] = useState(() => posts.length === 0);
   const [currentUserFollowing, setCurrentUserFollowing] = useState([]);
-  const [selectedPost, setSelectedPost] = useState(null);
 
   const [activeFilter, setActiveFilter] = useState("all");
   const [exploreHiddenUserIds, setExploreHiddenUserIds] = useState(new Set());
-  const [autoFocusComment, setAutoFocusComment] = useState(false);
 
   const token = localStorage.getItem("token");
 
@@ -229,13 +226,6 @@ const DashboardPage = () => {
       sessionStorage.setItem("dashboard_posts_cache", JSON.stringify(updated));
       return updated;
     });
-
-    setSelectedPost((prevSelected) => {
-      if (prevSelected && prevSelected._id === updatedPost._id) {
-        return updatedPost;
-      }
-      return prevSelected;
-    });
   }, []);
 
   const handlePostCreated = useCallback((newPost) => {
@@ -270,10 +260,6 @@ const DashboardPage = () => {
       sessionStorage.setItem("dashboard_posts_cache", JSON.stringify(updated));
       return updated;
     });
-
-    setSelectedPost((prev) =>
-      prev && prev._id.toString() === targetIdStr ? null : prev,
-    );
   }, []);
 
   useEffect(() => {
@@ -339,6 +325,26 @@ const DashboardPage = () => {
     };
   }, [fetchFeedData, token, scrollToTop]);
 
+  useEffect(() => {
+    const handleUserFollowToggled = (e) => {
+      const { targetUserId, isFollowing } = e.detail || {};
+      if (!targetUserId) return;
+      const target = String(targetUserId);
+
+      setCurrentUserFollowing((prev) =>
+        isFollowing
+          ? prev.includes(target)
+            ? prev
+            : [...prev, target]
+          : prev.filter((id) => id !== target),
+      );
+    };
+
+    window.addEventListener("userFollowToggled", handleUserFollowToggled);
+    return () =>
+      window.removeEventListener("userFollowToggled", handleUserFollowToggled);
+  }, []);
+
   const handleFilterChange = (newFilter) => {
     setActiveFilter(newFilter);
 
@@ -367,6 +373,14 @@ const DashboardPage = () => {
       }
 
       setCurrentUserFollowing(updatedFollowing);
+      window.dispatchEvent(
+        new CustomEvent("userFollowToggled", {
+          detail: {
+            targetUserId: targetUserId.toString(),
+            isFollowing: updatedFollowing.includes(targetUserId.toString()),
+          },
+        }),
+      );
 
       setPosts((prevPosts) => {
         const updated = prevPosts.map((p) => {
@@ -421,11 +435,6 @@ const DashboardPage = () => {
       }),
     );
   }, []);
-
-  const handleCloseModal = () => {
-    setSelectedPost(null);
-    setAutoFocusComment(false);
-  };
 
   const handleLogoClick = () => {
     scrollToTop();
@@ -695,17 +704,6 @@ const DashboardPage = () => {
             <AllCaughtUpCard onScrollToTop={scrollToTop} />
           )}
         </div>
-      )}
-
-      {selectedPost && (
-        <PostModal
-          post={posts.find((p) => p._id === selectedPost._id) || selectedPost}
-          onClose={handleCloseModal}
-          autoFocusComment={autoFocusComment}
-          onPostUpdate={handlePostUpdate}
-          currentUserFollowing={currentUserFollowing}
-          onFollowToggle={handleFollowToggle}
-        />
       )}
     </div>
   );

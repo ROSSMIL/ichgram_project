@@ -520,7 +520,15 @@ const UserProfilePage = () => {
 
       const updatedIsFollowing = response.data.isFollowing;
       setIsFollowing(updatedIsFollowing);
-
+      window.dispatchEvent(
+        new CustomEvent("userFollowToggled", {
+          detail: {
+            targetUserId: String(user._id),
+            isFollowing: updatedIsFollowing,
+            source: "user-profile",
+          },
+        }),
+      );
       setFollowersCount((prev) =>
         updatedIsFollowing ? prev + 1 : Math.max(0, prev - 1),
       );
@@ -556,7 +564,15 @@ const UserProfilePage = () => {
         );
 
         const nextState = response.data.isFollowing;
-
+        window.dispatchEvent(
+          new CustomEvent("userFollowToggled", {
+            detail: {
+              targetUserId: String(targetUserId),
+              isFollowing: nextState,
+              source: "user-profile",
+            },
+          }),
+        );
         setModalUsersList((prevList) =>
           prevList.map((u) =>
             u._id === targetUserId ? { ...u, isFollowing: nextState } : u,
@@ -652,7 +668,35 @@ const UserProfilePage = () => {
       }),
     );
   }, []);
+  useEffect(() => {
+    const handleUserFollowToggled = (e) => {
+      const { targetUserId, isFollowing: next, source } = e.detail || {};
+      if (!targetUserId || source === "user-profile") return;
+      const target = String(targetUserId);
 
+      setCurrentUser((prev) => {
+        if (!prev) return prev;
+        const ids = (prev.following || []).map((f) =>
+          String(typeof f === "string" ? f : f._id || f.id),
+        );
+        const updated = next
+          ? ids.includes(target)
+            ? ids
+            : [...ids, target]
+          : ids.filter((id) => id !== target);
+        return { ...prev, following: updated };
+      });
+
+      if (user?._id && String(user._id) === target && next !== isFollowing) {
+        setIsFollowing(next);
+        setFollowersCount((prev) => (next ? prev + 1 : Math.max(0, prev - 1)));
+      }
+    };
+
+    window.addEventListener("userFollowToggled", handleUserFollowToggled);
+    return () =>
+      window.removeEventListener("userFollowToggled", handleUserFollowToggled);
+  }, [user, isFollowing]);
   const userIdStr = (user?._id || user?.id)?.toString();
   const rawPresence = onlineUsers?.[userIdStr];
 

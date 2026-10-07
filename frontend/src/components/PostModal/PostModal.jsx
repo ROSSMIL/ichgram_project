@@ -13,6 +13,7 @@ import EmojiPicker from "emoji-picker-react";
 import styles from "./PostModal.module.css";
 import Avatar from "../Avatar/Avatar";
 import { usePreventBodyScroll } from "../../hooks/usePreventBodyScroll";
+import { useFollowing } from "../../hooks/useFollowing";
 
 const safeSlice = (str, maxLen = 150) => {
   if (str.length <= maxLen) return str;
@@ -73,8 +74,6 @@ const PostModal = ({
   onClose,
   onPostUpdate,
   onPostDelete,
-  currentUserFollowing,
-  onFollowToggle,
   autoFocusComment = false,
 }) => {
   const [isClosing, setIsClosing] = useState(false);
@@ -124,19 +123,13 @@ const PostModal = ({
   const authorId = post?.user?._id || post?.user?.id || post?.user;
   const authorUsername = post?.user?.username || "user";
 
-  let isFollowing = false;
-  if (post && authorId) {
-    if (currentUserFollowing) {
-      isFollowing = currentUserFollowing.includes(authorId.toString());
-    } else if (post.user && post.user.followers) {
-      isFollowing = post.user.followers.some((fId) => {
-        const id = typeof fId === "string" ? fId : fId._id || fId.id;
-        return id === currentUserId;
-      });
-    } else {
-      isFollowing = post.isFollowingAuthor || false;
-    }
-  }
+  const {
+    isFollowing: isUserFollowed,
+    isLoaded: isFollowingLoaded,
+    toggleFollow,
+  } = useFollowing();
+
+  const isFollowing = authorId ? isUserFollowed(authorId) : false;
 
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -455,11 +448,11 @@ const PostModal = ({
   }, []);
 
   const handleFollowToggleInModal = async () => {
-    if (!onFollowToggle || !authorId || isFollowLoading) return;
+    if (!authorId || isFollowLoading) return;
 
     try {
       setIsFollowLoading(true);
-      await onFollowToggle(authorId.toString());
+      await toggleFollow(authorId);
     } catch (error) {
       console.error("Error toggling follow in modal:", error);
     } finally {
@@ -714,7 +707,7 @@ const PostModal = ({
                               isFollowing ? styles.following : styles.follow
                             }`}
                             onClick={handleFollowToggleInModal}
-                            disabled={isFollowLoading}
+                            disabled={isFollowLoading || !isFollowingLoaded}
                           >
                             {isFollowing ? (
                               <>
@@ -1166,8 +1159,6 @@ PostModal.propTypes = {
   onClose: PropTypes.func.isRequired,
   onPostUpdate: PropTypes.func,
   onPostDelete: PropTypes.func,
-  currentUserFollowing: PropTypes.array,
-  onFollowToggle: PropTypes.func,
   autoFocusComment: PropTypes.bool,
 };
 

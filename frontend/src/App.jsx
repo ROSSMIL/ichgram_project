@@ -7,6 +7,7 @@ import {
   useLocation,
   useNavigate,
 } from "react-router-dom";
+import { useFollowing } from "./hooks/useFollowing";
 import LoginPage from "./pages/LoginPage/LoginPage";
 import RegisterPage from "./pages/RegisterPage/RegisterPage";
 import DashboardPage from "./pages/DashboardPage/DashboardPage";
@@ -60,6 +61,8 @@ const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
   const location = useLocation();
+
+  useFollowing();
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
