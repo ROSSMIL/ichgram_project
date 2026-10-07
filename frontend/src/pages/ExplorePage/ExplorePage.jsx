@@ -282,7 +282,6 @@ const ExplorePage = () => {
   }, [token]);
 
   const { userId: currentUserId } = getLoggedInData();
-
   const fetchExploreData = useCallback(
     async (forceRefresh = false) => {
       try {
@@ -299,13 +298,37 @@ const ExplorePage = () => {
           }),
         ]);
 
-        if (forceRefresh || posts.length === 0) {
+        if (forceRefresh) {
           const randomizedPosts = shuffleArray(postsRes.data);
           setPosts(randomizedPosts);
           sessionStorage.setItem(
             "explore_posts_cache",
             JSON.stringify(randomizedPosts),
           );
+        } else {
+          setPosts((prevPosts) => {
+            if (prevPosts.length === 0) {
+              const randomizedPosts = shuffleArray(postsRes.data);
+              sessionStorage.setItem(
+                "explore_posts_cache",
+                JSON.stringify(randomizedPosts),
+              );
+              return randomizedPosts;
+            }
+
+            const fetchedPostsMap = new Map(
+              postsRes.data.map((p) => [p._id, p]),
+            );
+            const updatedPosts = prevPosts
+              .filter((p) => fetchedPostsMap.has(p._id))
+              .map((p) => fetchedPostsMap.get(p._id));
+
+            sessionStorage.setItem(
+              "explore_posts_cache",
+              JSON.stringify(updatedPosts),
+            );
+            return updatedPosts;
+          });
         }
 
         const followingIds =
