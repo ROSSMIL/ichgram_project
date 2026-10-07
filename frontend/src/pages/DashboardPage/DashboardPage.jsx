@@ -163,9 +163,9 @@ const DashboardPage = () => {
             const fetchedPostsMap = new Map(
               postsRes.data.map((p) => [p._id, p]),
             );
-            const updatedExistingPosts = prevPosts.map(
-              (oldPost) => fetchedPostsMap.get(oldPost._id) || oldPost,
-            );
+            const updatedExistingPosts = prevPosts
+              .filter((oldPost) => fetchedPostsMap.has(oldPost._id))
+              .map((oldPost) => fetchedPostsMap.get(oldPost._id));
 
             const existingIds = new Set(prevPosts.map((p) => p._id));
             const newPosts = postsRes.data.filter(

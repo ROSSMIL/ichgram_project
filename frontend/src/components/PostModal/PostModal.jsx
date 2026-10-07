@@ -244,36 +244,35 @@ const PostModal = ({
     setShowMenu(false);
     setIsDeleteConfirmOpen(true);
   };
-
   const handleDeletePostConfirm = async () => {
+    const deletedPostId = post._id || post.id;
+
+    const finishDelete = () => {
+      if (typeof onPostDelete === "function") onPostDelete(deletedPostId);
+      window.dispatchEvent(
+        new CustomEvent("postDeleted", { detail: { _id: deletedPostId } }),
+      );
+      handleCloseDeleteConfirm();
+      onClose();
+    };
+
     try {
       setIsDeletingPost(true);
       const token = localStorage.getItem("token");
-      await API.delete(`/api/posts/${post._id}`, {
+      await API.delete(`/api/posts/${deletedPostId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      const deletedPostId = post._id || post.id;
-
-      if (typeof onPostDelete === "function") {
-        onPostDelete(deletedPostId);
-      }
-
-      window.dispatchEvent(
-        new CustomEvent("postDeleted", {
-          detail: { _id: deletedPostId },
-        }),
-      );
-
-      handleCloseDeleteConfirm();
-      onClose();
+      finishDelete();
     } catch (error) {
-      console.error("Error deleting post:", error);
+      if (error.response?.status === 404) {
+        finishDelete();
+      } else {
+        console.error("Error deleting post:", error);
+      }
     } finally {
       setIsDeletingPost(false);
     }
   };
-
   const handlePromptDeleteComment = (cId) => {
     setCommentToDelete(cId);
   };
@@ -782,7 +781,7 @@ const PostModal = ({
                             strokeLinecap="round"
                             strokeLinejoin="round"
                           >
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 2-2v-7"></path>
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                           </svg>
                           <span>Edit post</span>
