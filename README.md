@@ -14,7 +14,7 @@
 > The backend runs on a free Render instance, so the first request after idle can take ~30-50 s. That wait is a designed screen, not an accident (see below).
 
 <p align="center">
-  <img src="./assets/gif_demo.gif" alt="ICHGRAM Walkthrough" width="100%" />
+  <img src="./assets/gif_demo.gif" alt="ICHGRAM Walkthrough" width="650" style="max-width: 100%; border-radius: 8px;" />
 </p>
 
 _Non-commercial educational project. It started as my final project at ITCareerHub and grew over ~200 commits into something I'd actually want to use. UI is inspired by Instagram; no affiliation._
