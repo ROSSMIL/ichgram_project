@@ -694,7 +694,11 @@ const MessagesPage = () => {
           createdAt: newMessageReceived.createdAt,
         });
 
-        API.put(`/api/message/mark-read/${activeChat._id}`);
+        API.put(`/api/message/mark-read/${activeChat._id}`)
+          .then(() =>
+            window.dispatchEvent(new CustomEvent("unreadCountsUpdated")),
+          )
+          .catch(() => {});
 
         if (myIdStr) {
           socket.emit("messages read", {
@@ -735,7 +739,7 @@ const MessagesPage = () => {
       if (data?.chatId) {
         setReactionUnreadCounts((prev) => {
           const currentCount = prev[data.chatId];
-          if (!currentCount || currentCount <= 0) return prev; 
+          if (!currentCount || currentCount <= 0) return prev;
 
           return {
             ...prev,
@@ -773,7 +777,6 @@ const MessagesPage = () => {
           })
           .catch(() => {});
       } else {
-        
         fetchUnreadReactions();
       }
     };

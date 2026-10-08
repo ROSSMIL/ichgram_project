@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import PropTypes from "prop-types";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import API from "../../api/axios";
@@ -17,6 +17,7 @@ const Sidebar = ({
   const [currentUser, setCurrentUser] = useState(null);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
+  const activeChatIdRef = useRef(null);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -63,7 +64,9 @@ const Sidebar = ({
     });
 
     const handleActiveChatChanged = (e) => {
-      const { unreadCountForChat } = e.detail || {};
+      const { chatId, unreadCountForChat } = e.detail || {};
+      activeChatIdRef.current = chatId ? String(chatId) : null;
+
       if (unreadCountForChat && unreadCountForChat > 0) {
         setUnreadMessagesCount((prev) =>
           Math.max(0, prev - unreadCountForChat),
@@ -72,7 +75,6 @@ const Sidebar = ({
         fetchUnreadCounts();
       }
     };
-
     window.addEventListener("profileUpdated", fetchUser);
     window.addEventListener("unreadCountsUpdated", fetchUnreadCounts);
     window.addEventListener("activeChatChanged", handleActiveChatChanged);
@@ -101,6 +103,10 @@ const Sidebar = ({
       )?.toString();
 
       if (senderId && currentUserIdStr && senderId === currentUserIdStr) {
+        return;
+      }
+      const notifChatId = (newNotif.chat?._id || newNotif.chat)?.toString();
+      if (notifChatId && notifChatId === activeChatIdRef.current) {
         return;
       }
       fetchUnreadCounts();
