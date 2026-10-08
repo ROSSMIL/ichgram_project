@@ -722,16 +722,16 @@ const MessagesPage = () => {
 
       bumpChatToTop(chatId);
 
-      if (notif.type === "message_reaction") {
-        const activeChat = selectedChatRef.current;
-        if (activeChat && activeChat._id.toString() === chatId) {
-          API.put(`/api/notifications/read-chat/${chatId}`).catch(() => {});
-        } else {
-          setReactionUnreadCounts((prev) => ({
-            ...prev,
-            [chatId]: (prev[chatId] || 0) + 1,
-          }));
-        }
+      const activeChat = selectedChatRef.current;
+      const isActiveChat = activeChat && activeChat._id.toString() === chatId;
+
+      if (isActiveChat) {
+        API.put(`/api/notifications/read-chat/${chatId}`).catch(() => {});
+      } else if (notif.type === "message_reaction") {
+        setReactionUnreadCounts((prev) => ({
+          ...prev,
+          [chatId]: (prev[chatId] || 0) + 1,
+        }));
       }
     };
 
