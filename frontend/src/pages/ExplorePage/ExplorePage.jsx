@@ -319,15 +319,22 @@ const ExplorePage = () => {
             const fetchedPostsMap = new Map(
               postsRes.data.map((p) => [p._id, p]),
             );
-            const updatedPosts = prevPosts
+
+            const keptPosts = prevPosts
               .filter((p) => fetchedPostsMap.has(p._id))
               .map((p) => fetchedPostsMap.get(p._id));
 
+            const existingIds = new Set(prevPosts.map((p) => p._id));
+            const newPosts = postsRes.data.filter(
+              (p) => !existingIds.has(p._id),
+            );
+
+            const merged = [...newPosts, ...keptPosts];
             sessionStorage.setItem(
               "explore_posts_cache",
-              JSON.stringify(updatedPosts),
+              JSON.stringify(merged),
             );
-            return updatedPosts;
+            return merged;
           });
         }
 
@@ -348,7 +355,6 @@ const ExplorePage = () => {
     },
     [token, posts.length],
   );
-
   useEffect(() => {
     let isMounted = true;
 
