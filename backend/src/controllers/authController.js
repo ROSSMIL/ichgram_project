@@ -149,7 +149,7 @@ export const login = async (req, res) => {
 
 export const guestLogin = async (req, res) => {
   try {
-    const { guestDeviceId } = req.body;
+    const { guestDeviceId, stayLoggedIn } = req.body;
     const deviceId =
       typeof guestDeviceId === "string" &&
       guestDeviceId.length > 0 &&
@@ -189,7 +189,7 @@ export const guestLogin = async (req, res) => {
     const token = jwt.sign(
       { userId: guestUser._id, username: guestUser.username },
       jwtSecret,
-      { expiresIn: "30d" },
+      { expiresIn: stayLoggedIn ? "30d" : "1d" },
     );
 
     return res.status(200).json({

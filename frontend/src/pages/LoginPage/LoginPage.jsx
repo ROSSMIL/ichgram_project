@@ -152,11 +152,12 @@ const LoginPage = () => {
 
       const response = await API.post("/api/auth/guest-login", {
         guestDeviceId,
+        stayLoggedIn,
       });
 
       if (response.status === 200) {
         localStorage.setItem("token", response.data.token);
-        localStorage.setItem("stayLoggedIn", "true");
+        localStorage.setItem("stayLoggedIn", stayLoggedIn ? "true" : "false");
         if (response.data.guestDeviceId) {
           localStorage.setItem("guest_device_id", response.data.guestDeviceId);
         }
